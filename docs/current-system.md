@@ -31,7 +31,7 @@ At mount the app:
 2. Executes the in-app verification suite and stores its results for the Methodology view.
 3. Reads `prefers-reduced-motion` when available.
 
-The interface exposes a live workbench, isolated Monetag chamber, scoring view, layer/export view, verification suite, and architecture view. It also supports test search/filtering, a detailed test inspector, reduced-motion preference, and a theme switch.
+The initial route is an Overview with a Quick Scan and Full Diagnostic. Quick Scan runs exactly `DSP-01`, `TPA-01`, `TPA-05`, `TRK-01`, `INT-03`, and `AAB-01`; Full Diagnostic uses `TEST_REGISTRY`. Both invoke the same batch runner and route to the Results view. The live workbench, isolated Monetag chamber, scoring view, layer/export view, verification suite, and architecture view remain reachable under Advanced Tools.
 
 ## Registry and configuration
 
