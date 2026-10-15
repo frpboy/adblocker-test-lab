@@ -1322,7 +1322,7 @@ export function buildProtectionTraceStages({
           : 'COMPLETE',
       detail:
         evaluationDetail ||
-        `${confidence?.label || 'Evaluated'} — Alternative causes: ${testItem.audit.alternativeExplanations.join(', ')}`
+    `${confidence?.label || 'Evaluated'}: Alternative causes: ${testItem.audit.alternativeExplanations.join(', ')}`
     },
     {
       step: 6,
@@ -1747,7 +1747,7 @@ export async function collectEnvironmentDiagnostics() {
     engineHint,
     uaBrandHint: isBraveReported
       ? 'Brave (Reported via navigator.brave)'
-      : uaClientHints?.brands || `${engineHint} — Brand unverified`,
+    : uaClientHints?.brands || `${engineHint}: Brand unverified`,
     platformHint: uaClientHints?.platform || nav.platform || 'Unavailable',
     viewport: `${win.innerWidth || 0} x ${win.innerHeight || 0} px`,
     screenResolution: `${scr.width || 0} x ${scr.height || 0} px (${win.devicePixelRatio || 1}x DPR)`,
@@ -1866,7 +1866,7 @@ export function generateHtmlReport({ scoreSummary, resultsMap, userReported }) {
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>${escapeHtml(BRAND_NAME)} v${escapeHtml(APP_VERSION)} — Benchmark Report</title>
+<title>${escapeHtml(BRAND_NAME)} v${escapeHtml(APP_VERSION)}: Benchmark Report</title>
 <style>
   body { font-family: system-ui, sans-serif; background: #f4f4f0; color: #0f1419; padding: 32px; max-width: 1280px; margin: 0 auto; }
   .panel { background: #fff; border: 1px solid #d1d5db; padding: 20px; margin-bottom: 20px; }
@@ -1876,7 +1876,7 @@ export function generateHtmlReport({ scoreSummary, resultsMap, userReported }) {
 </style>
 </head>
 <body>
-  <h1>${escapeHtml(BRAND_NAME)} v${escapeHtml(APP_VERSION)} — Diagnostic Benchmark Report</h1>
+<h1>${escapeHtml(BRAND_NAME)} v${escapeHtml(APP_VERSION)}: Diagnostic Benchmark Report</h1>
   <p><strong>${escapeHtml(BRAND_PROMISE)}</strong></p>
   <div class="panel">
     <h2>Ad &amp; Tracker Blocking Score: ${
@@ -3153,7 +3153,7 @@ export async function executeAuditedTest(
 }
 
 const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-1';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c65322] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f0e7] dark:focus-visible:ring-offset-[#172129]';
 
 function StatusBadge({ status, darkMode }) {
   const styles = {
@@ -3317,7 +3317,7 @@ const WaterfallRow = React.memo(function WaterfallRow({
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
   const [resultsMap, setResultsMap] = useState({});
   const [executionState, setExecutionState] = useState(EXECUTION_STATE.IDLE);
@@ -3621,10 +3621,10 @@ export default function App() {
   const isPaused = executionState === EXECUTION_STATE.PAUSED;
   const isActiveRun = isRunning || isPaused;
 
-  const appBg = darkMode ? 'bg-[#090C10] text-[#E6EDF3]' : 'bg-[#F3F4F6] text-[#0F1419]';
-  const surface = darkMode ? 'bg-[#0F141C] border-[#1F2733]' : 'bg-white border-slate-300';
-  const subSurface = darkMode ? 'bg-[#090C10] border-[#1F2733]' : 'bg-[#F8FAFC] border-slate-300';
-  const muted = darkMode ? 'text-slate-400' : 'text-slate-600';
+  const appBg = darkMode ? 'bg-[#10191f] text-[#edf2ee]' : 'bg-[#f4f0e7] text-[#182024]';
+  const surface = darkMode ? 'bg-[#172129] border-[#354955]' : 'bg-[#fffdf8] border-[#c9c1b2]';
+  const subSurface = darkMode ? 'bg-[#111a20] border-[#354955]' : 'bg-[#ebe5d9] border-[#c9c1b2]';
+  const muted = darkMode ? 'text-[#b3c0c2]' : 'text-[#536266]';
 
   const coreBlockingTests = useMemo(
     () => TEST_REGISTRY.filter((t) => t.metricGroup === METRIC_GROUP.AD_TRACKER_BLOCKING),
@@ -3658,27 +3658,25 @@ export default function App() {
   );
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-sky-600 selection:text-white ${appBg}`}>
-      <header className={`sticky top-0 z-30 border-b px-3 py-2 flex flex-wrap items-center justify-between gap-3 ${surface}`}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-xs bg-sky-600 text-white flex items-center justify-center font-mono font-bold text-xs">
+    <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-[#c65322] selection:text-white ${appBg}`}>
+      <header className={`sticky top-0 z-30 border-b px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-4 ${surface}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full border-2 border-[#c65322] text-[#c65322] flex items-center justify-center font-bold text-sm" aria-hidden="true">
             AB
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-sm tracking-tight">{BRAND_NAME}</span>
-            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-xs border tabular-nums ${subSurface}`}>
-              v{APP_VERSION} // {EXPECTED_REGISTRY_COUNT} AUDITED VECTORS
-            </span>
+          <div>
+            <div className="font-bold text-base tracking-[-0.02em]">{BRAND_NAME}</div>
+            <div className={`text-[11px] ${muted}`}>Evidence-led browser diagnostics · v{APP_VERSION}</div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap font-mono text-xs tabular-nums">
           <div
             title={`Ad & Tracker Blocking Score (0-100): Evaluated strictly from ${scoreSummary.maxScoredTests} controlled ad/tracker blocking fixtures.`}
-            className={`px-2.5 py-1 rounded-xs border flex items-center gap-2 ${subSurface}`}
+            className={`px-3 py-1.5 rounded-sm border flex items-center gap-2 ${subSurface}`}
           >
-            <span className={`text-[10px] uppercase ${muted}`}>AD/TRACKER BLOCK SCORE:</span>
-            <span className="font-bold text-sky-500">
+            <span className={`text-[10px] ${muted}`}>CORE SCORE</span>
+            <span className="font-bold text-[#c65322]">
               {scoreSummary.overallScore !== null ? `${scoreSummary.overallScore}/100` : 'STANDBY'}
             </span>
             <span className={`text-[10px] ${muted}`}>
@@ -3688,9 +3686,9 @@ export default function App() {
 
           <div
             title="Browser Privacy & Hardening Signals: Evaluated separately so GPC/DNT or WebGL masking never inflate the Ad-Blocking Score."
-            className={`px-2.5 py-1 rounded-xs border flex items-center gap-2 ${subSurface}`}
+            className={`hidden md:flex px-3 py-1.5 rounded-sm border items-center gap-2 ${subSurface}`}
           >
-            <span className={`text-[10px] uppercase ${muted}`}>PRIVACY SIGNALS:</span>
+            <span className={`text-[10px] ${muted}`}>PRIVACY SIGNALS</span>
             <span className="font-bold text-teal-500">
               {scoreSummary.privacySignalsSummary.activeCount}/{scoreSummary.privacySignalsSummary.totalSignals} ACTIVE
             </span>
@@ -3701,20 +3699,20 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => runTestsBatch(coreBlockingTests)}
-                className={`inline-flex items-center gap-1 px-2.5 min-h-[30px] rounded-xs text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer ${FOCUS_RING}`}
+                className={`hidden lg:inline-flex items-center gap-1 px-3 min-h-10 rounded-sm text-[11px] font-semibold border border-[#355f50] text-[#216447] hover:bg-[#e5f1e8] dark:hover:bg-[#1a3028] cursor-pointer ${FOCUS_RING}`}
                 title={`Run only the ${coreBlockingTests.length} Core Controlled Ad & Tracker Blocking Fixtures`}
               >
                 <Play aria-hidden="true" className="w-3 h-3 fill-current" />
-                Run Core ({coreBlockingTests.length})
+                Run core ({coreBlockingTests.length})
               </button>
               <button
                 type="button"
                 onClick={() => runTestsBatch(TEST_REGISTRY)}
-                className={`inline-flex items-center gap-1 px-2.5 min-h-[30px] rounded-xs text-[11px] font-semibold bg-sky-700 hover:bg-sky-600 text-white cursor-pointer ${FOCUS_RING}`}
+                className={`inline-flex items-center gap-1 px-3 min-h-10 rounded-sm text-[11px] font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white cursor-pointer ${FOCUS_RING}`}
                 title={`Run all ${EXPECTED_REGISTRY_COUNT} tests across all 14 domains`}
               >
                 <Play aria-hidden="true" className="w-3 h-3 fill-current" />
-                Run All ({EXPECTED_REGISTRY_COUNT})
+                Run full diagnostic
               </button>
             </div>
           ) : (
@@ -3743,14 +3741,14 @@ export default function App() {
             type="button"
             onClick={() => setDarkMode((d) => !d)}
             aria-label="Toggle theme"
-            className={`p-1.5 rounded-xs border cursor-pointer ${subSurface} ${FOCUS_RING}`}
+            className={`min-w-10 min-h-10 p-2 rounded-sm border cursor-pointer ${subSurface} ${FOCUS_RING}`}
           >
             {darkMode ? <Sun aria-hidden="true" className="w-3.5 h-3.5 text-amber-400" /> : <Moon aria-hidden="true" className="w-3.5 h-3.5" />}
           </button>
         </div>
       </header>
 
-      <div className={`border-b px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono ${subSurface}`}>
+      <div className={`border-b px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs ${subSurface}`}>
         <nav className="flex items-center gap-1 flex-wrap" aria-label="Primary navigation">
           {[
             { id: 'overview', label: 'Overview', icon: ShieldCheck },
@@ -3766,10 +3764,10 @@ export default function App() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs border text-[11px] cursor-pointer transition ${FOCUS_RING} ${
+                className={`inline-flex items-center gap-1.5 min-h-11 sm:min-h-9 px-3 py-1 rounded-sm border text-[12px] cursor-pointer transition-colors ${FOCUS_RING} ${
                   active
-                    ? 'bg-sky-700 text-white border-sky-600 font-bold'
-                    : `border-transparent ${muted} hover:text-current`
+                    ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-semibold'
+                    : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white`
                 }`}
               >
                 <Icon aria-hidden="true" className="w-3.5 h-3.5" />
@@ -3777,7 +3775,7 @@ export default function App() {
               </button>
             );
           })}
-          <span className={`mx-1 hidden sm:inline ${muted}`}>| Advanced:</span>
+          <span className={`mx-1 hidden lg:inline ${muted}`}>Advanced tools</span>
           {[
             { id: 'workbench', label: 'Catalog', icon: Terminal },
             { id: 'layers', label: 'Analysis & exports', icon: Layers },
@@ -3789,7 +3787,7 @@ export default function App() {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-xs border text-[10px] cursor-pointer transition ${FOCUS_RING} ${active ? 'bg-sky-700 text-white border-sky-600 font-bold' : `border-transparent ${muted} hover:text-current`}`}>
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`inline-flex items-center gap-1.5 min-h-11 sm:min-h-8 px-3 py-1 rounded-sm border text-[11px] cursor-pointer transition-colors ${FOCUS_RING} ${active ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-semibold' : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white`}`}>
                 <Icon aria-hidden="true" className="w-3 h-3" />
                 <span>{tab.label}</span>
               </button>
@@ -3797,13 +3795,11 @@ export default function App() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3 text-[10px]">
-          <span className={muted}>
-            CORRELATION_MODE: <strong>{fixtureServerStatus.mode}</strong>
-          </span>
+        <div className="hidden xl:flex items-center gap-3 text-[11px]">
+          <span className={muted}>Fixture mode: <strong>{fixtureServerStatus.mode}</strong></span>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className={muted}>DOM_FIXTURE_MOUNT:</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-600" aria-hidden="true" />
+            <span className={muted}>DOM fixture:</span>
             <div
               ref={sandboxStageRef}
               aria-label="Isolated DOM Fixture Stage"
@@ -3815,20 +3811,18 @@ export default function App() {
         </div>
       </div>
 
-      <div className={`border-b px-3 py-2 ${surface}`}>
+      <div className={`border-b px-4 sm:px-6 py-3 ${surface}`}>
         <div className="flex items-center justify-between text-[10px] font-mono mb-1.5">
-          <span className={`uppercase font-bold ${muted}`}>
-            {TEST_REGISTRY.length}-PIN LOGIC ANALYZER WAFER // [CORE AD/TRACKER BLOCKING ({coreBlockingTests.length})] [PRIVACY SIGNALS ({privacySignalTests.length})] [EXPLORATORY ({exploratoryTests.length})]
+          <span className={`font-semibold ${muted}`}>
+            Test index · {coreBlockingTests.length} core checks · {privacySignalTests.length} privacy signals · {exploratoryTests.length} exploratory probes
           </span>
           <div className="flex items-center gap-3 tabular-nums">
-            <span className="text-emerald-500">BLK: {scoreSummary.passedCount}</span>
-            <span className="text-amber-500">PRT: {scoreSummary.partialCount}</span>
-            <span className="text-rose-500">ALW: {scoreSummary.failedCount}</span>
-            <span className="text-teal-400">SIG_ON: {scoreSummary.privacySignalsSummary.activeCount}</span>
-            <span className="text-purple-400">CAUSE_UNK: {scoreSummary.causeUnknownCount}</span>
+            <span className="text-emerald-700 dark:text-emerald-400">Blocked {scoreSummary.passedCount}</span>
+            <span className="text-amber-700 dark:text-amber-300">Partial {scoreSummary.partialCount}</span>
+            <span className="text-rose-700 dark:text-rose-300">Allowed {scoreSummary.failedCount}</span>
           </div>
         </div>
-        <div className="grid grid-cols-11 sm:grid-cols-22 gap-1 font-mono tabular-nums">
+        <div className="grid grid-cols-11 sm:grid-cols-22 gap-1.5 font-mono tabular-nums">
           {TEST_REGISTRY.map((t) => {
             const st = resultsMap[t.id]?.status;
             const selected = inspectedTestId === t.id;
@@ -3846,9 +3840,9 @@ export default function App() {
                 key={t.id}
                 type="button"
                 onClick={() => setInspectedTestId(t.id)}
-                title={`${t.id} (${t.metricGroup}): ${t.name} — ${st || 'STANDBY'}`}
+                title={`${t.id} (${t.metricGroup}): ${t.name}; ${st || 'STANDBY'}`}
                 className={`h-6 rounded-xs border text-[9px] font-bold flex items-center justify-center cursor-pointer transition ${cellBg} ${
-                  selected ? 'ring-2 ring-sky-400 z-10' : ''
+                  selected ? 'ring-2 ring-[#c65322] z-10' : ''
                 }`}
               >
                 {t.id.replace('-', '')}
@@ -3858,45 +3852,52 @@ export default function App() {
         </div>
       </div>
 
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10">
         {activeTab === 'overview' && (
-          <section className="max-w-3xl mx-auto py-8 sm:py-14" aria-labelledby="overview-title">
-            <p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Evidence-first browser diagnostics</p>
-            <h1 id="overview-title" className="mt-3 text-3xl sm:text-5xl font-bold tracking-tight">Understand what your browser visibly blocks.</h1>
-            <p className={`mt-5 max-w-2xl text-base leading-7 ${muted}`}>Run a small controlled scan first, then inspect the evidence. Results describe browser-observable behavior; they do not identify a specific extension, DNS service, VPN, or privacy mode.</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`inline-flex items-center gap-2 min-h-11 px-4 rounded-sm font-semibold bg-sky-700 hover:bg-sky-600 text-white disabled:opacity-50 ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4 fill-current" />Quick Scan ({quickScanTests.length})</button>
-              <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`inline-flex items-center gap-2 min-h-11 px-4 rounded-sm border font-semibold disabled:opacity-50 ${subSurface} ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4" />Full Diagnostic ({TEST_REGISTRY.length})</button>
+          <section className="grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,.75fr)] lg:items-end" aria-labelledby="overview-title">
+            <div className="max-w-3xl py-4 sm:py-10">
+              <p className="text-sm font-semibold text-[#c65322]">Start with what a page can actually observe.</p>
+              <h1 id="overview-title" className="mt-4 text-4xl sm:text-6xl font-bold tracking-[-0.05em] leading-[.98]">Inspect browser behavior without inventing the cause.</h1>
+              <p className={`mt-6 max-w-2xl text-base sm:text-lg leading-8 ${muted}`}>Run a focused scan first, then follow the evidence. This lab records browser-visible behavior and its limits. It does not identify an extension, DNS service, VPN, or privacy mode.</p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-sm font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white disabled:opacity-50 ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4 fill-current" />Run quick scan ({quickScanTests.length})</button>
+                <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-sm border font-semibold disabled:opacity-50 ${surface} ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4" />Run full diagnostic ({TEST_REGISTRY.length})</button>
+              </div>
             </div>
-            <div className={`mt-10 border-t pt-5 text-sm leading-6 ${muted}`}>
-              <strong className="text-current">Quick Scan checks:</strong> DSP-01, TPA-01, TPA-05, TRK-01, INT-03, and AAB-01. It uses actual registered controlled fixtures; it is not a score preview or an extension detector.
-            </div>
+            <aside className={`border-t-4 border-[#c65322] p-5 sm:p-6 ${surface}`} aria-label="Quick scan scope">
+              <p className="text-sm font-semibold">Quick scan scope</p>
+              <p className={`mt-2 text-sm leading-6 ${muted}`}>Six registered controlled checks, selected to give a useful first look without presenting a shortcut as an authoritative score.</p>
+              <ol className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm font-medium">
+                {quickScanTests.map((test) => <li key={test.id} className="border-b border-current/15 pb-2">{test.id}</li>)}
+              </ol>
+              <button type="button" onClick={() => setActiveTab('learn')} className={`mt-6 text-sm font-semibold underline underline-offset-4 ${FOCUS_RING}`}>Read the method</button>
+            </aside>
           </section>
         )}
 
         {activeTab === 'run' && (
-          <section className="max-w-3xl mx-auto py-8" aria-labelledby="run-title">
-            <p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Choose a diagnostic depth</p>
-            <h1 id="run-title" className="mt-3 text-2xl font-bold">Run a test</h1>
+          <section className="max-w-4xl mx-auto py-4 sm:py-8" aria-labelledby="run-title">
+            <p className="text-sm font-semibold text-[#c65322]">Choose a diagnostic depth</p>
+            <h1 id="run-title" className="mt-2 text-3xl font-bold tracking-[-0.03em]">Run a test</h1>
             <p className={`mt-2 ${muted}`}>The current run state and progress shown below are live. You can pause or cancel at any time.</p>
-            <div className={`mt-6 border-y py-5 flex flex-wrap gap-3 ${subSurface}`}>
-              <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`min-h-11 px-4 rounded-sm bg-sky-700 hover:bg-sky-600 text-white font-semibold disabled:opacity-50 ${FOCUS_RING}`}>Quick Scan — {quickScanTests.length} controlled checks</button>
-              <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`min-h-11 px-4 rounded-sm border font-semibold disabled:opacity-50 ${surface} ${FOCUS_RING}`}>Full Diagnostic — {TEST_REGISTRY.length} cases</button>
+            <div className={`mt-6 border-y py-5 flex flex-col sm:flex-row gap-3 ${subSurface}`}>
+              <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`min-h-12 px-5 rounded-sm bg-[#c65322] hover:bg-[#a9431c] text-white font-semibold disabled:opacity-50 ${FOCUS_RING}`}>Run quick scan · {quickScanTests.length} checks</button>
+              <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`min-h-12 px-5 rounded-sm border font-semibold disabled:opacity-50 ${surface} ${FOCUS_RING}`}>Run full diagnostic · {TEST_REGISTRY.length} cases</button>
             </div>
             <p className={`mt-5 font-mono text-sm ${muted}`}>State: <strong className="text-current">{executionState}</strong>{runProgress.total > 0 ? ` · ${runProgress.completed}/${runProgress.total} complete · current: ${runProgress.currentTestId || '—'}` : ''}</p>
           </section>
         )}
 
         {activeTab === 'results' && (
-          <section className="max-w-4xl mx-auto py-8" aria-labelledby="results-title">
-            <p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Plain-language result summary</p>
-            <h1 id="results-title" className="mt-3 text-2xl font-bold">Results</h1>
+          <section className="max-w-4xl mx-auto py-4 sm:py-8" aria-labelledby="results-title">
+            <p className="text-sm font-semibold text-[#c65322]">Plain-language result summary</p>
+            <h1 id="results-title" className="mt-2 text-3xl font-bold tracking-[-0.03em]">Results</h1>
             <p className={`mt-2 ${muted}`}>{scoreSummary.overallScore === null ? 'A blocking score is unavailable until eligible controlled evidence is completed.' : `Core blocking score: ${scoreSummary.overallScore}/100 from ${scoreSummary.eligibleTotalTests}/${scoreSummary.maxScoredTests} eligible results.`}</p>
-            <div className={`mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 border-y py-5 ${subSurface}`}>
-              <div><div className="text-2xl font-bold">{runProgress.completed || terminalResults.length}</div><div className={`text-xs ${muted}`}>completed</div></div>
-              <div><div className="text-2xl font-bold text-emerald-500">{scoreSummary.passedCount}</div><div className={`text-xs ${muted}`}>blocked</div></div>
-              <div><div className="text-2xl font-bold text-amber-500">{scoreSummary.partialCount}</div><div className={`text-xs ${muted}`}>partial</div></div>
-              <div><div className="text-2xl font-bold text-rose-500">{scoreSummary.failedCount}</div><div className={`text-xs ${muted}`}>allowed</div></div>
+            <div className={`mt-6 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 border-y py-5 ${subSurface}`}>
+              <div><div className="text-3xl font-bold">{runProgress.completed || terminalResults.length}</div><div className={`text-xs ${muted}`}>completed</div></div>
+              <div><div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{scoreSummary.passedCount}</div><div className={`text-xs ${muted}`}>blocked</div></div>
+              <div><div className="text-3xl font-bold text-amber-700 dark:text-amber-300">{scoreSummary.partialCount}</div><div className={`text-xs ${muted}`}>partial</div></div>
+              <div><div className="text-3xl font-bold text-rose-700 dark:text-rose-300">{scoreSummary.failedCount}</div><div className={`text-xs ${muted}`}>allowed</div></div>
             </div>
             <p className={`mt-5 text-sm leading-6 ${muted}`}>Privacy signals and external reachability probes are displayed separately. They do not increase the core blocking score because they cannot independently prove a blocking rule.</p>
             <button type="button" onClick={() => setActiveTab('workbench')} className={`mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Inspect detailed evidence</button>

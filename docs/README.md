@@ -15,6 +15,7 @@ This directory documents the current AdBlocker Test Lab repository and the two s
 | [Technical requirements document](trd.md) | Target architecture, interfaces, data rules, security constraints, and implementation requirements | Current source and planned requirements |
 | [UI and UX specification](ui-ux-specification.md) | Information architecture, interaction behavior, accessibility, responsive rules, and UI acceptance criteria | Current UI and planned requirements |
 | [Technology stack](technology-stack.md) | Current dependencies, build pipeline, hosting assumptions, and adoption rules | Current package/configuration files |
+| [Design rationale](design-rationale.md) | UI audit, design read, and deliberate visual decisions | Current source and approved redesign direction |
 | [Quality and release strategy](quality-and-release-strategy.md) | Test layers, release gates, evidence capture, and ownership checklist | Current validation and planned requirements |
 | [Engineering log](../log.md) | Append-only record of implemented changes, verification, and deployment status | Verified repository activity |
 

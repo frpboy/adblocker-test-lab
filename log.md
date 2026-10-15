@@ -2,6 +2,15 @@
 
 This is an append-only record of repository changes and their verification. Add a new dated entry for each material change; do not rewrite earlier entries. Record only commands and outcomes that were actually observed.
 
+## 2026-10-15 — Evidence workspace visual redesign
+
+- Reworked the application shell, primary navigation, test index, first-run overview, run selection, and results summary into a restrained evidence workspace without changing registry, execution, scoring, report, or provider behavior.
+- Made the readable light theme the default while preserving the existing working theme toggle; safety orange is reserved for run actions and keyboard focus, and result colors remain semantic.
+- Added `docs/design-rationale.md` with the UI audit, design read, decision reasons, and explicit draft-without-direction status.
+- Validation: `npm run typecheck` and `npm run build` passed; `git diff --check` completed without diff errors. Contrast checks passed for body text, muted text, the orange action color, and dark-mode foreground pairs.
+- Browser validation: a user-owned Vite server already held port 8080. Browser automation timed out while attaching to that session, so no rendered local UI claim is recorded for this change.
+- Deployment status: no deployment was performed. Current production remains stale and provider verification cannot be resolved from the local source until the current build is deployed to the exact verified host.
+
 ## 2026-10-15 — Integration readiness
 
 - Verified the complete `feature/simplified-first-run` branch before integration.
