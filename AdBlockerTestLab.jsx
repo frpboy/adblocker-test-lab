@@ -3316,7 +3316,7 @@ const WaterfallRow = React.memo(function WaterfallRow({
 });
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('workbench');
+  const [activeTab, setActiveTab] = useState('overview');
   const [darkMode, setDarkMode] = useState(true);
 
   const [resultsMap, setResultsMap] = useState({});
@@ -3508,6 +3508,14 @@ export default function App() {
     }
   }, [executionState]);
 
+  const startRun = useCallback(
+    (testsToRun) => {
+      setActiveTab('results');
+      return runTestsBatch(testsToRun);
+    },
+    [runTestsBatch]
+  );
+
   const scoreSummary = useMemo(
     () => calculateBenchmarkScore(resultsMap, categoryWeights),
     [resultsMap, categoryWeights]
@@ -3630,6 +3638,24 @@ export default function App() {
     () => TEST_REGISTRY.filter((t) => t.metricGroup === METRIC_GROUP.EXPLORATORY_PROBE),
     []
   );
+  const quickScanTests = useMemo(
+    () =>
+      TEST_REGISTRY.filter((t) =>
+        ['DSP-01', 'TPA-01', 'TPA-05', 'TRK-01', 'INT-03', 'AAB-01'].includes(t.id)
+      ),
+    []
+  );
+  const terminalResults = Object.values(resultsMap).filter((result) =>
+    [
+      RESULT_STATUS.BLOCKED,
+      RESULT_STATUS.PARTIAL,
+      RESULT_STATUS.ALLOWED,
+      RESULT_STATUS.INCONCLUSIVE,
+      RESULT_STATUS.UNSUPPORTED,
+      RESULT_STATUS.ERROR,
+      RESULT_STATUS.CANCELLED
+    ].includes(result.status)
+  );
 
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-sky-600 selection:text-white ${appBg}`}>
@@ -3725,14 +3751,13 @@ export default function App() {
       </header>
 
       <div className={`border-b px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono ${subSurface}`}>
-        <nav className="flex items-center gap-1 flex-wrap" aria-label="Workbench Views">
+        <nav className="flex items-center gap-1 flex-wrap" aria-label="Primary navigation">
           {[
-            { id: 'workbench', label: `01 // Live Workbench (${EXPECTED_REGISTRY_COUNT})`, icon: Terminal },
-            { id: 'monetag', label: '02 // Dedicated Monetag Chamber (MTG-01/02)', icon: Box },
-            { id: 'scoring', label: '03 // Scoring Engine & Denominator Math', icon: Sliders },
-            { id: 'layers', label: '04 // Layer Attribution & Exports', icon: Layers },
-            { id: 'verification', label: '05 // P0/P1 Audit & Unit Suite (15/15)', icon: CheckCircle2 },
-            { id: 'architecture', label: '06 // Modular & Server API Code', icon: Server }
+            { id: 'overview', label: 'Overview', icon: ShieldCheck },
+            { id: 'run', label: 'Run a Test', icon: Play },
+            { id: 'results', label: 'Results', icon: CheckCircle2 },
+            { id: 'learn', label: 'Learn & Methodology', icon: Layers },
+            { id: 'settings', label: 'Settings', icon: Sliders }
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -3748,6 +3773,24 @@ export default function App() {
                 }`}
               >
                 <Icon aria-hidden="true" className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+          <span className={`mx-1 hidden sm:inline ${muted}`}>| Advanced:</span>
+          {[
+            { id: 'workbench', label: 'Catalog', icon: Terminal },
+            { id: 'layers', label: 'Analysis & exports', icon: Layers },
+            { id: 'scoring', label: 'Score configuration', icon: Sliders },
+            { id: 'monetag', label: 'Monetag chamber', icon: Box },
+            { id: 'verification', label: 'Audit suite', icon: CheckCircle2 },
+            { id: 'architecture', label: 'Diagnostics', icon: Server }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-xs border text-[10px] cursor-pointer transition ${FOCUS_RING} ${active ? 'bg-sky-700 text-white border-sky-600 font-bold' : `border-transparent ${muted} hover:text-current`}`}>
+                <Icon aria-hidden="true" className="w-3 h-3" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -3816,6 +3859,58 @@ export default function App() {
       </div>
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-3">
+        {activeTab === 'overview' && (
+          <section className="max-w-3xl mx-auto py-8 sm:py-14" aria-labelledby="overview-title">
+            <p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Evidence-first browser diagnostics</p>
+            <h1 id="overview-title" className="mt-3 text-3xl sm:text-5xl font-bold tracking-tight">Understand what your browser visibly blocks.</h1>
+            <p className={`mt-5 max-w-2xl text-base leading-7 ${muted}`}>Run a small controlled scan first, then inspect the evidence. Results describe browser-observable behavior; they do not identify a specific extension, DNS service, VPN, or privacy mode.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`inline-flex items-center gap-2 min-h-11 px-4 rounded-sm font-semibold bg-sky-700 hover:bg-sky-600 text-white disabled:opacity-50 ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4 fill-current" />Quick Scan ({quickScanTests.length})</button>
+              <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`inline-flex items-center gap-2 min-h-11 px-4 rounded-sm border font-semibold disabled:opacity-50 ${subSurface} ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4" />Full Diagnostic ({TEST_REGISTRY.length})</button>
+            </div>
+            <div className={`mt-10 border-t pt-5 text-sm leading-6 ${muted}`}>
+              <strong className="text-current">Quick Scan checks:</strong> DSP-01, TPA-01, TPA-05, TRK-01, INT-03, and AAB-01. It uses actual registered controlled fixtures; it is not a score preview or an extension detector.
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'run' && (
+          <section className="max-w-3xl mx-auto py-8" aria-labelledby="run-title">
+            <p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Choose a diagnostic depth</p>
+            <h1 id="run-title" className="mt-3 text-2xl font-bold">Run a test</h1>
+            <p className={`mt-2 ${muted}`}>The current run state and progress shown below are live. You can pause or cancel at any time.</p>
+            <div className={`mt-6 border-y py-5 flex flex-wrap gap-3 ${subSurface}`}>
+              <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`min-h-11 px-4 rounded-sm bg-sky-700 hover:bg-sky-600 text-white font-semibold disabled:opacity-50 ${FOCUS_RING}`}>Quick Scan — {quickScanTests.length} controlled checks</button>
+              <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`min-h-11 px-4 rounded-sm border font-semibold disabled:opacity-50 ${surface} ${FOCUS_RING}`}>Full Diagnostic — {TEST_REGISTRY.length} cases</button>
+            </div>
+            <p className={`mt-5 font-mono text-sm ${muted}`}>State: <strong className="text-current">{executionState}</strong>{runProgress.total > 0 ? ` · ${runProgress.completed}/${runProgress.total} complete · current: ${runProgress.currentTestId || '—'}` : ''}</p>
+          </section>
+        )}
+
+        {activeTab === 'results' && (
+          <section className="max-w-4xl mx-auto py-8" aria-labelledby="results-title">
+            <p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Plain-language result summary</p>
+            <h1 id="results-title" className="mt-3 text-2xl font-bold">Results</h1>
+            <p className={`mt-2 ${muted}`}>{scoreSummary.overallScore === null ? 'A blocking score is unavailable until eligible controlled evidence is completed.' : `Core blocking score: ${scoreSummary.overallScore}/100 from ${scoreSummary.eligibleTotalTests}/${scoreSummary.maxScoredTests} eligible results.`}</p>
+            <div className={`mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 border-y py-5 ${subSurface}`}>
+              <div><div className="text-2xl font-bold">{runProgress.completed || terminalResults.length}</div><div className={`text-xs ${muted}`}>completed</div></div>
+              <div><div className="text-2xl font-bold text-emerald-500">{scoreSummary.passedCount}</div><div className={`text-xs ${muted}`}>blocked</div></div>
+              <div><div className="text-2xl font-bold text-amber-500">{scoreSummary.partialCount}</div><div className={`text-xs ${muted}`}>partial</div></div>
+              <div><div className="text-2xl font-bold text-rose-500">{scoreSummary.failedCount}</div><div className={`text-xs ${muted}`}>allowed</div></div>
+            </div>
+            <p className={`mt-5 text-sm leading-6 ${muted}`}>Privacy signals and external reachability probes are displayed separately. They do not increase the core blocking score because they cannot independently prove a blocking rule.</p>
+            <button type="button" onClick={() => setActiveTab('workbench')} className={`mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Inspect detailed evidence</button>
+          </section>
+        )}
+
+        {activeTab === 'learn' && (
+          <section className="max-w-3xl mx-auto py-8" aria-labelledby="learn-title"><p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Methodology</p><h1 id="learn-title" className="mt-3 text-2xl font-bold">What this lab can and cannot show</h1><p className={`mt-4 leading-7 ${muted}`}>Controlled fixtures can show whether a browser-visible behavior occurred. Failed third-party requests can have many causes, including connectivity, policy, DNS, or an outage. The lab reports that uncertainty instead of naming the software or network layer responsible.</p><button type="button" onClick={() => setActiveTab('verification')} className={`mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Open audit suite</button></section>
+        )}
+
+        {activeTab === 'settings' && (
+          <section className="max-w-3xl mx-auto py-8" aria-labelledby="settings-title"><p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Preferences</p><h1 id="settings-title" className="mt-3 text-2xl font-bold">Settings</h1><p className={`mt-4 ${muted}`}>Theme is available here. Score weights and technical run configuration remain in Advanced Tools so first-run choices stay focused.</p><button type="button" onClick={() => setDarkMode((value) => !value)} className={`mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Use {darkMode ? 'light' : 'dark'} theme</button><button type="button" onClick={() => setActiveTab('scoring')} className={`ml-3 mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Advanced score configuration</button></section>
+        )}
+
         {activeTab === 'workbench' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
             <div className={`lg:col-span-7 border rounded-xs overflow-hidden ${surface}`}>
