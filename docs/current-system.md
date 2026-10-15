@@ -31,7 +31,7 @@ At mount the app:
 2. Executes the in-app verification suite and stores its results for the Methodology view.
 3. Reads `prefers-reduced-motion` when available.
 
-The interface exposes overview, run-benchmark, laboratory, protection-analysis, reports, methodology, and settings views. It also supports keyboard focus for laboratory search, status and validity filters, a detailed test modal, reduced-motion preference, and a theme switch.
+The interface exposes a live workbench, isolated Monetag chamber, scoring view, layer/export view, verification suite, and architecture view. It also supports test search/filtering, a detailed test inspector, reduced-motion preference, and a theme switch.
 
 ## Registry and configuration
 
@@ -39,15 +39,15 @@ The interface exposes overview, run-benchmark, laboratory, protection-analysis, 
 
 The registry is the source of count displays and integrity checking. Do not add or remove entries without keeping their audit metadata complete. The internal verification only asserts registry uniqueness and audit metadata completeness; it does not validate that every live browser result is correct in every engine or network environment.
 
-The eight default weighted categories are Advertising Resource Blocking, Tracker and Beacon Blocking, Intrusive Advertisement Prevention, Cosmetic Filtering, Script and Resource Filtering, Privacy and Storage Protections, Redirect and Popup Prevention, and Network Filtering Evidence. Default weights total 100 percent.
+The seven default weighted categories cover core ad/tracker blocking only. Privacy signals and exploratory probes are rendered separately and do not contribute to the weighted score. Default core-category weights total 100 percent.
 
 ## Execution lifecycle
 
 `runTestsBatch` queues selected records, creates a worker pool based on the user-selected concurrency, and calls `executeAuditedTest` for each record. Each completed result replaces its queued placeholder in `resultsMap`.
 
-The lifecycle state is `IDLE`, `QUEUED`, `RUNNING`, `PAUSED`, `COMPLETED`, or `CANCELLED`. Result statuses are `BLOCKED`, `PARTIAL`, `ALLOWED`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`, `CANCELLED`, `QUEUED`, and `RUNNING`.
+The lifecycle state is `IDLE`, `QUEUED`, `RUNNING`, `PAUSED`, `COMPLETED`, or `CANCELLED`. Result statuses include `BLOCKED`, `PARTIAL`, `ALLOWED`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`, `CANCELLED`, `REQUEST_FAILED_CAUSE_UNKNOWN`, `CONSISTENT_WITH_FILTERING`, `SIGNAL_ACTIVE`, and `SIGNAL_INACTIVE`.
 
-Pause and cancel are cooperative queue controls. Pause waits before another queued case is claimed. Cancel marks remaining queued work as cancelled, but does not currently pass an `AbortSignal` into an already-running fetch, timer, or iframe operation. This is a real implementation limit, not merely a UI caveat.
+Pause waits before another queued case is claimed. Cancel aborts the active batch through `AbortController`, marks remaining queued work as cancelled, and propagates the signal into cancellable execution work. Executor cleanup still needs browser-engine coverage before claiming universal behavior.
 
 ## Six-stage protection trace
 

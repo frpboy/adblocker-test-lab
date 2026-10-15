@@ -7,10 +7,10 @@ Every test is labelled with one of three validity classes.
 | Validity class | Meaning | Core-score treatment |
 | --- | --- | --- |
 | Controlled First-Party Fixture | A local DOM or same-origin behavior can be observed with a stated control | Eligible only when the record is marked scoring eligible and has a usable result |
-| Exploratory Third-Party Endpoint | An external resource probe that cannot isolate the cause of failure | Excluded by default; an optional setting can include exploratory results |
-| Browser Privacy Signal or API Inspection | A browser capability or privacy-signal observation | Usually diagnostic; individual active signals may be eligible when the registry says so |
+| Exploratory Third-Party Endpoint | An external resource probe that cannot isolate the cause of failure | Always excluded from the authoritative core score |
+| Browser Privacy Signal or API Inspection | A browser capability or privacy-signal observation | Reported in a separate privacy index; excluded from the authoritative core score |
 
-The current registry has 53 entries. The UI derives rather than hardcodes its current breakdown: 37 entries are marked scoring eligible, 9 have exploratory-external validity, and 9 have capability-signal validity. Validity class and score eligibility are separate fields; do not infer one from the other.
+The current registry has 55 entries: 35 core ad/tracker-blocking cases, 11 exploratory probes, and 9 privacy signals. The UI derives the group counts from the registry. Metric group and score eligibility are separate fields; do not infer one from the other.
 
 ## Result semantics
 
@@ -23,6 +23,9 @@ The current registry has 53 entries. The UI derives rather than hardcodes its cu
 | UNSUPPORTED | Required API is unavailable | Excluded |
 | ERROR | Execution or infrastructure error | Excluded |
 | CANCELLED | User stopped queued execution | Excluded |
+| REQUEST_FAILED_CAUSE_UNKNOWN | External reachability failed, but client code cannot attribute the cause | Excluded |
+| CONSISTENT_WITH_FILTERING | Observation is compatible with filtering but not sufficient to prove it | Excluded |
+| SIGNAL_ACTIVE / SIGNAL_INACTIVE | Separate browser privacy/hardening observation | Excluded |
 
 Queued and running are operational states, not scored outcomes.
 
@@ -30,7 +33,7 @@ Queued and running are operational states, not scored outcomes.
 
 `calculateBenchmarkScore` validates each configured category weight: non-finite or negative values become zero and values are capped at 100. It then calculates category scores from eligible completed results, applies partial credit, and renormalizes participating category weights. If no eligible evidence exists, the UI should present no meaningful score rather than fabricate a baseline.
 
-The engine excludes `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`, and `CANCELLED` outcomes from the denominator. Non-eligible records are also excluded unless the user enables the exploratory-score setting. The verification suite checks empty state handling, all-inconclusive handling, exclusion of third-party exploratory probes by default, deterministic partial-credit calculation, and zero-weight safety.
+The engine excludes `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`, `CANCELLED`, `REQUEST_FAILED_CAUSE_UNKNOWN`, and `CONSISTENT_WITH_FILTERING` from the denominator. Privacy signals and exploratory probes are always excluded. The verification suite checks empty state handling, all-inconclusive handling, exploratory exclusion, deterministic partial-credit calculation, and zero-weight safety.
 
 ## Important measurement boundaries
 

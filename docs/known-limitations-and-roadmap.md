@@ -4,7 +4,7 @@
 
 ### Single-file prototype
 
-The registry, execution engine, scoring, diagnostics, exports, and UI live in one 5,000-plus-line JSX file. This is workable as a prototype but makes reviews, targeted testing, and changes to the measurement model unnecessarily difficult.
+The registry, execution engine, scoring, diagnostics, exports, and UI live in one large JSX file. This is workable as a prototype but makes reviews, targeted testing, and changes to the measurement model unnecessarily difficult.
 
 ### No controlled fixture service
 
@@ -12,7 +12,7 @@ This repository has no server routes, fixture service, or request-arrival store.
 
 ### In-flight cancellation
 
-Queue cancellation is cooperative. A currently executing request, timeout, or iframe action can continue until its existing operation completes. Future executor work should accept an `AbortSignal`, pass it to fetches where supported, clear timers, and retire generated DOM/iframe resources deterministically.
+Batch cancellation propagates an `AbortSignal` to cancellable executor work and marks queued cases as cancelled. The behavior still needs end-to-end browser-matrix coverage, especially for generated DOM/iframe cleanup and browser-specific fetch cancellation.
 
 ### Attribution limits
 

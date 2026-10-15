@@ -56,7 +56,7 @@ The score area must show:
 | Test table/list | Supports search by ID/name/description/section and filters by status, section, and audit validity |
 | Test detail modal | Closes with Escape, has a visible close control, returns focus to the invoking element, and provides run/methodology actions |
 | Trace | Shows six ordered stages with observed vs inferred evidence type and no color-only meaning |
-| Pause/cancel | Announces state change; cancellation describes queued vs active-work limitation until abort support exists |
+| Pause/cancel | Announces state changes and exposes immediate abort progress; browser-matrix validation remains required for active-work cleanup |
 | Export | Provides format name and error feedback; never injects unsanitized text into HTML output |
 | Theme/reduced motion | Theme has adequate contrast; reduced-motion preference is respected and can be changed |
 | Notifications | Announce action success/failure without blocking keyboard use or persisting beyond relevance |

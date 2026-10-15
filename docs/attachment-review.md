@@ -19,10 +19,10 @@ The prior review reached several important conclusions. Each is classified below
 | Topic | Attachment claim | Current interpretation |
 | --- | --- | --- |
 | Prototype status | The Canvas output was substantive but monolithic, not production-ready | Still applicable: the live app is a monolithic prototype |
-| Registry count | The historical registry contained 53 entries while UI/verification text expected 42 | Addressed in current source: count displays and integrity check derive from `TEST_REGISTRY`; Chromium verification displayed 53 of 53 unique IDs |
+| Registry count | The historical registry contained 53 entries while UI/verification text expected 42 | Historical issue superseded by the current 55-case registry; count displays and integrity assertions now agree with `TEST_REGISTRY` |
 | Score inflation | API presence and ordinary browser policies could be mistaken for blocking | Partially addressed in current executor and registry wording; maintain strict review of each capability/privacy signal before scoring |
 | Fixture backend | No fixture server independently recorded controlled request arrival | Still applicable: no server fixture implementation exists in this repository |
-| Cancellation | Cancellation only affected queued work, not active operations | Still applicable: no abort propagation is implemented |
+| Cancellation | Cancellation only affected queued work, not active operations | Addressed in current source with `AbortController` propagation; browser-matrix cleanup verification remains pending |
 | UI | Repetitive dashboard/card styling and a monolithic component reduce clarity and maintainability | Design recommendation remains open; no visual redesign is claimed here |
 | Proposed Next.js repository | A multi-file architecture with API routes, test engine, scoring, server fixtures, security config, and automation was described in text | Reference-only. The attachment does not provide a verified initialized repository or passing test evidence |
 

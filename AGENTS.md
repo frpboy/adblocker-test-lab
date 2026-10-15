@@ -55,6 +55,6 @@ The root prototype is intentionally JavaScript/JSX. Do not disable strict TypeSc
 ## Known implementation limits
 
 - There is no controlled fixture backend or durable request-arrival verification yet.
-- Cancellation is cooperative and does not abort all active work.
+- Batch cancellation uses `AbortController`; validate executor cleanup in supported browser engines before claiming universal interruption behavior.
 - Chromium smoke evidence exists; Firefox and WebKit release evidence does not.
 - Full development audit findings from Tailwind 3 require a reviewed major-version migration; do not run `npm audit fix --force`.

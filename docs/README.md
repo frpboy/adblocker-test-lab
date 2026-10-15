@@ -26,11 +26,11 @@ This directory documents the current AdBlocker Test Lab repository and the two s
 
 ## Current snapshot
 
-- Product: AdBlocker Test Lab, version 3.2.0.
+- Product: AdBlocker Test Lab, version 4.1.0.
 - Runtime: a Vite + React single-page application.
-- Registry: 53 test entries across 13 sections; the live UI currently derives its counts from the registry.
-- Current core-score display: 37 scoring-eligible entries, 9 exploratory external entries, and 9 browser capability entries. Some capability entries can still be scoring eligible only when an active privacy signal is observed; category labels are not score eligibility by themselves.
-- Validation recorded before this documentation was added: strict TypeScript check passed, production Vite build passed, production dependency audit reported no vulnerabilities, and the in-app verification suite passed eight assertions in Chromium.
+- Registry: 55 test entries across 14 sections: 35 core ad/tracker-blocking cases, 9 privacy signals, and 11 exploratory probes. All displayed group counts derive from the registry.
+- The 0–100 score includes only eligible core ad/tracker-blocking results. Privacy signals and exploratory probes are reported separately and cannot increase that score.
+- Current validation: strict TypeScript check, production Vite build, production dependency audit, browser smoke test, and all 15 in-app assertions must pass for a release.
 
 ## How to update these documents
 

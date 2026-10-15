@@ -4,7 +4,7 @@
 
 AdBlocker Test Lab is an evidence-focused browser diagnostics product. A visitor runs a selection of tests and receives observable results about ad-resource patterns, trackers, cosmetic filtering, privacy signals, popups, and network-loading behavior. The product must show evidence and limitations, not invent results or claim to identify an installed blocker.
 
-The implemented product is a client-side Vite/React single-page application with a 53-case registry. The target product adds reliable controlled fixtures, stronger automated validation, and an optional approved live-ad exploratory mode without weakening the benchmark's evidence standards.
+The implemented product is a client-side Vite/React single-page application with a 55-case registry: 35 core blocking cases, 9 privacy signals, and 11 exploratory probes. The target product adds reliable controlled fixtures, stronger automated validation, and an optional approved live-ad exploratory mode without weakening the benchmark's evidence standards.
 
 ## Problem
 
@@ -59,14 +59,14 @@ People cannot easily tell what their browser privacy configuration blocks, hides
 | ID | Requirement | Current state | Acceptance evidence |
 | --- | --- | --- | --- |
 | PRD-01 | Show the benchmark purpose, limits, and current run state before tests run | Implemented | Browser UI snapshot and copy review |
-| PRD-02 | Display 53 registry cases with ID, category, audit data, filters, and search | Implemented | Registry integrity verification plus laboratory UI |
-| PRD-03 | Run selected cases and surface queued, running, terminal, paused, and cancelled states | Implemented with cooperative cancellation | Browser interaction test |
+| PRD-02 | Display 55 registry cases with ID, category, audit data, filters, and search | Implemented | Registry integrity verification plus laboratory UI |
+| PRD-03 | Run selected cases and surface queued, running, terminal, paused, and cancelled states | Implemented with abort propagation | Browser interaction test |
 | PRD-04 | Show a six-stage evidence trace for every executed case | Implemented | Trace component inspection and browser test |
 | PRD-05 | Keep `BLOCKED`, `PARTIAL`, `ALLOWED`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`, and `CANCELLED` semantically distinct | Implemented | Unit/in-app verification and score tests |
 | PRD-06 | Score only eligible usable results and surface no score when there is no eligible evidence | Implemented | Score unit tests |
 | PRD-07 | Export user-readable and machine-readable results safely | Implemented | HTML/JSON export inspection with escaping test |
 | PRD-08 | Verify controlled network fixtures independently of browser request outcome | Planned | Fixture protocol integration test |
-| PRD-09 | Stop active execution promptly when the user cancels | Planned | Abort/cancellation end-to-end test |
+| PRD-09 | Stop active execution promptly when the user cancels | Implemented; browser-matrix proof pending | Abort/cancellation end-to-end test |
 | PRD-10 | Isolate approved live-ad experiments from authoritative scoring | Planned | Provider approval record and exploratory-mode test |
 
 ## Core user journeys
