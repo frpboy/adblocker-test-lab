@@ -7,6 +7,7 @@ This is an append-only record of repository changes and their verification. Add 
 - Verified the complete `feature/simplified-first-run` branch before integration.
 - Validation: `npm run typecheck`, `npm run build`, and `git diff --check` passed.
 - Branch inventory: only `main` and `feature/simplified-first-run` existed locally/remotely; no additional worktrees or unrelated branch histories required merging.
+- Integration: merged into `main` as `03c77a5 Merge feature/simplified-first-run` and pushed to `origin/main`.
 
 ## 2026-10-15 — Approved provider metadata and loader
 
