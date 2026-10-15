@@ -4,6 +4,10 @@
 
 A browser-based lab for exploring ad-resource blocking, tracking protection, cosmetic filtering, privacy signals, popup containment, and observable resource-loading behavior.
 
+## Documentation
+
+See [docs/README.md](docs/README.md) for the current architecture, measurement model, operational guidance, known limitations, roadmap, and the detailed review of the supplied project attachments.
+
 ## Current status
 
 This repository begins with the supplied React/TSX prototype. Treat its tests and scores as a work in progress until each test is verified in target browsers. Browser APIs cannot always distinguish an extension block from DNS filtering, CSP, browser-native protections, firewalls, or ordinary network failures; inconclusive outcomes must remain inconclusive.
