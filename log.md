@@ -2,6 +2,12 @@
 
 This is an append-only record of repository changes and their verification. Add a new dated entry for each material change; do not rewrite earlier entries. Record only commands and outcomes that were actually observed.
 
+## 2026-10-15 — Integration readiness
+
+- Verified the complete `feature/simplified-first-run` branch before integration.
+- Validation: `npm run typecheck`, `npm run build`, and `git diff --check` passed.
+- Branch inventory: only `main` and `feature/simplified-first-run` existed locally/remotely; no additional worktrees or unrelated branch histories required merging.
+
 ## 2026-10-15 — Approved provider metadata and loader
 
 - Added the Monetag ownership-verification meta tag to `index.html`.
