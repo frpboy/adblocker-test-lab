@@ -11,6 +11,11 @@ This directory documents the current AdBlocker Test Lab repository and the two s
 | [Operations and deployment](operations-and-deployment.md) | Local workflow, deployment checklist, configuration, and ad-integration boundary | Current source code and repository documentation |
 | [Known limitations and roadmap](known-limitations-and-roadmap.md) | Proven limitations, risks, and sequenced work | Current source code plus clearly labelled recommendations |
 | [Attachment review](attachment-review.md) | Detailed record of the supplied Canvas/proposal discussion and what remains reference-only | Supplied attachments |
+| [Product requirements document](prd.md) | Product purpose, users, functional requirements, success criteria, and non-goals | Current source and accepted product direction |
+| [Technical requirements document](trd.md) | Target architecture, interfaces, data rules, security constraints, and implementation requirements | Current source and planned requirements |
+| [UI and UX specification](ui-ux-specification.md) | Information architecture, interaction behavior, accessibility, responsive rules, and UI acceptance criteria | Current UI and planned requirements |
+| [Technology stack](technology-stack.md) | Current dependencies, build pipeline, hosting assumptions, and adoption rules | Current package/configuration files |
+| [Quality and release strategy](quality-and-release-strategy.md) | Test layers, release gates, evidence capture, and ownership checklist | Current validation and planned requirements |
 
 ## Source-of-truth rules
 
