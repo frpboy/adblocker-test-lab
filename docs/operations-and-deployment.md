@@ -9,6 +9,8 @@ npm install
 npm run dev
 ```
 
+The development and production-preview server default to port `8080`. Open `http://localhost:8080`; `strictPort` makes startup fail rather than silently selecting another port when 8080 is unavailable.
+
 Use these gates before pushing or deploying:
 
 ```powershell

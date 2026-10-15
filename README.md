@@ -21,6 +21,8 @@ npm install
 npm run dev
 ```
 
+The local server runs at `http://localhost:8080` by default. It fails fast if port 8080 is already occupied.
+
 Create a production build:
 
 ```bash
