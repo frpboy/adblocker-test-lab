@@ -59,3 +59,17 @@ This is an append-only record of repository changes and their verification. Add 
 - Verified primary navigation from Overview to Methodology and back, plus light and dark theme rendering.
 - No diagnostic run was started during this UI validation; registry, result, and score evidence remain untouched.
 - Deployment status: no deployment or provider re-verification was performed.
+
+## 2026-10-15 — Mobile navigation correction
+
+- Mobile review found that the advanced controls and 55-cell index consumed too much first-viewport space.
+- Replaced the always-visible mobile advanced controls with a labelled `More tools` disclosure and replaced the mobile grid with a labelled route to the complete catalog.
+- Validation: `npm run typecheck`, `npm run build`, and `git diff --check` passed. Browser inspection at a 390px viewport verified both the collapsed state and expanded `More tools` state.
+- Updated the document theme color to match the default light evidence workspace.
+- Deployment status: no deployment was performed.
+
+## 2026-10-15 — Production provider verification follow-up
+
+- Direct production inspection confirmed `https://lab.frpboy.in/` serves the v4.1 evidence workspace, the Monetag verification meta tag, and the approved AdSense loader.
+- Direct Monetag dashboard inspection now marks `lab.frpboy.in` as `Verified`.
+- The dashboard still reports a zone-installation error for the configured live zone. No zone script was added because the repository policy requires explicit provider approval and a documented isolated exploratory-mode design before mounting live-ad code.
