@@ -10,7 +10,10 @@ The app presents evidence, its confidence, and alternative explanations. This bo
 
 | Path | Responsibility |
 | --- | --- |
-| `AdBlockerTestLab.jsx` | Main prototype: registry, evidence/tracing helpers, scoring, environment collection, exports, test executor, and all React UI views |
+| `AdBlockerTestLab.jsx` | Main prototype: registry, evidence/tracing helpers, executor, and React UI views; delegates live score display and HTML export to focused modules |
+| `src/lab/scoring.js` | Pure core-score calculation; accepts a registry and normalized result map |
+| `src/lab/reporting.js` | Escaped standalone HTML report builder |
+| `scripts/fixture-service.mjs` | Local-only first-party fixture receipt service for development and protocol tests |
 | `src/main.tsx` | React entry point that mounts the lab in `React.StrictMode` |
 | `src/styles.css` | Global stylesheet entry |
 | `index.html` | HTML shell, metadata, inline SVG favicon, and module entry |
@@ -73,6 +76,10 @@ The application reads ordinary browser-visible properties such as user agent hin
 The application can create a summary, JSON report, and standalone HTML report in the browser and trigger downloads with a temporary Blob URL. Report generation escapes HTML user-controlled/test strings before inserting them into the HTML export; the in-app verification suite includes an escaping assertion.
 
 User-reported extension, VPN, and notes data are deliberately distinguished from automated observations. The current repository contains no server, database, analytics pipeline, or persistent backend; browser session data therefore remains in client memory unless the user exports it.
+
+## Local fixture protocol
+
+`scripts/fixture-service.mjs` provides a development-only HTTP fixture service. It creates opaque run IDs, records a fixture arrival against an exact run/test pair in a local JSON receipt file, and exposes a verification response for that pair. Its test proves correlation in one local process. It is not configured for Vercel or production and its file receipt store is not a shared durable store; do not treat it as multi-instance or deployed fixture evidence.
 
 ## Approved third-party ad loader
 

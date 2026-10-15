@@ -18,6 +18,8 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
+import { calculateBenchmarkScore as calculateExtractedBenchmarkScore } from './src/lab/scoring.js';
+import { generateHtmlReport as generateExtractedHtmlReport } from './src/lab/reporting.js';
 
 export const APP_VERSION = '4.1.0';
 export const SCHEMA_VERSION = '2026.10.adblockertestlab.v4.1';
@@ -3518,7 +3520,7 @@ export default function App() {
   );
 
   const scoreSummary = useMemo(
-    () => calculateBenchmarkScore(resultsMap, categoryWeights),
+    () => calculateExtractedBenchmarkScore(resultsMap, categoryWeights, TEST_REGISTRY),
     [resultsMap, categoryWeights]
   );
 
@@ -4395,7 +4397,15 @@ export default function App() {
                   type="button"
                   onClick={() =>
                     triggerDownload(
-                      generateHtmlReport({ scoreSummary, resultsMap, userReported }),
+                      generateExtractedHtmlReport({
+                        brandName: BRAND_NAME,
+                        appVersion: APP_VERSION,
+                        brandPromise: BRAND_PROMISE,
+                        registry: TEST_REGISTRY,
+                        scoreSummary,
+                        resultsMap,
+                        userReported
+                      }),
                       'adblocker-test-lab-v4.1.html',
                       'text/html;charset=utf-8;'
                     )

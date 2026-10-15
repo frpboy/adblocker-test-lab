@@ -73,3 +73,19 @@ This is an append-only record of repository changes and their verification. Add 
 - Direct production inspection confirmed `https://lab.frpboy.in/` serves the v4.1 evidence workspace, the Monetag verification meta tag, and the approved AdSense loader.
 - Direct Monetag dashboard inspection now marks `lab.frpboy.in` as `Verified`.
 - The dashboard still reports a zone-installation error for the configured live zone. No zone script was added because the repository policy requires explicit provider approval and a documented isolated exploratory-mode design before mounting live-ad code.
+
+## 2026-10-15 — Browser validation, module extraction, and local fixture protocol
+
+- Baseline: local `main` and `origin/main` both resolved to `3c4ef61315edddcff727548576fdd9efa26a79c2` before this change.
+- Production validation: `https://lab.frpboy.in/` rendered v4.1.0 at 1920x873 and showed the six Quick Scan IDs. A 390x844 capture showed labelled `More tools`, `Browse all 55 test records`, and no horizontal overflow (`scrollWidth=375`, `clientWidth=375`). Captured Chrome user agent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36`. Desktop and 390px screenshots were captured through browser automation during this validation.
+- Deployment evidence: the Vercel production deployment `3b3FBXfy1PuRAsnz3RLWjj4r6RoG` was Ready and identified source commit `8dd638df37f78ec28ea71c5f9afdd26f4a94dc22`; it is behind local/current `main` at `3c4ef61`. Production therefore cannot be claimed to be deployed from latest `main`.
+- Local interaction evidence at `http://127.0.0.1:8080`: empty Results view showed an unavailable score with zero completed results; Quick Scan completed six cases and showed a 0/100 score from 6/35 eligible results in this Chrome profile; DSP-01 detail showed all six trace stages. The Full Diagnostic run reached 51 completed cases during observation. Pause/cancel controls and escaped-HTML download could not be conclusively exercised because the run completed before the control action was delivered and the browser download wait timed out; no pass claim is made for those paths.
+- Change: added standard-library Node tests, extracted the active score-display and HTML-export seams to `src/lab/`, and added `scripts/fixture-service.mjs`. The fixture service records and verifies an opaque run/test receipt in a local JSON file; it is development-only and not a deployed multi-instance fixture backend.
+- Validation: `npm test` passed (3 tests); `npm run typecheck` passed; `npm run build` passed (Vite 6.4.4, `dist/assets/index-COA8O12O.js`); `git diff --check` passed.
+- Deployment status: no commit, push, deployment, provider action, or production fixture activation was performed.
+
+## 2026-10-15 — In-app audit follow-up
+
+- Browser validation at `http://127.0.0.1:8080` opened the Audit suite after the module extraction. The visible suite summary reported `15 / 15` passed assertions.
+- The local `Export Escaped HTML` action displayed the `Exported adblocker-test-lab-v4.1.html` success toast. The automation download-event wait remains unavailable, so no downloaded-file artifact path is recorded.
+- Deployment status: no deployment was performed.

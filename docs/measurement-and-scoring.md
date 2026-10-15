@@ -56,3 +56,5 @@ Before adding a test, document all of the following in its registry record:
 6. The limitation a user must see before interpreting the result.
 
 Prefer controlled first-party fixtures with independently verifiable request arrival. The current static Vite application has no fixture backend or request-arrival recorder, so relative-path probes alone cannot establish that a valid controlled resource was served. A resolved fetch can still represent an unexpected response, and a failure can still have many causes.
+
+The repository includes a local-only fixture-protocol service for development testing. It can verify a correlated run/test arrival within one local process, but it is not mounted in the Vite app or deployed with a shared durable store. Until that production boundary exists, browser-only network outcomes retain their current non-authoritative limitations.
