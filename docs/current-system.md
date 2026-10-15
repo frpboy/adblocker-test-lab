@@ -31,7 +31,7 @@ At mount the app:
 2. Executes the in-app verification suite and stores its results for the Methodology view.
 3. Reads `prefers-reduced-motion` when available.
 
-The interface exposes a live workbench, isolated Monetag chamber, scoring view, layer/export view, verification suite, and architecture view. It also supports test search/filtering, a detailed test inspector, reduced-motion preference, and a theme switch.
+The initial route is an Overview with a Quick Scan and Full Diagnostic. Quick Scan runs exactly `DSP-01`, `TPA-01`, `TPA-05`, `TRK-01`, `INT-03`, and `AAB-01`; Full Diagnostic uses `TEST_REGISTRY`. Both invoke the same batch runner and route to the Results view. The live workbench, isolated Monetag chamber, scoring view, layer/export view, verification suite, and architecture view remain reachable under Advanced Tools.
 
 ## Registry and configuration
 
@@ -71,3 +71,7 @@ The application reads ordinary browser-visible properties such as user agent hin
 The application can create a summary, JSON report, and standalone HTML report in the browser and trigger downloads with a temporary Blob URL. Report generation escapes HTML user-controlled/test strings before inserting them into the HTML export; the in-app verification suite includes an escaping assertion.
 
 User-reported extension, VPN, and notes data are deliberately distinguished from automated observations. The current repository contains no server, database, analytics pipeline, or persistent backend; browser session data therefore remains in client memory unless the user exports it.
+
+## Approved third-party ad loader
+
+The document head contains an operator-approved asynchronous Google AdSense loader. It is third-party code, not a test fixture or a result signal. The runner never reads its presence or outcome into the core score, privacy-signal index, or attribution analysis. A blocked or loaded ad-loader request must not be interpreted as proof of a particular extension, DNS service, VPN, or browser setting.

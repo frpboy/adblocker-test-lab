@@ -32,6 +32,7 @@ People cannot easily tell what their browser privacy configuration blocks, hides
 
 ### Implemented goals
 
+- Provide an Overview with an honest measurement boundary, a six-case Quick Scan, and a full-registry diagnostic path.
 - Present a registry of diagnostic cases with audit metadata.
 - Run all, selected, filtered, or individual tests from the browser UI.
 - Show lifecycle state, per-test result, six-stage trace, score summary, environmental context, and methodology.
@@ -59,6 +60,7 @@ People cannot easily tell what their browser privacy configuration blocks, hides
 | ID | Requirement | Current state | Acceptance evidence |
 | --- | --- | --- | --- |
 | PRD-01 | Show the benchmark purpose, limits, and current run state before tests run | Implemented | Browser UI snapshot and copy review |
+| PRD-01a | Provide a Quick Scan that runs `DSP-01`, `TPA-01`, `TPA-05`, `TRK-01`, `INT-03`, and `AAB-01` through the real runner | Implemented | Browser interaction test and source review |
 | PRD-02 | Display 55 registry cases with ID, category, audit data, filters, and search | Implemented | Registry integrity verification plus laboratory UI |
 | PRD-03 | Run selected cases and surface queued, running, terminal, paused, and cancelled states | Implemented with abort propagation | Browser interaction test |
 | PRD-04 | Show a six-stage evidence trace for every executed case | Implemented | Trace component inspection and browser test |

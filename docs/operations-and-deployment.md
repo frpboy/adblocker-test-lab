@@ -43,7 +43,7 @@ To deploy safely:
 
 ## Environment configuration
 
-`.env.example` reserves `VITE_MONETAG_SCRIPT_URL`. No Monetag code or live ad tag is currently committed. Do not add a live script URL, site key, or publisher token to source control. Configure secrets in the host environment only after the provider has explicitly approved the intended use case.
+The production HTML includes an operator-approved asynchronous Google AdSense loader. It is not a benchmark fixture, does not contribute to any score, and must not be used to infer protection status. Any future provider script must receive equivalent explicit approval, remain labelled as third-party/exploratory, and stay outside authoritative score evidence.
 
 ## Live-ad integration boundary
 
