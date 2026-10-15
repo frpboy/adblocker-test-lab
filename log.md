@@ -52,3 +52,10 @@ This is an append-only record of repository changes and their verification. Add 
 - Verification:
 - Deployment status:
 - Follow-up / known limitation:
+
+## 2026-10-15 — Evidence workspace browser follow-up
+
+- Local Vite validation at `http://127.0.0.1:8080` rendered the redesigned Overview with the 55-case index and all six Quick Scan IDs.
+- Verified primary navigation from Overview to Methodology and back, plus light and dark theme rendering.
+- No diagnostic run was started during this UI validation; registry, result, and score evidence remain untouched.
+- Deployment status: no deployment or provider re-verification was performed.

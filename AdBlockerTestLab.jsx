@@ -1029,7 +1029,7 @@ export const TEST_REGISTRY = [
     limitations: 'First-party path test.'
   }),
 
-  // 5.11 Fingerprinting and Privacy-Related Signals (4 Tests — Separate Privacy Index)
+  // 5.11 Fingerprinting and Privacy-Related Signals (4 Tests: Separate Privacy Index)
   createTestSpec({
     id: 'FPR-01',
     section: '5.11 Fingerprinting & Privacy Signals',
@@ -1221,7 +1221,7 @@ export const TEST_REGISTRY = [
     limitations: 'Exploratory external probe; excluded from core score denominator by default.'
   }),
 
-  // 5.14 Dedicated Monetag Ad-Network Test Blocks (2 Tests — Isolated Test Chamber)
+  // 5.14 Dedicated Monetag Ad-Network Test Blocks (2 Tests: Isolated Test Chamber)
   createTestSpec({
     id: 'MTG-01',
     section: '5.14 Dedicated Monetag Test Blocks',
@@ -3286,14 +3286,14 @@ const WaterfallRow = React.memo(function WaterfallRow({
         <StatusBadge status={status} darkMode={darkMode} />
       </td>
       <td className="py-1.5 px-2 font-mono text-[10px] whitespace-nowrap opacity-80">
-        {result?.confidence?.shortLabel || '—'}
+        {result?.confidence?.shortLabel || '-'}
       </td>
       <td className="py-1.5 px-2.5 w-28">
         <div className="flex items-center gap-1.5 font-mono text-[10px]">
           <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-xs overflow-hidden">
             {status && <div className={`h-full ${barColor}`} style={{ width: `${barWidthPct}%` }} />}
           </div>
-          <span className="w-9 text-right opacity-75">{duration ? `${duration}ms` : '—'}</span>
+          <span className="w-9 text-right opacity-75">{duration ? `${duration}ms` : '-'}</span>
         </div>
       </td>
       <td className="py-1.5 px-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -3318,6 +3318,7 @@ const WaterfallRow = React.memo(function WaterfallRow({
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [darkMode, setDarkMode] = useState(false);
+  const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
 
   const [resultsMap, setResultsMap] = useState({});
   const [executionState, setExecutionState] = useState(EXECUTION_STATE.IDLE);
@@ -3763,7 +3764,10 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setAdvancedToolsOpen(false);
+                }}
                 className={`inline-flex items-center gap-1.5 min-h-11 sm:min-h-9 px-3 py-1 rounded-sm border text-[12px] cursor-pointer transition-colors ${FOCUS_RING} ${
                   active
                     ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-semibold'
@@ -3775,6 +3779,14 @@ export default function App() {
               </button>
             );
           })}
+          <button
+            type="button"
+            aria-expanded={advancedToolsOpen}
+            onClick={() => setAdvancedToolsOpen((open) => !open)}
+            className={`sm:hidden inline-flex items-center min-h-11 px-3 py-1 rounded-sm border text-[12px] font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
+          >
+            {advancedToolsOpen ? 'Hide tools' : 'More tools'}
+          </button>
           <span className={`mx-1 hidden lg:inline ${muted}`}>Advanced tools</span>
           {[
             { id: 'workbench', label: 'Catalog', icon: Terminal },
@@ -3787,7 +3799,7 @@ export default function App() {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`inline-flex items-center gap-1.5 min-h-11 sm:min-h-8 px-3 py-1 rounded-sm border text-[11px] cursor-pointer transition-colors ${FOCUS_RING} ${active ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-semibold' : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white`}`}>
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`${advancedToolsOpen ? 'inline-flex' : 'hidden'} sm:inline-flex items-center gap-1.5 min-h-11 sm:min-h-8 px-3 py-1 rounded-sm border text-[11px] cursor-pointer transition-colors ${FOCUS_RING} ${active ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-semibold' : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white`}`}>
                 <Icon aria-hidden="true" className="w-3 h-3" />
                 <span>{tab.label}</span>
               </button>
@@ -3822,7 +3834,14 @@ export default function App() {
             <span className="text-rose-700 dark:text-rose-300">Allowed {scoreSummary.failedCount}</span>
           </div>
         </div>
-        <div className="grid grid-cols-11 sm:grid-cols-22 gap-1.5 font-mono tabular-nums">
+        <button
+          type="button"
+          onClick={() => setActiveTab('workbench')}
+          className={`sm:hidden mt-3 min-h-11 w-full rounded-sm border text-sm font-semibold ${subSurface} ${FOCUS_RING}`}
+        >
+          Browse all {TEST_REGISTRY.length} test records
+        </button>
+        <div className="hidden sm:grid sm:grid-cols-22 gap-1.5 font-mono tabular-nums">
           {TEST_REGISTRY.map((t) => {
             const st = resultsMap[t.id]?.status;
             const selected = inspectedTestId === t.id;

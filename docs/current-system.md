@@ -33,7 +33,7 @@ At mount the app:
 
 The initial route is an Overview with a Quick Scan and Full Diagnostic. Quick Scan runs exactly `DSP-01`, `TPA-01`, `TPA-05`, `TRK-01`, `INT-03`, and `AAB-01`; Full Diagnostic uses `TEST_REGISTRY`. Both invoke the same batch runner and route to the Results view. The live workbench, isolated Monetag chamber, scoring view, layer/export view, verification suite, and architecture view remain reachable under Advanced Tools.
 
-The current visual shell is a responsive evidence workspace. Light mode is the default for extended evidence review, with a working dark-mode preference. The Overview gives diagnostic actions precedence over telemetry, and its scope panel exposes the actual Quick Scan case IDs. The shared test index remains available above each view, while fixture details are intentionally hidden on narrower layouts rather than competing with primary navigation.
+The current visual shell is a responsive evidence workspace. Light mode is the default for extended evidence review, with a working dark-mode preference. The Overview gives diagnostic actions precedence over telemetry, and its scope panel exposes the actual Quick Scan case IDs. The shared test index remains available above each view on wider layouts; mobile exposes its full catalog through a labelled action and keeps advanced tools behind a labelled expandable control.
 
 ## Registry and configuration
 
