@@ -1,0 +1,38 @@
+# Engineering Log
+
+This is an append-only record of repository changes and their verification. Add a new dated entry for each material change; do not rewrite earlier entries. Record only commands and outcomes that were actually observed.
+
+## 2026-10-15 — Approved provider metadata and loader
+
+- Added the Monetag ownership-verification meta tag to `index.html`.
+- Added the operator-approved asynchronous Google AdSense loader to `index.html`.
+- Documented that the loader is third-party/exploratory and excluded from scoring, privacy-signal, and attribution results.
+- Validation: `npm run build` passed; the generated `dist/index.html` was confirmed to contain the AdSense loader.
+- Git commit: `24415c5 Add approved AdSense loader` on `feature/simplified-first-run`.
+- Deployment status: not pushed, merged, or deployed. The deployed `https://lab.frpboy.in/` page was observed without the Monetag verification meta tag before this local change is deployed.
+
+## 2026-10-15 — First-run UX simplification
+
+- Added an Overview-first experience with primary navigation for Overview, Run a Test, Results, Learn & Methodology, and Settings.
+- Added Quick Scan using real registry cases `DSP-01`, `TPA-01`, `TPA-05`, `TRK-01`, `INT-03`, and `AAB-01`.
+- Full Diagnostic uses the full 55-case `TEST_REGISTRY`; both routes use the existing batch runner and route to Results.
+- Kept catalog, analysis/exports, score configuration, Monetag chamber, audit suite, and diagnostics reachable under Advanced Tools.
+- Validation: `npm run typecheck` and `npm run build` passed; Chromium local validation rendered Overview, completed Quick Scan, routed to Results, and showed no failed in-app audit assertions.
+- Git commits: `5a000c1 Refactor app navigation and enhance first-run experience`; `196ac5b Document simplified first-run flow`.
+
+## 2026-10-15 — v4.1 registry integrity repair
+
+- Integrated the v4.1 lab implementation and reconciled the registry/UI/verification counts to 55 total cases: 35 core ad/tracker-blocking cases, 9 privacy signals, and 11 exploratory probes.
+- Kept privacy signals and exploratory probes outside the authoritative score.
+- Validation: typecheck, production build, dependency audit (`0 vulnerabilities`), Chromium smoke test, and all 15 in-app assertions passed.
+- Git commit: `d5d1e15 Update lab to v4.1 implementation`.
+
+## Entry template
+
+## YYYY-MM-DD — Short change title
+
+- Change:
+- Files:
+- Verification:
+- Deployment status:
+- Follow-up / known limitation:
