@@ -221,3 +221,13 @@ Implementation updates `docs/current-system.md`,
 The separate user-requested ExoClick verification meta tag is a bounded
 verification-only change. It does not authorize an ExoClick script, provider
 adapter, placement, or score change and is implemented/validated independently.
+
+## Three-provider extension
+
+ExoClick is the third provider. The supplied verification meta tag belongs in
+the static document head and must be present exactly once in the built HTML.
+It establishes neither account acceptance nor ad delivery. ExoClick live zones
+remain unavailable until exact publisher-generated snippets are supplied through
+untracked local/deployment configuration; the adapter presents those formats as
+unavailable rather than inventing values. All three providers share the same
+explicit-session, no-duplicate, evidence-first lifecycle.
