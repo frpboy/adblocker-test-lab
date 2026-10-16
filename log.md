@@ -121,3 +121,9 @@ This is an append-only record of repository changes and their verification. Add 
 - Added an explicit client-side session lifecycle with `IDLE`, `STARTING`, `ACTIVE`, `STOPPING`, `STOPPED`, and `ERROR` states. It creates only app-owned mount/script nodes after a caller invokes Start, refuses duplicate Starts, and removes owned nodes/listeners/observers on Stop.
 - Popunder Stop responses flag that an already-triggered third-party effect can require a document reload; the implementation never clicks, reloads, or generates impressions automatically.
 - Validation: focused lifecycle tests cover idle/start/duplicate-start, cleanup and popunder reload flag, and replacement reload. No provider configuration was supplied and no live script was loaded during this validation.
+
+## 2026-10-16 - Real Ads Stress Lab provider adapters
+
+- Added inert adapters for Adsterra, Monetag, and ExoClick. Adsterra exposes level-based banner/native/social/popunder composition, labels Smartlinks as manual-only, and excludes Popunder from compatible maximum mode. Monetag and ExoClick return no placements until valid configured formats exist.
+- Added sequential Adsterra option consumption so one supplied options object is set immediately before its corresponding placement start and removed afterward. The adapter never appends a script itself.
+- Validation: focused adapter tests cover six distinct banners, popunder exclusion, manual Smartlink handling, empty provider fallback, and sequential options. No live provider request or creative was observed.

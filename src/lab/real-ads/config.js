@@ -31,7 +31,11 @@ function parseScriptDescriptor(value, descriptor) {
   const parsed = parseJson(value);
   if (!parsed || !isHttpsUrl(parsed.scriptUrl)) return null;
 
-  return { ...descriptor, scriptUrl: parsed.scriptUrl };
+  return {
+    ...descriptor,
+    scriptUrl: parsed.scriptUrl,
+    ...(parsed.options && typeof parsed.options === 'object' && !Array.isArray(parsed.options) ? { options: parsed.options } : {})
+  };
 }
 
 function parseFormatList(value, provider) {
@@ -40,7 +44,7 @@ function parseFormatList(value, provider) {
 
   return parsed.flatMap((item) => {
     if (!item || typeof item.id !== 'string' || typeof item.kind !== 'string' || !isHttpsUrl(item.scriptUrl)) return [];
-    return [{ id: item.id, provider, kind: item.kind, scriptUrl: item.scriptUrl }];
+    return [{ id: item.id, provider, kind: item.kind, scriptUrl: item.scriptUrl, compatible: item.compatible !== false }];
   });
 }
 
