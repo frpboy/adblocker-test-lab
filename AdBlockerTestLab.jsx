@@ -31,6 +31,10 @@ import {
 import { calculateBenchmarkScore as calculateExtractedBenchmarkScore } from './src/lab/scoring.js';
 import { generateHtmlReport as generateExtractedHtmlReport } from './src/lab/reporting.js';
 import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
+import NavigationRibbon from './src/components/NavigationRibbon.jsx';
+import OverviewView from './src/components/OverviewView.jsx';
+import ResultsWorkbenchView from './src/components/ResultsWorkbenchView.jsx';
+import { normalizeTab } from './src/lab/navigation.js';
 
 export const APP_VERSION = '4.1.0';
 export const SCHEMA_VERSION = '2026.10.adblockertestlab.v4.1';
@@ -3796,13 +3800,7 @@ export default function App() {
     setTimeout(() => setCopiedRule(false), 2000);
   };
 
-  const normalizedTab = useMemo(() => {
-    if (activeTab === 'workbench' || activeTab === 'layers' || activeTab === 'run') return 'results';
-    if (activeTab === 'learn' || activeTab === 'verification') return 'methodology';
-    if (activeTab === 'scoring' || activeTab === 'monetag' || activeTab === 'architecture') return 'settings';
-    if (activeTab === 'real-ads' || activeTab === 'stress-lab') return 'real-ads';
-    return activeTab;
-  }, [activeTab]);
+  const normalizedTab = useMemo(() => normalizeTab(activeTab), [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'monetag') setSettingsSubTab('monetag');
@@ -3812,759 +3810,103 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-[#c65322] selection:text-white ${appBg}`}>
-      <header className={`sticky top-0 z-30 border-b px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-4 ${surface}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border-2 border-[#c65322] text-[#c65322] flex items-center justify-center font-bold text-sm" aria-hidden="true">
-            AB
-          </div>
-          <div>
-            <div className="font-bold text-base tracking-[-0.02em]">{BRAND_NAME}</div>
-            <div className={`text-[11px] ${muted}`}>Evidence-led browser diagnostics · v{APP_VERSION}</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap font-mono text-xs tabular-nums">
-          <div
-            title={`Ad & Tracker Blocking Score (0-100): Evaluated strictly from ${scoreSummary.maxScoredTests} controlled ad/tracker blocking fixtures.`}
-            className={`px-3 py-1.5 rounded-sm border flex items-center gap-2 ${subSurface}`}
-          >
-            <span className={`text-[10px] ${muted}`}>CORE SCORE</span>
-            <span className="font-bold text-[#c65322]">
-              {scoreSummary.overallScore !== null ? `${scoreSummary.overallScore}/100` : 'STANDBY'}
-            </span>
-            <span className={`text-[10px] ${muted}`}>
-              ({scoreSummary.eligibleTotalTests}/{scoreSummary.maxScoredTests} core)
-            </span>
-          </div>
-
-          <div
-            title="Browser Privacy & Hardening Signals: Evaluated separately so GPC/DNT or WebGL masking never inflate the Ad-Blocking Score."
-            className={`hidden md:flex px-3 py-1.5 rounded-sm border items-center gap-2 ${subSurface}`}
-          >
-            <span className={`text-[10px] ${muted}`}>PRIVACY SIGNALS</span>
-            <span className="font-bold text-teal-500">
-              {scoreSummary.privacySignalsSummary.activeCount}/{scoreSummary.privacySignalsSummary.totalSignals} ACTIVE
-            </span>
-          </div>
-
-          {!isActiveRun ? (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => runTestsBatch(coreBlockingTests)}
-                className={`hidden lg:inline-flex items-center gap-1 px-3 min-h-10 rounded-sm text-[11px] font-semibold border border-[#355f50] text-[#216447] hover:bg-[#e5f1e8] dark:hover:bg-[#1a3028] cursor-pointer ${FOCUS_RING}`}
-                title={`Run only the ${coreBlockingTests.length} Core Controlled Ad & Tracker Blocking Fixtures`}
-              >
-                <Play aria-hidden="true" className="w-3 h-3 fill-current" />
-                Run core ({coreBlockingTests.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => runTestsBatch(TEST_REGISTRY)}
-                className={`inline-flex items-center gap-1 px-3 min-h-10 rounded-sm text-[11px] font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white cursor-pointer ${FOCUS_RING}`}
-                title={`Run all ${EXPECTED_REGISTRY_COUNT} tests across all 14 domains`}
-              >
-                <Play aria-hidden="true" className="w-3 h-3 fill-current" />
-                Run full diagnostic
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={handleTogglePause}
-                className={`inline-flex items-center gap-1 px-2.5 min-h-[30px] rounded-xs text-[11px] font-semibold border cursor-pointer ${subSurface} ${FOCUS_RING}`}
-              >
-                {isPaused ? <Play aria-hidden="true" className="w-3 h-3" /> : <Pause aria-hidden="true" className="w-3 h-3" />}
-                {isPaused ? 'Resume' : 'Pause'}
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelRun}
-                className={`inline-flex items-center gap-1 px-2.5 min-h-[30px] rounded-xs text-[11px] font-semibold bg-rose-700 hover:bg-rose-600 text-white cursor-pointer ${FOCUS_RING}`}
-                title="Immediately aborts in-flight fetch/XHR requests via AbortController"
-              >
-                <Square aria-hidden="true" className="w-3 h-3 fill-current" />
-                Abort Now ({runProgress.completed}/{runProgress.total})
-              </button>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setDarkMode((d) => !d)}
-            aria-label="Toggle theme"
-            className={`min-w-10 min-h-10 p-2 rounded-sm border cursor-pointer ${subSurface} ${FOCUS_RING}`}
-          >
-            {darkMode ? <Sun aria-hidden="true" className="w-3.5 h-3.5 text-amber-400" /> : <Moon aria-hidden="true" className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-      </header>
-
-      {/* Streamlined 4-Tab Navigation */}
-      <div className={`border-b px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs ${subSurface}`}>
-        <nav className="flex items-center gap-1.5 flex-wrap" aria-label="Primary navigation">
-          {[
-            { id: 'overview', label: 'Overview & Scanner', icon: ShieldCheck },
-            { id: 'results', label: 'Results & Workbench', icon: CheckCircle2 },
-            { id: 'real-ads', label: 'Real Ads Stress Lab', icon: Zap },
-            { id: 'methodology', label: 'Methodology & Audit', icon: Layers },
-            { id: 'settings', label: 'Settings & Lab', icon: Sliders }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = normalizedTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 min-h-10 sm:min-h-9 px-3.5 py-1.5 rounded-sm border text-xs cursor-pointer transition-all ${FOCUS_RING} ${
-                  active
-                    ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-bold shadow-xs'
-                    : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5`
-                }`}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon aria-hidden="true" className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-3 text-[11px] font-mono">
-          <span className={muted}>Mode: <strong className="text-current">{fixtureServerStatus.mode}</strong></span>
-          <span className="px-2 py-0.5 rounded-sm border border-slate-300 dark:border-slate-700 bg-black/5 dark:bg-white/5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
-            SANDBOX ISOLATED
-          </span>
-        </div>
-      </div>
+      <NavigationRibbon
+        brandName={BRAND_NAME}
+        appVersion={APP_VERSION}
+        scoreSummary={scoreSummary}
+        isActiveRun={isActiveRun}
+        isPaused={isPaused}
+        handleTogglePause={handleTogglePause}
+        handleCancelRun={handleCancelRun}
+        runProgress={runProgress}
+        runTestsBatch={runTestsBatch}
+        coreBlockingTests={coreBlockingTests}
+        testRegistry={TEST_REGISTRY}
+        expectedRegistryCount={EXPECTED_REGISTRY_COUNT}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        normalizedTab={normalizedTab}
+        setActiveTab={setActiveTab}
+        fixtureServerStatus={fixtureServerStatus}
+        surface={surface}
+        subSurface={subSurface}
+        muted={muted}
+        focusRing={FOCUS_RING}
+      />
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10">
         {normalizedTab === 'overview' && (
-          <div className="space-y-8">
-            <section className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,.75fr)] lg:items-start" aria-labelledby="overview-title">
-              <div className="py-2 sm:py-6">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-sm text-[11px] font-mono font-semibold bg-[#c65322]/10 text-[#c65322] border border-[#c65322]/30 mb-4">
-                  <Shield className="w-3.5 h-3.5" />
-                  EVIDENCE-FIRST BROWSER DIAGNOSTICS
-                </div>
-                <h1 id="overview-title" className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-[-0.04em] leading-[1.02]">
-                  Inspect browser behavior without inventing the cause.
-                </h1>
-                <p className={`mt-5 max-w-2xl text-base sm:text-lg leading-relaxed ${muted}`}>
-                  Run controlled fixtures to measure observable ad blocking, tracker interception, cosmetic filtering, and privacy signals.
-                  We record direct browser-visible evidence and its limitations — without guessing your extensions, VPN, or DNS resolver.
-                </p>
-
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() => startRun(quickScanTests)}
-                    disabled={isActiveRun}
-                    className={`inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-sm font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white disabled:opacity-50 shadow-xs cursor-pointer transition-colors ${FOCUS_RING}`}
-                  >
-                    <Play aria-hidden="true" className="w-4 h-4 fill-current" />
-                    Run Quick Scan (6 checks · ~1.5s)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startRun(TEST_REGISTRY)}
-                    disabled={isActiveRun}
-                    className={`inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-sm border font-semibold disabled:opacity-50 cursor-pointer ${surface} hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${FOCUS_RING}`}
-                  >
-                    <Play aria-hidden="true" className="w-4 h-4" />
-                    Run Full Diagnostic ({EXPECTED_REGISTRY_COUNT} cases)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('results')}
-                    className={`inline-flex items-center justify-center gap-2 min-h-12 px-4 rounded-sm border text-xs font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
-                  >
-                    View Workbench
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Scope & Environment Cards */}
-              <div className="space-y-4">
-                <aside className={`border-t-4 border-[#c65322] p-5 sm:p-6 rounded-xs border shadow-xs ${surface}`} aria-label="Quick scan scope">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold uppercase font-mono tracking-wider text-[#c65322]">Quick Scan Scope</p>
-                    <span className={`text-xs font-mono ${muted}`}>6 CORE VECTORS</span>
-                  </div>
-                  <p className={`mt-2 text-xs leading-relaxed ${muted}`}>
-                    Six registered controlled checks covering core display, script interception, tracking, and anti-adblock detection:
-                  </p>
-                  <ol className="mt-4 grid grid-cols-2 gap-2 text-xs font-mono font-medium">
-                    {quickScanTests.map((test) => (
-                      <li key={test.id} className={`p-2 rounded-xs border flex items-center justify-between ${subSurface}`}>
-                        <span className="font-bold text-[#c65322]">{test.id}</span>
-                        <span className={`text-[10px] truncate max-w-[120px] ${muted}`}>{test.name}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('methodology')}
-                    className={`mt-4 text-xs font-semibold underline underline-offset-4 cursor-pointer text-[#c65322] ${FOCUS_RING}`}
-                  >
-                    Read the evidence methodology →
-                  </button>
-                </aside>
-
-                <div className={`p-5 rounded-xs border space-y-3 text-xs ${surface}`}>
-                  <p className="text-xs font-bold uppercase font-mono tracking-wider">Detected Browser Context</p>
-                  <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
-                    <div className={`p-2 rounded-xs border ${subSurface}`}>
-                      <span className={muted}>Engine Hint:</span>
-                      <div className="font-bold truncate">{envDiagnostics?.engineHint || 'Analyzing...'}</div>
-                    </div>
-                    <div className={`p-2 rounded-xs border ${subSurface}`}>
-                      <span className={muted}>Viewport:</span>
-                      <div className="font-bold">{envDiagnostics?.viewport || 'Calculating...'}</div>
-                    </div>
-                    <div className={`p-2 rounded-xs border ${subSurface}`}>
-                      <span className={muted}>Privacy Signal (GPC):</span>
-                      <div className="font-bold text-teal-600 dark:text-teal-400">
-                        {envDiagnostics?.globalPrivacyControlReported ? 'Active (true)' : 'Inactive'}
-                      </div>
-                    </div>
-                    <div className={`p-2 rounded-xs border ${subSurface}`}>
-                      <span className={muted}>Do Not Track (DNT):</span>
-                      <div className="font-bold">
-                        {envDiagnostics?.doNotTrackReported ? 'Active (1)' : 'Inactive'}
-                      </div>
-                    </div>
-                  </div>
-                  <p className={`text-[10px] ${muted} leading-normal`}>
-                    Note: Visible browser properties are diagnostic context only and cannot prove installed extensions or local VPN adapters.
-                  </p>
-                </div>
-              </div>
-            </section>
-          </div>
+          <OverviewView
+            startRun={startRun}
+            quickScanTests={quickScanTests}
+            testRegistry={TEST_REGISTRY}
+            expectedRegistryCount={EXPECTED_REGISTRY_COUNT}
+            isActiveRun={isActiveRun}
+            setActiveTab={setActiveTab}
+            envDiagnostics={envDiagnostics}
+            scoreSummary={scoreSummary}
+            resultsMap={resultsMap}
+            surface={surface}
+            subSurface={subSurface}
+            muted={muted}
+            focusRing={FOCUS_RING}
+          />
         )}
 
         {normalizedTab === 'results' && (
-          <div className="space-y-6">
-            {/* Active Execution HUD (shown when tests are running or paused) */}
-            {isActiveRun && (
-              <div className={`p-4 rounded-xs border-2 border-[#c65322] space-y-3 shadow-md ${surface}`} role="status" aria-live="polite">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#c65322] animate-ping" />
-                    <span className="font-bold uppercase tracking-wider text-[#c65322]">
-                      {isPaused ? 'Diagnostic Paused' : 'Diagnostic in Progress'}
-                    </span>
-                    <span className={muted}>· Current: <strong>{runProgress.currentTestId || 'Starting'}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleTogglePause}
-                      className={`px-3 py-1 rounded-xs border text-xs font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
-                    >
-                      {isPaused ? 'Resume Run' : 'Pause Run'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancelRun}
-                      className={`px-3 py-1 rounded-xs bg-rose-700 hover:bg-rose-600 text-white text-xs font-semibold cursor-pointer ${FOCUS_RING}`}
-                    >
-                      Abort Now
-                    </button>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#c65322] transition-all duration-300"
-                    style={{ width: `${Math.round((runProgress.completed / (runProgress.total || 1)) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-slate-500">
-                  <span>Completed {runProgress.completed} of {runProgress.total} test vectors</span>
-                  <span>{Math.round((runProgress.completed / (runProgress.total || 1)) * 100)}% complete</span>
-                </div>
-              </div>
-            )}
-
-            {/* Score & Telemetry Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Card 1: Core Blocking Score */}
-              <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className={`font-bold uppercase tracking-wider ${muted}`}>CORE BLOCKING SCORE</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-xs border border-current/20 text-[#c65322]">35 CORE FIXTURES</span>
-                </div>
-                <div className="text-4xl font-bold tracking-tight text-[#c65322]">
-                  {scoreSummary.overallScore !== null ? `${scoreSummary.overallScore}/100` : 'STANDBY'}
-                </div>
-                <p className={`text-xs ${muted}`}>
-                  {scoreSummary.overallScore !== null
-                    ? `From ${scoreSummary.eligibleTotalTests} eligible controlled ad/tracker blocking fixtures.`
-                    : 'Click "Run Quick Scan" or "Run Full Diagnostic" to compute score.'}
-                </p>
-                <div className="pt-2 flex items-center gap-2 text-xs font-mono tabular-nums">
-                  <span className="px-2 py-0.5 rounded-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
-                    {scoreSummary.passedCount} BLOCKED
-                  </span>
-                  <span className="px-2 py-0.5 rounded-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                    {scoreSummary.partialCount} PARTIAL
-                  </span>
-                  <span className="px-2 py-0.5 rounded-xs bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/30">
-                    {scoreSummary.failedCount} ALLOWED
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 2: Privacy Signals */}
-              <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className={`font-bold uppercase tracking-wider ${muted}`}>PRIVACY SIGNALS</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-xs border border-teal-500/40 text-teal-600 dark:text-teal-400">9 SIGNALS</span>
-                </div>
-                <div className="text-4xl font-bold tracking-tight text-teal-600 dark:text-teal-400">
-                  {scoreSummary.privacySignalsSummary.activeCount} / {scoreSummary.privacySignalsSummary.totalSignals} ACTIVE
-                </div>
-                <p className={`text-xs ${muted}`}>
-                  Client-side privacy features (GPC, DNT, referrer policy) harden the browser without inflating the ad score.
-                </p>
-                <div className="pt-2 flex items-center gap-2 text-xs font-mono">
-                  <span className={`px-2 py-0.5 rounded-xs border ${subSurface}`}>
-                    {scoreSummary.privacySignalsSummary.activeCount > 0 ? 'Signals Protected' : 'Default / Inactive'}
-                  </span>
-                  <span className={`text-[11px] ${muted}`}>
-                    ({scoreSummary.privacySignalsSummary.executedSignals} evaluated)
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 3: Protection Confidence */}
-              <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className={`font-bold uppercase tracking-wider ${muted}`}>AUDIT CONFIDENCE</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-xs border border-current/20">{scoreSummary.coveragePercentage}% COVERAGE</span>
-                </div>
-                <div className="text-2xl font-bold tracking-tight">
-                  {scoreSummary.overallConfidence}
-                </div>
-                <p className={`text-xs ${muted}`}>
-                  Direct observations from same-origin and relative path fixtures; no guesses on unseen network layers.
-                </p>
-                <div className="pt-2 flex items-center gap-2 text-xs font-mono">
-                  <span className={`px-2 py-0.5 rounded-xs border ${subSurface}`}>
-                    Mode: {fixtureServerStatus.mode}
-                  </span>
-                  <span className={`text-[11px] ${muted}`}>
-                    {scoreSummary.inconclusiveCount} Inconclusive
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* 7-Category Score Breakdown Grid */}
-            <div className={`p-5 rounded-xs border space-y-4 ${surface}`}>
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 border-current/10">
-                <div>
-                  <h2 className="text-sm font-bold uppercase font-mono tracking-wider">7-Category Protection Breakdown</h2>
-                  <p className={`text-xs ${muted}`}>
-                    Click any category below to filter the test catalog and inspect detailed evidence for that vector group.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSectionFilter('ALL');
-                    setGroupFilter('ALL');
-                    setStatusFilter('ALL');
-                  }}
-                  className={`text-xs font-semibold underline underline-offset-4 cursor-pointer text-[#c65322] ${FOCUS_RING}`}
-                >
-                  Reset category filter
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {scoreSummary.categoryBreakdown.map((cat) => {
-                  const hasEligible = cat.eligibleCount > 0;
-                  const pct = hasEligible ? cat.rawScore : 0;
-                  return (
-                    <div
-                      key={cat.id}
-                      onClick={() => {
-                        const matchingTest = TEST_REGISTRY.find((t) => t.scoringCategory === cat.id);
-                        if (matchingTest) setSectionFilter(matchingTest.section);
-                      }}
-                      className={`p-3 rounded-xs border cursor-pointer hover:border-[#c65322] transition-colors space-y-2 ${subSurface}`}
-                      title={`Filter tests by ${cat.name}`}
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold truncate max-w-[150px]">{cat.name}</span>
-                        <span className="font-mono text-[10px] opacity-75">{cat.configWeight}% weight</span>
-                      </div>
-                      <div className="flex items-end justify-between font-mono">
-                        <span className="text-xl font-bold">
-                          {cat.rawScore !== null ? `${cat.rawScore}%` : 'STANDBY'}
-                        </span>
-                        <span className={`text-[10px] ${muted}`}>
-                          {cat.blocked}/{cat.eligibleCount} blocked
-                        </span>
-                      </div>
-                      {/* Mini progress bar */}
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${pct >= 80 ? 'bg-emerald-600' : pct >= 40 ? 'bg-amber-500' : 'bg-rose-600'}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Consolidated Report Export Bar */}
-            <div className={`p-4 rounded-xs border flex flex-wrap items-center justify-between gap-3 text-xs ${surface}`}>
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#c65322]" />
-                <div>
-                  <span className="font-bold uppercase font-mono tracking-wider">Sanitized Benchmark Exports</span>
-                  <div className={`text-[11px] ${muted}`}>
-                    Export verified telemetry with HTML escaping, separated privacy indices, and audit boundaries.
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() =>
-                    triggerDownload(
-                      generateExtractedHtmlReport({
-                        brandName: BRAND_NAME,
-                        appVersion: APP_VERSION,
-                        brandPromise: BRAND_PROMISE,
-                        registry: TEST_REGISTRY,
-                        scoreSummary,
-                        resultsMap,
-                        userReported
-                      }),
-                      'adblocker-test-lab-report.html',
-                      'text/html;charset=utf-8;'
-                    )
-                  }
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export HTML
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    triggerDownload(
-                      generateJsonReport({
-                        scoreSummary,
-                        protectionAnalysis,
-                        userReported,
-                        envDiagnostics,
-                        resultsMap
-                      }),
-                      'adblocker-test-lab-benchmark.json',
-                      'application/json'
-                    )
-                  }
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export JSON
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    triggerDownload(
-                      generateCsvReport(resultsMap),
-                      'adblocker-test-lab-results.csv',
-                      'text/csv;charset=utf-8;'
-                    )
-                  }
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export CSV
-                </button>
-              </div>
-            </div>
-
-            {/* Interactive Test Workbench */}
-            <div className="space-y-3">
-              {/* Filter and Matrix Controls */}
-              <div className={`p-3 rounded-xs border flex flex-wrap items-center justify-between gap-3 text-xs ${surface}`}>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    { id: 'ALL', label: `ALL (${TEST_REGISTRY.length})` },
-                    { id: METRIC_GROUP.AD_TRACKER_BLOCKING, label: `CORE BLOCKING (${coreBlockingTests.length})` },
-                    { id: METRIC_GROUP.PRIVACY_SIGNAL, label: `PRIVACY SIGNALS (${privacySignalTests.length})` },
-                    { id: METRIC_GROUP.EXPLORATORY_PROBE, label: `EXPLORATORY (${exploratoryTests.length})` }
-                  ].map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => setGroupFilter(g.id)}
-                      className={`px-2.5 py-1 rounded-xs border text-[11px] font-semibold cursor-pointer transition-colors ${
-                        groupFilter === g.id ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] font-bold' : `${subSurface} ${muted}`
-                      }`}
-                    >
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Outcome Filter Pills */}
-                  <div className="flex items-center gap-1 text-[11px] font-mono">
-                    {['ALL', 'BLOCKED', 'PARTIAL', 'ALLOWED', 'OTHER'].map((st) => (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => setStatusFilter(st)}
-                        className={`px-2 py-0.5 rounded-xs border cursor-pointer ${
-                          statusFilter === st ? 'bg-sky-700 text-white border-sky-600 font-bold' : `${subSurface} ${muted}`
-                        }`}
-                      >
-                        {st}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Section Select */}
-                  <select
-                    aria-label="Filter by domain section"
-                    value={sectionFilter}
-                    onChange={(e) => setSectionFilter(e.target.value)}
-                    className={`px-2 py-1 rounded-xs border text-xs font-mono ${subSurface}`}
-                  >
-                    <option value="ALL">All 14 Sections</option>
-                    {allSections.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Search Input */}
-                  <div className="relative">
-                    <Search aria-hidden="true" className="w-3.5 h-3.5 absolute left-2 top-2 opacity-50" />
-                    <input
-                      ref={searchInputRef}
-                      type="search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Filter (/)"
-                      className={`pl-7 pr-2 py-1 w-36 sm:w-44 rounded-xs border text-xs font-mono ${subSurface}`}
-                    />
-                  </div>
-
-                  {/* Toggle 55-Pin Matrix */}
-                  <button
-                    type="button"
-                    onClick={() => setShowWaferMatrix((prev) => !prev)}
-                    className={`px-2.5 py-1 rounded-xs border text-xs font-mono font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
-                  >
-                    {showWaferMatrix ? 'Hide Pin Matrix' : 'Show 55-Pin Matrix'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Collapsible 55-Vector Pin Matrix */}
-              {showWaferMatrix && (
-                <div className={`p-4 rounded-xs border space-y-2 ${surface}`}>
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="font-bold uppercase tracking-wider text-[#c65322]">
-                      55-VECTOR COVERAGE MATRIX (Click chip to inspect)
-                    </span>
-                    <span className={muted}>
-                      Blocked: {scoreSummary.passedCount} · Partial: {scoreSummary.partialCount} · Allowed: {scoreSummary.failedCount}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-6 sm:grid-cols-11 lg:grid-cols-22 gap-1.5 font-mono tabular-nums text-center">
-                    {TEST_REGISTRY.map((t) => {
-                      const st = resultsMap[t.id]?.status;
-                      const selected = inspectedTestId === t.id;
-                      let cellBg = darkMode ? 'bg-[#090C10] border-[#1F2733] text-slate-500' : 'bg-slate-100 border-slate-300 text-slate-500';
-                      if (st === RESULT_STATUS.BLOCKED) cellBg = 'bg-emerald-600 text-white border-emerald-500';
-                      else if (st === RESULT_STATUS.PARTIAL) cellBg = 'bg-amber-500 text-slate-950 border-amber-400';
-                      else if (st === RESULT_STATUS.ALLOWED) cellBg = 'bg-rose-600 text-white border-rose-500';
-                      else if (st === RESULT_STATUS.SIGNAL_ACTIVE) cellBg = 'bg-teal-600 text-white border-teal-500';
-                      else if (st === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN) cellBg = 'bg-purple-700 text-white border-purple-500';
-                      else if (st === RESULT_STATUS.CONSISTENT_WITH_FILTERING) cellBg = 'bg-sky-700 text-white border-sky-500';
-                      else if (st === RESULT_STATUS.INCONCLUSIVE || st === RESULT_STATUS.SIGNAL_INACTIVE) cellBg = 'bg-slate-700 text-slate-200 border-slate-600';
-
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setInspectedTestId(t.id)}
-                          title={`${t.id} (${t.metricGroup}): ${t.name}; ${st || 'STANDBY'}`}
-                          className={`h-7 rounded-xs border text-[10px] font-bold flex items-center justify-center cursor-pointer transition ${cellBg} ${
-                            selected ? 'ring-2 ring-[#c65322] z-10 font-black scale-105' : 'hover:opacity-85'
-                          }`}
-                        >
-                          {t.id.replace('-', '')}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
-                <div className={`lg:col-span-7 border rounded-xs overflow-hidden ${surface}`}>
-                  <div className={`p-2.5 border-b flex items-center justify-between text-xs font-mono ${subSurface}`}>
-                    <span className="font-bold">Showing {filteredTests.length} Test Vectors</span>
-                    <span className={muted}>Navigate with ↑/↓ keys · Press R to probe</span>
-                  </div>
-
-              <div className="max-h-[620px] overflow-y-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className={`sticky top-0 z-10 border-b text-[10px] font-mono uppercase ${subSurface} ${muted}`}>
-                    <tr>
-                      <th className="py-2 px-2.5">ID</th>
-                      <th className="py-2 px-2">INDEX</th>
-                      <th className="py-2 px-2.5">VECTOR DESCRIPTION</th>
-                      <th className="py-2 px-2">OUTCOME</th>
-                      <th className="py-2 px-2">EVIDENCE</th>
-                      <th className="py-2 px-2.5">WATERFALL</th>
-                      <th className="py-2 px-2 text-right">ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTests.map((t) => (
-                      <WaterfallRow
-                        key={t.id}
-                        test={t}
-                        result={resultsMap[t.id]}
-                        isSelected={inspectedTestId === t.id}
-                        onSelect={setInspectedTestId}
-                        onRunSingle={(item) => runTestsBatch([item])}
-                        isRunning={isActiveRun}
-                        darkMode={darkMode}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className={`lg:col-span-5 border rounded-xs overflow-hidden sticky top-14 space-y-3 p-3.5 ${surface}`}>
-              <div className="flex items-start justify-between gap-2 border-b pb-3 border-slate-200 dark:border-[#1F2733]">
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap font-mono text-[10px]">
-                    <span className="px-1.5 py-0.5 rounded-xs bg-sky-700 text-white font-bold">
-                      {inspectedTest.id}
-                    </span>
-                    <span className={`px-1.5 py-0.5 rounded-xs border ${subSurface}`}>
-                      {inspectedTest.metricGroup}
-                    </span>
-                    <span className={muted}>{inspectedTest.section}</span>
-                  </div>
-                  <h2 className="text-sm font-bold mt-1.5">{inspectedTest.name}</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => runTestsBatch([inspectedTest])}
-                  disabled={isActiveRun}
-                  className={`px-2.5 py-1 rounded-xs font-mono text-[11px] font-semibold bg-sky-700 hover:bg-sky-600 text-white cursor-pointer disabled:opacity-40 shrink-0 ${FOCUS_RING}`}
-                >
-                  Re-Probe (R)
-                </button>
-              </div>
-
-              <div className={`p-2.5 rounded-xs border font-mono text-[11px] space-y-1.5 ${subSurface}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${muted}`}>OUTCOME CLASSIFICATION</span>
-                  <StatusBadge status={inspectedResult?.status} darkMode={darkMode} />
-                </div>
-                <div className="truncate">
-                  <span className="text-emerald-500 font-semibold">CTRL: </span>
-                  <span className={muted}>{inspectedTest.controlResource}</span>
-                </div>
-                <div className="truncate">
-                  <span className="text-sky-400 font-semibold">TEST: </span>
-                  <span className={muted}>{inspectedTest.testResource}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold">
-                  <span>6-STAGE PROTECTION TRACE</span>
-                  <span className={muted}>{inspectedResult?.confidence?.label || 'Awaiting Execution'}</span>
-                </div>
-                <div className="grid grid-cols-1 gap-1.5 font-mono text-[11px]">
-                  {(
-                    inspectedResult?.traceStages ||
-                    buildProtectionTraceStages({
-                      testItem: inspectedTest,
-                      controlOk: true,
-                      status: 'STANDBY',
-                      confidence: CONFIDENCE.UNKNOWN,
-                      durationMs: 0
-                    })
-                  ).map((st) => (
-                    <div
-                      key={st.step}
-                      className={`p-2 rounded-xs border flex items-start justify-between gap-2 ${subSurface}`}
-                    >
-                      <div className="min-w-0">
-                        <span className="font-bold text-sky-500">
-                          0{st.step} {st.code}:
-                        </span>{' '}
-                        <span className="font-semibold">{st.label}</span>
-                        <div className={`text-[10px] mt-0.5 break-words ${muted}`}>{st.detail}</div>
-                      </div>
-                      <span
-                        className={`px-1.5 py-0.5 rounded-xs text-[9px] border shrink-0 ${
-                          st.evidenceType === 'OBSERVED'
-                            ? 'border-teal-600/40 text-teal-400'
-                            : st.evidenceType === 'INFERRED'
-                            ? 'border-sky-600/40 text-sky-400'
-                            : 'border-slate-600 text-slate-400'
-                        }`}
-                      >
-                        {st.evidenceType}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className={`p-3 rounded-xs border font-mono text-xs space-y-1.5 ${subSurface}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-[#c65322]">
-                    TARGET FILTER RULE (SYNTHESIS)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyRule(inspectedTest.recommendedRule)}
-                    className={`inline-flex items-center gap-1 text-[10px] font-sans font-semibold cursor-pointer underline underline-offset-2 ${FOCUS_RING}`}
-                  >
-                    {copiedRule ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                    {copiedRule ? 'Copied!' : 'Copy Rule'}
-                  </button>
-                </div>
-                <pre className="text-xs overflow-x-auto select-all font-bold text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap p-2 rounded-xs bg-black/5 dark:bg-black/30">
-                  {inspectedTest.recommendedRule}
-                </pre>
-                <p className={`font-sans text-[11px] pt-1 ${muted}`}>
-                  <strong>Audit Boundary:</strong> {inspectedTest.audit.limitations}
-                </p>
-              </div>
-            </div>
-          </div>
-            </div>
-          </div>
+          <ResultsWorkbenchView
+            isActiveRun={isActiveRun}
+            isPaused={isPaused}
+            handleTogglePause={handleTogglePause}
+            handleCancelRun={handleCancelRun}
+            runProgress={runProgress}
+            scoreSummary={scoreSummary}
+            resultsMap={resultsMap}
+            fixtureServerStatus={fixtureServerStatus}
+            testRegistry={TEST_REGISTRY}
+            coreBlockingTests={coreBlockingTests}
+            privacySignalTests={privacySignalTests}
+            exploratoryTests={exploratoryTests}
+            metricGroups={METRIC_GROUP}
+            groupFilter={groupFilter}
+            setGroupFilter={setGroupFilter}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            sectionFilter={sectionFilter}
+            setSectionFilter={setSectionFilter}
+            allSections={allSections}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchInputRef={searchInputRef}
+            showWaferMatrix={showWaferMatrix}
+            setShowWaferMatrix={setShowWaferMatrix}
+            filteredTests={filteredTests}
+            inspectedTestId={inspectedTestId}
+            setInspectedTestId={setInspectedTestId}
+            inspectedTest={inspectedTest}
+            inspectedResult={inspectedResult}
+            runTestsBatch={runTestsBatch}
+            copiedRule={copiedRule}
+            handleCopyRule={handleCopyRule}
+            triggerDownload={triggerDownload}
+            generateExtractedHtmlReport={generateExtractedHtmlReport}
+            generateJsonReport={generateJsonReport}
+            generateCsvReport={generateCsvReport}
+            protectionAnalysis={protectionAnalysis}
+            userReported={userReported}
+            envDiagnostics={envDiagnostics}
+            brandName={BRAND_NAME}
+            appVersion={APP_VERSION}
+            brandPromise={BRAND_PROMISE}
+            darkMode={darkMode}
+            surface={surface}
+            subSurface={subSurface}
+            muted={muted}
+            focusRing={FOCUS_RING}
+            buildProtectionTraceStages={buildProtectionTraceStages}
+            CONFIDENCE={CONFIDENCE}
+            RESULT_STATUS={RESULT_STATUS}
+          />
         )}
 
         {normalizedTab === 'real-ads' && (

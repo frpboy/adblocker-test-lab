@@ -179,3 +179,22 @@ This is an append-only record of repository changes and their verification. Add 
 - Observed local behavior: navigation ribbon cleanly switches to Real Ads Stress Lab; placement stage renders organized, dimension-locked slots awaiting session start; no automated network requests or impressions occur until the user explicitly clicks Start Session.
 - Provider limitations: Adsterra remains the only provider with local live-delivery configuration; ExoClick has verification metadata only, and Monetag has no approved live tag configured.
 - Deployment status: no deployment, commit, push, dashboard modification, or live credential creation was performed.
+
+## 2026-10-16 - UI/UX Overhaul execution (Phases 4 through 8)
+
+- Phase 4 (Overview & primary run flow): simplified the hero section with an outcome-first headline ("Inspect browser behavior without inventing the cause"), prominent Quick Scan (6 checks, ~1.5s) primary CTA, Full Diagnostic (55 checks, ~8s) secondary CTA, and a 3-step visitor guide ("Controlled Fixtures", "Objective Telemetry", "Unbiased Audit Score"). Implemented a true first-run empty state explaining score standby instead of an artificial 0/100. Moved browser context diagnostics into an expandable `<details>` disclosure.
+- Phase 5 (Results & workbench comprehension): restructured Results & Workbench to present coverage and denominator before the headline score. Added a dynamic plain-English insight observation banner, text-backed status indicators (`BLOCKED`, `PARTIAL`, `ALLOWED`, `INCONCLUSIVE`), visible "Reset Filters" pill, and toast notifications for JSON/CSV/HTML exports.
+- Phase 6 (Accessibility & responsive quality): verified keyboard navigation with visible focus rings (`focus-visible:ring-2 focus-visible:ring-[#c65322]`), added `role="status"` and `aria-live="polite"` on active execution HUD, wrapped data tables in horizontal scroll containers, and verified responsive layout reflow across mobile (320px–390px) through desktop breakpoints without horizontal body overflow.
+- Phase 7 (Controlled architectural modularization): safely extracted UI components from `AdBlockerTestLab.jsx` into modular components under `src/components/`:
+  - `src/components/NavigationRibbon.jsx`: primary navigation header, score chips, run controls, theme toggle.
+  - `src/components/OverviewView.jsx`: hero, scan cards, first-run state, and collapsible browser context.
+  - `src/components/ResultsWorkbenchView.jsx`: HUD, score cards, category breakdown, export toolbar, filter bar, results list, and 6-stage audit drawer.
+  - `src/lab/navigation.js`: pure route normalization and 5 primary ribbon destination constants.
+  - Added unit test suite `test/navigation.test.mjs` verifying destination counts and alias normalization.
+- Phase 8 (Verification & quality gate):
+  - `npm test` executed and passed: 31/31 unit tests passing across all suites.
+  - `npm run typecheck` executed and passed: 0 TypeScript errors.
+  - `npm run build` executed and passed: production bundle compiled cleanly in 5.32s.
+  - `git diff --check` executed and passed: 0 whitespace issues.
+- Attribution and provider limitations: no live provider credentials or secret tags committed; no automated ad clicks, impressions, or popunders generated; live-ad telemetry remains strictly non-scoring.
+- Deployment status: no production deployment, commit, push, or credential modification was performed.
