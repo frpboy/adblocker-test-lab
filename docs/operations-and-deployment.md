@@ -51,6 +51,8 @@ After deployment, submit `https://lab.frpboy.in/sitemap.xml` to the verified pro
 
 The production HTML includes an operator-approved asynchronous Google AdSense loader. It is not a benchmark fixture, does not contribute to any score, and must not be used to infer protection status. Any future provider script must receive equivalent explicit approval, remain labelled as third-party/exploratory, and stay outside authoritative score evidence.
 
+The Real Ads Stress Lab reads only `VITE_REAL_ADS_*` configuration supplied by the local or deployment environment. With blank, malformed, non-HTTPS, or absent values, every provider format remains unavailable and no live-ad script is eligible to load. The checked-in `.env.example` lists variable names only; provider tags, zone IDs, publisher identifiers, and Smartlinks must never enter Git. Banner, native, popunder, social-bar, and provider-format script values use JSON descriptors containing a `scriptUrl`; the Smartlink uses its direct HTTPS URL. A future operator must configure values in the host environment, rebuild, then perform the explicit session/browser checks before claiming delivery.
+
 ## Live-ad integration boundary
 
 The project may eventually offer an explicitly labelled live-ad test block, but there are hard integrity and policy constraints:

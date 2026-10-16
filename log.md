@@ -109,3 +109,9 @@ This is an append-only record of repository changes and their verification. Add 
 - Added a built-document test that requires one tag with the expected ownership value; the test initially failed against the prior build (zero matching tags), then passed after the change.
 - Validation: `npm run typecheck`, `npm run build`, focused document-head test, full `npm test` (4 passing tests), and `git diff --check` passed. Local Chromium at `http://127.0.0.1:8080` rendered the Overview; its document title remained correct.
 - Dashboard acceptance and production availability remain unverified. No provider request, creative, no-fill result, or filtering conclusion is implied by this metadata.
+
+## 2026-10-16 - Real Ads Stress Lab configuration boundary
+
+- Added a pure configuration catalog for six optional Adsterra banner sizes, optional Adsterra Native/Popunder/Social Bar/Smartlink formats, and optional Monetag and ExoClick format lists. It accepts only valid HTTPS values and leaves malformed or absent values unavailable.
+- Added blank `VITE_REAL_ADS_*` variable names to `.env.example` and deployment guidance. No provider tag, zone ID, publisher identifier, Smartlink, or live script was committed.
+- Validation: focused configuration tests cover blank configuration, an individual banner, six distinct banners, and unavailable malformed Monetag/ExoClick input. Live-provider delivery remains unverified and no app UI starts a provider session yet.
