@@ -41,6 +41,12 @@ To deploy safely:
 4. Verify HTTPS, responsive behavior, privacy/contact material, and error handling on the deployed origin.
 5. Run browser validation against the deployed origin, not only the local dev server.
 
+## Search discoverability
+
+The production shell supplies a canonical URL, descriptive title and description, Open Graph/Twitter metadata, `WebApplication` structured data, `robots.txt`, and a one-page sitemap. These files make the public root eligible for crawling and accurate previews; they do not guarantee ranking, indexing, traffic, or a position for any query.
+
+After deployment, submit `https://lab.frpboy.in/sitemap.xml` to the verified property in Google Search Console and review the URL Inspection result for the canonical root. Do not add fabricated ratings, reviews, FAQs, claims, or links merely to influence search results.
+
 ## Environment configuration
 
 The production HTML includes an operator-approved asynchronous Google AdSense loader. It is not a benchmark fixture, does not contribute to any score, and must not be used to infer protection status. Any future provider script must receive equivalent explicit approval, remain labelled as third-party/exploratory, and stay outside authoritative score evidence.

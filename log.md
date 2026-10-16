@@ -89,3 +89,16 @@ This is an append-only record of repository changes and their verification. Add 
 - Browser validation at `http://127.0.0.1:8080` opened the Audit suite after the module extraction. The visible suite summary reported `15 / 15` passed assertions.
 - The local `Export Escaped HTML` action displayed the `Exported adblocker-test-lab-v4.1.html` success toast. The automation download-event wait remains unavailable, so no downloaded-file artifact path is recorded.
 - Deployment status: no deployment was performed.
+
+## 2026-10-16 — Technical SEO foundations
+
+- Added a truthful canonical root URL, descriptive title and description, crawl directive, Open Graph/Twitter card metadata, and `WebApplication` structured data to the Vite document shell.
+- Added public `robots.txt` and `sitemap.xml` for the single public root route; documented post-deployment Search Console submission and the ranking/indexing boundary.
+- No keyword stuffing, fake reviews, provider changes, tracking, or misleading structured data were added.
+- Validation and deployment status: pending final typecheck, build, diff check, and local browser validation; no deployment performed.
+
+## 2026-10-16 — Technical SEO validation follow-up
+
+- `npm run typecheck` and `npm run build` passed; `git diff --check` completed without diff errors. The production build contains the canonical link, Open Graph/Twitter metadata, `WebApplication` JSON-LD, `robots.txt`, and `sitemap.xml`.
+- Browser validation at `http://127.0.0.1:8080` confirmed the updated title, description, canonical URL, robots directive, JSON-LD, and rendered Overview copy.
+- Deployment status: no commit, push, sitemap submission, Search Console action, or deployment was performed.
