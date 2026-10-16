@@ -9,6 +9,10 @@ export function normalizeRealAdsObservation(input = {}) {
     placementId: input.placementId ?? 'unknown',
     status,
     benchmarkEligible: false,
-    alternatives: input.alternatives ?? []
+    alternatives: input.alternatives ?? [],
+    timestamp: input.timestamp ?? new Date().toISOString(),
+    viewport: input.viewport ?? 'unknown',
+    format: input.format ?? 'unknown',
+    dimensions: input.dimensions ?? 'unknown'
   };
 }

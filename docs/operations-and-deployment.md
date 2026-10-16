@@ -53,6 +53,15 @@ The production HTML includes an operator-approved asynchronous Google AdSense lo
 
 The Real Ads Stress Lab reads only `VITE_REAL_ADS_*` configuration supplied by the local or deployment environment. With blank, malformed, non-HTTPS, or absent values, every provider format remains unavailable and no live-ad script is eligible to load. The checked-in `.env.example` lists variable names only; provider tags, zone IDs, publisher identifiers, and Smartlinks must never enter Git. Banner, native, popunder, social-bar, and provider-format script values use JSON descriptors containing a `scriptUrl`; the Smartlink uses its direct HTTPS URL. A future operator must configure values in the host environment, rebuild, then perform the explicit session/browser checks before claiming delivery.
 
+### Manual Real Ads Stress Lab comparison
+
+1. Use a clean Chromium profile and set a reproducible viewport (desktop `1280x720` or mobile `390x844`).
+2. First test with uBlock Lite disabled. Open Settings & Lab, select Real Ads Stress Lab, select the same provider/level/format you will compare, then explicitly select Start Session.
+3. Record the per-placement script outcome, visible layout/creative observation, console and network evidence, and any no-fill/provider error. A script or frame by itself is not a creative.
+4. Stop Session. If an intrusive provider was started, reload before the next run because third-party effects can survive SPA cleanup.
+5. Repeat in a fresh comparable condition with uBlock Lite enabled. Describe failed requests as possible filtering only unless stronger browser evidence establishes the cause.
+6. Never automate the Start interaction, ad clicks, Smartlink navigation, Popunder interaction, reloads, or impressions. Do not perform production testing until deployment authorization is explicit.
+
 ## Live-ad integration boundary
 
 The project may eventually offer an explicitly labelled live-ad test block, but there are hard integrity and policy constraints:

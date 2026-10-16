@@ -1,4 +1,4 @@
-const ADSTERRA_BANNER_SIZES = ['728x90', '300x250', '160x600', '300x100', '320x50', '468x60'];
+const ADSTERRA_BANNER_SIZES = ['728x90', '300x250', '160x600', '160x300', '320x50', '468x60'];
 
 export const REAL_ADS_LEVELS = [
   { id: 'baseline', label: 'Level 0 — Baseline' },
@@ -34,7 +34,9 @@ function parseScriptDescriptor(value, descriptor) {
   return {
     ...descriptor,
     scriptUrl: parsed.scriptUrl,
-    ...(parsed.options && typeof parsed.options === 'object' && !Array.isArray(parsed.options) ? { options: parsed.options } : {})
+    ...(parsed.options && typeof parsed.options === 'object' && !Array.isArray(parsed.options) ? { options: parsed.options } : {}),
+    ...(typeof parsed.containerId === 'string' ? { containerId: parsed.containerId } : {}),
+    ...(parsed.scriptAttributes && typeof parsed.scriptAttributes === 'object' && !Array.isArray(parsed.scriptAttributes) ? { scriptAttributes: parsed.scriptAttributes } : {})
   };
 }
 

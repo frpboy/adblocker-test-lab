@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { calculateBenchmarkScore as calculateExtractedBenchmarkScore } from './src/lab/scoring.js';
 import { generateHtmlReport as generateExtractedHtmlReport } from './src/lab/reporting.js';
+import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
 
 export const APP_VERSION = '4.1.0';
 export const SCHEMA_VERSION = '2026.10.adblockertestlab.v4.1';
@@ -4653,6 +4654,7 @@ export default function App() {
                   { id: 'weights', label: 'Scoring Weights' },
                   { id: 'context', label: 'User Context' },
                   { id: 'monetag', label: 'Monetag Chamber' },
+                  { id: 'real-ads', label: 'Real Ads Stress Lab' },
                   { id: 'backend', label: 'Backend APIs' }
                 ].map((st) => (
                   <button
@@ -4926,6 +4928,10 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {settingsSubTab === 'real-ads' && (
+              <RealAdsStressLab surface={surface} subSurface={subSurface} muted={muted} focusRing={FOCUS_RING} />
             )}
 
             {/* Sub-tab 4: Backend APIs */}

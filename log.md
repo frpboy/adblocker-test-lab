@@ -133,3 +133,32 @@ This is an append-only record of repository changes and their verification. Add 
 - Added independent statuses for not-started, script-loading, script-loaded, rendered creative, no-fill, request failure, possible filtering, provider error, and inconclusive observations. A rendered-creative label now requires a direct visible-layout observation.
 - Every normalized live-ad observation explicitly remains ineligible for the authoritative benchmark score and privacy-signal index.
 - Validation: focused evidence tests cover every status and reject hidden/indirect rendered claims. No provider creative was observed.
+
+## 2026-10-16 - Real Ads Stress Lab local UI and Adsterra configuration
+
+- Change: added an explicit Real Ads Stress Lab settings view with Level 0-5, provider selection, Start/Stop/Clear controls, planned-placement disclosure, and independent placement evidence. The default is Level 0 with no provider initialization.
+- Provider and formats: local ignored configuration now contains the owner-supplied Adsterra six-banner inventory (160x300, 160x600, 300x250, 320x50, 468x60, 728x90), Native Banner, Popunder, Social Bar, and manual Smartlink. ExoClick has verification metadata only; Monetag has no approved live tag configured.
+- Configuration status: provider values are confined to ignored `.env.local`; no provider tag, zone identifier, Smartlink, or production value was added to tracked files. Banner loading is sequential around the shared `atOptions` value; Popunder remains Level-4 opt-in and Smartlink remains manual.
+- Verification performed: `npm test` passed (24 tests), `npm run typecheck` passed, `npm run build` passed, and local Chromium rendered the Lab control surface with zero configured formats before the development server reloads its ignored environment file.
+- Observed results: no live session was started by automation. Therefore no provider request, impression, no-fill result, creative, uBlock Lite comparison, or provider-attributed failure is recorded.
+- Errors and limitations: actual delivery requires a Vite development-server restart or an explicitly configured deployment environment, then a user-initiated session on the approved host. A loaded script remains insufficient evidence of a rendered creative.
+- Deployment status: no deployment, account change, dashboard action, commit, or push was performed for this local configuration work.
+
+## 2026-10-16 - Real Ads Stress Lab configuration refresh observation
+
+- Verification performed: after the ignored local configuration was written, the existing Vite server at `http://127.0.0.1:8080` rendered the Real Ads Stress Lab with `10` available configured formats while Level 0 remained selected and Start Session remained disabled.
+- Observed results: this confirms configuration discovery only. No provider level was started, no script was intentionally requested, and no creative/no-fill/blocking conclusion is recorded.
+- Errors and limitations: an attempted automation-only select action used an unsupported selector syntax and did not alter the page state. The user-owned Vite process was not stopped or restarted.
+
+## 2026-10-16 - Real Ads Stress Lab comparison controls
+
+- Change: added explicit individual-format and comparison-viewport controls to the Real Ads Stress Lab. A selected viewport is evidence metadata only; it does not alter the visitor's browser dimensions. Placement evidence now preserves timestamp, format, dimensions, and viewport while remaining benchmark-ineligible.
+- Verification performed: added a focused evidence-context test; `npm test` passed with 25 tests, `npm run typecheck` passed, `npm run build` passed, and `git diff --check` completed without diff errors.
+- Observed results: no provider session was started during validation. No provider request, creative, no-fill, failure attribution, or uBlock Lite comparison is recorded.
+- Deployment status: no deployment, commit, push, dashboard action, click, reload, or impression generation was performed.
+
+## 2026-10-16 - User-observed Adsterra live-delivery evidence
+
+- Observed result: user-provided Chromium evidence at local `localhost:8080` shows the Real Ads Stress Lab reporting `SCRIPT_LOADING` and `SCRIPT_LOADED` for supplied Adsterra banner, Native Banner, and Social Bar placements, with multiple visible third-party ad creatives in the page and an on-screen Social Bar creative.
+- Attribution boundary: this is evidence that Adsterra delivery occurred in that local browser state; it does not establish a production result, a fill guarantee, or any conclusion about uBlock Lite because the screenshot is an unprotected-state observation only.
+- Provider status: ExoClick still has ownership-verification metadata but no supplied zone snippet. Monetag still has no configured approved live tag. Their absence from the shown session is a configuration gap, not evidence that either provider was filtered or returned no-fill.

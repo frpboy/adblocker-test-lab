@@ -1,5 +1,9 @@
 # Known Limitations and Roadmap
 
+## Live-provider delivery
+
+Real Ads Stress Lab local configuration is intentionally ignored by Git. A Vite server restart is required after changing `VITE_REAL_ADS_*` values. ExoClick ownership verification is not an ad zone, and Monetag must not be considered installed without a current approved tag and browser evidence. Provider script load, iframe insertion, an empty placement, or a failed request cannot alone prove creative delivery or filtering by uBlock Lite.
+
 ## Proven current limitations
 
 ### Single-file prototype
