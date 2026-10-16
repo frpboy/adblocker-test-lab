@@ -102,3 +102,10 @@ This is an append-only record of repository changes and their verification. Add 
 - `npm run typecheck` and `npm run build` passed; `git diff --check` completed without diff errors. The production build contains the canonical link, Open Graph/Twitter metadata, `WebApplication` JSON-LD, `robots.txt`, and `sitemap.xml`.
 - Browser validation at `http://127.0.0.1:8080` confirmed the updated title, description, canonical URL, robots directive, JSON-LD, and rendered Overview copy.
 - Deployment status: no commit, push, sitemap submission, Search Console action, or deployment was performed.
+
+## 2026-10-16 - ExoClick ownership verification baseline
+
+- Added exactly one ExoClick ownership-verification meta tag to the document head. It is static verification metadata only: no ExoClick runtime loader, zone, provider request, or benchmark scoring behavior was added.
+- Added a built-document test that requires one tag with the expected ownership value; the test initially failed against the prior build (zero matching tags), then passed after the change.
+- Validation: `npm run typecheck`, `npm run build`, focused document-head test, full `npm test` (4 passing tests), and `git diff --check` passed. Local Chromium at `http://127.0.0.1:8080` rendered the Overview; its document title remained correct.
+- Dashboard acceptance and production availability remain unverified. No provider request, creative, no-fill result, or filtering conclusion is implied by this metadata.

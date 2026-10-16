@@ -88,3 +88,5 @@ User-reported extension, VPN, and notes data are deliberately distinguished from
 ## Approved third-party ad loader
 
 The document head contains an operator-approved asynchronous Google AdSense loader. It is third-party code, not a test fixture or a result signal. The runner never reads its presence or outcome into the core score, privacy-signal index, or attribution analysis. A blocked or loaded ad-loader request must not be interpreted as proof of a particular extension, DNS service, VPN, or browser setting.
+
+The document head also contains one static ExoClick ownership-verification meta tag. It does not load an ExoClick zone, request an ad, or provide filtering evidence. ExoClick delivery remains unavailable until approved publisher zone configuration is supplied through the isolated Real Ads Stress Lab configuration boundary.
