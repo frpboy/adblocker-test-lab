@@ -25,7 +25,8 @@ import {
   ArrowRight,
   Shield,
   Info,
-  FileText
+  FileText,
+  Zap
 } from 'lucide-react';
 import { calculateBenchmarkScore as calculateExtractedBenchmarkScore } from './src/lab/scoring.js';
 import { generateHtmlReport as generateExtractedHtmlReport } from './src/lab/reporting.js';
@@ -2264,27 +2265,36 @@ export async function executeAuditedTest(
         baitEl.textContent = `Ad Fixture ${testItem.id}`;
       }
 
-      sandboxStageEl.appendChild(controlEl);
-      if (testItem.type === 'dynamic_cosmetic_dom') {
+      let controlVisible = false;
+      let visuallyHidden = false;
+      let zeroDimensions = false;
+      let controlRect = { height: 0, width: 0 };
+      let baitRect = { height: 0, width: 0 };
+      let baitComputed = { display: 'none', visibility: 'hidden', opacity: '0' };
+
+      try {
+        sandboxStageEl.appendChild(controlEl);
+        if (testItem.type === 'dynamic_cosmetic_dom') {
+          await waitAnimationFrameCancellable(abortSignal);
+        }
+        sandboxStageEl.appendChild(baitEl);
+
         await waitAnimationFrameCancellable(abortSignal);
+
+        controlRect = controlEl.getBoundingClientRect();
+        baitRect = baitEl.getBoundingClientRect();
+        baitComputed = window.getComputedStyle(baitEl);
+
+        controlVisible = controlRect.height > 0 && controlRect.width > 0;
+        visuallyHidden =
+          baitComputed.display === 'none' ||
+          baitComputed.visibility === 'hidden' ||
+          baitComputed.opacity === '0';
+        zeroDimensions = baitRect.height === 0 || baitRect.width === 0 || baitEl.offsetParent === null;
+      } finally {
+        if (controlEl.parentNode === sandboxStageEl) sandboxStageEl.removeChild(controlEl);
+        if (baitEl.parentNode === sandboxStageEl) sandboxStageEl.removeChild(baitEl);
       }
-      sandboxStageEl.appendChild(baitEl);
-
-      await waitAnimationFrameCancellable(abortSignal);
-
-      const controlRect = controlEl.getBoundingClientRect();
-      const baitRect = baitEl.getBoundingClientRect();
-      const baitComputed = window.getComputedStyle(baitEl);
-
-      const controlVisible = controlRect.height > 0 && controlRect.width > 0;
-      const visuallyHidden =
-        baitComputed.display === 'none' ||
-        baitComputed.visibility === 'hidden' ||
-        baitComputed.opacity === '0';
-      const zeroDimensions = baitRect.height === 0 || baitRect.width === 0 || baitEl.offsetParent === null;
-
-      if (controlEl.parentNode === sandboxStageEl) sandboxStageEl.removeChild(controlEl);
-      if (baitEl.parentNode === sandboxStageEl) sandboxStageEl.removeChild(baitEl);
 
       if (!controlVisible) {
         return createResult(
@@ -2472,11 +2482,17 @@ export async function executeAuditedTest(
 
       const img = new Image(1, 1);
       img.className = testItem.selectorClasses;
-      if (sandboxStageEl) sandboxStageEl.appendChild(img);
-      await waitAnimationFrameCancellable(abortSignal);
-      const computed = window.getComputedStyle(img);
-      const domHidden = computed.display === 'none' || computed.visibility === 'hidden';
-      if (sandboxStageEl && img.parentNode === sandboxStageEl) sandboxStageEl.removeChild(img);
+      let domHidden = false;
+      if (sandboxStageEl) {
+        try {
+          sandboxStageEl.appendChild(img);
+          await waitAnimationFrameCancellable(abortSignal);
+          const computed = window.getComputedStyle(img);
+          domHidden = computed.display === 'none' || computed.visibility === 'hidden';
+        } finally {
+          if (img.parentNode === sandboxStageEl) sandboxStageEl.removeChild(img);
+        }
+      }
 
       let pathAborted = false;
       try {
@@ -2627,18 +2643,22 @@ export async function executeAuditedTest(
       linkEl.style.height = '20px';
       linkEl.textContent = 'Popunder Trigger';
 
-      sandboxStageEl.appendChild(ctrlLink);
-      sandboxStageEl.appendChild(linkEl);
-      await waitAnimationFrameCancellable(abortSignal);
+      let ctrlVisible = false;
+      let linkHidden = false;
+      try {
+        sandboxStageEl.appendChild(ctrlLink);
+        sandboxStageEl.appendChild(linkEl);
+        await waitAnimationFrameCancellable(abortSignal);
 
-      const ctrlRect = ctrlLink.getBoundingClientRect();
-      const rect = linkEl.getBoundingClientRect();
-      const comp = window.getComputedStyle(linkEl);
-      const ctrlVisible = ctrlRect.height > 0;
-      const linkHidden = comp.display === 'none' || comp.visibility === 'hidden' || rect.height === 0;
-
-      if (ctrlLink.parentNode === sandboxStageEl) sandboxStageEl.removeChild(ctrlLink);
-      if (linkEl.parentNode === sandboxStageEl) sandboxStageEl.removeChild(linkEl);
+        const ctrlRect = ctrlLink.getBoundingClientRect();
+        const rect = linkEl.getBoundingClientRect();
+        const comp = window.getComputedStyle(linkEl);
+        ctrlVisible = ctrlRect.height > 0;
+        linkHidden = comp.display === 'none' || comp.visibility === 'hidden' || rect.height === 0;
+      } finally {
+        if (ctrlLink.parentNode === sandboxStageEl) sandboxStageEl.removeChild(ctrlLink);
+        if (linkEl.parentNode === sandboxStageEl) sandboxStageEl.removeChild(linkEl);
+      }
 
       if (!ctrlVisible) {
         return createResult(
@@ -2740,14 +2760,21 @@ export async function executeAuditedTest(
       bait.className = 'ad_unit adsbox text-ad banner-ad';
       bait.style.height = '20px';
       bait.innerHTML = '&nbsp;';
-      if (sandboxStageEl) sandboxStageEl.appendChild(bait);
-      await waitAnimationFrameCancellable(abortSignal);
-      const hidden = bait.offsetHeight === 0 || window.getComputedStyle(bait).display === 'none';
-      const hasShim =
-        typeof window.google_ad_status !== 'undefined' ||
-        typeof window.canRunAds !== 'undefined' ||
-        typeof window.google_jobrunner !== 'undefined';
-      if (sandboxStageEl && bait.parentNode === sandboxStageEl) sandboxStageEl.removeChild(bait);
+      let hidden = false;
+      let hasShim = false;
+      if (sandboxStageEl) {
+        try {
+          sandboxStageEl.appendChild(bait);
+          await waitAnimationFrameCancellable(abortSignal);
+          hidden = bait.offsetHeight === 0 || window.getComputedStyle(bait).display === 'none';
+          hasShim =
+            typeof window.google_ad_status !== 'undefined' ||
+            typeof window.canRunAds !== 'undefined' ||
+            typeof window.google_jobrunner !== 'undefined';
+        } finally {
+          if (bait.parentNode === sandboxStageEl) sandboxStageEl.removeChild(bait);
+        }
+      }
 
       if (hidden && hasShim) {
         return createResult(
@@ -2801,26 +2828,46 @@ export async function executeAuditedTest(
       const scriptErrored = await new Promise((resolve) => {
         const s = document.createElement('script');
         s.src = testItem.probePath;
-        const timer = setTimeout(() => resolve(false), 600);
+        let cleaned = false;
+        const removeScript = () => {
+          if (!cleaned) {
+            cleaned = true;
+            if (s.parentNode) s.parentNode.removeChild(s);
+          }
+        };
+
+        const timer = setTimeout(() => {
+          removeScript();
+          resolve(false);
+        }, 600);
+
         const onAbort = () => {
           clearTimeout(timer);
-          if (s.parentNode) s.parentNode.removeChild(s);
+          removeScript();
           resolve(false);
         };
         abortSignal?.addEventListener('abort', onAbort, { once: true });
+
         s.onload = () => {
           clearTimeout(timer);
           abortSignal?.removeEventListener('abort', onAbort);
-          if (s.parentNode) s.parentNode.removeChild(s);
+          removeScript();
           resolve(false);
         };
         s.onerror = () => {
           clearTimeout(timer);
           abortSignal?.removeEventListener('abort', onAbort);
-          if (s.parentNode) s.parentNode.removeChild(s);
+          removeScript();
           resolve(true);
         };
-        (sandboxStageEl || document.body).appendChild(s);
+
+        const mount = sandboxStageEl || document.getElementById('adblocker-test-lab-sandbox');
+        if (mount) {
+          mount.appendChild(s);
+        } else {
+          clearTimeout(timer);
+          resolve(false);
+        }
       });
 
       if (abortSignal?.aborted) {
@@ -3088,17 +3135,20 @@ export async function executeAuditedTest(
       zoneEl.style.display = 'block';
       zoneEl.textContent = 'Monetag Test Zone';
 
-      targetStage.appendChild(ctrlBox);
-      targetStage.appendChild(zoneEl);
-      await waitAnimationFrameCancellable(abortSignal);
+      let domHidden = false;
+      try {
+        targetStage.appendChild(ctrlBox);
+        targetStage.appendChild(zoneEl);
+        await waitAnimationFrameCancellable(abortSignal);
 
-      const zoneRect = zoneEl.getBoundingClientRect();
-      const zoneComp = window.getComputedStyle(zoneEl);
-      const domHidden =
-        zoneComp.display === 'none' || zoneComp.visibility === 'hidden' || zoneRect.height === 0;
-
-      if (ctrlBox.parentNode === targetStage) targetStage.removeChild(ctrlBox);
-      if (zoneEl.parentNode === targetStage) targetStage.removeChild(zoneEl);
+        const zoneRect = zoneEl.getBoundingClientRect();
+        const zoneComp = window.getComputedStyle(zoneEl);
+        domHidden =
+          zoneComp.display === 'none' || zoneComp.visibility === 'hidden' || zoneRect.height === 0;
+      } finally {
+        if (ctrlBox.parentNode === targetStage) targetStage.removeChild(ctrlBox);
+        if (zoneEl.parentNode === targetStage) targetStage.removeChild(zoneEl);
+      }
 
       let tagPathAborted = false;
       try {
@@ -3161,6 +3211,14 @@ export async function executeAuditedTest(
       'Runner Error Boundary',
       CONFIDENCE.UNKNOWN
     );
+  } finally {
+    if (sandboxStageEl && sandboxStageEl.childNodes.length > 0) {
+      while (sandboxStageEl.firstChild) {
+        try {
+          sandboxStageEl.removeChild(sandboxStageEl.firstChild);
+        } catch {}
+      }
+    }
   }
 }
 
@@ -3401,6 +3459,21 @@ export default function App() {
         return;
       }
 
+      if (sandboxStageRef.current) {
+        while (sandboxStageRef.current.firstChild) {
+          try {
+            sandboxStageRef.current.removeChild(sandboxStageRef.current.firstChild);
+          } catch {}
+        }
+      }
+      if (monetagStageRef.current) {
+        while (monetagStageRef.current.firstChild) {
+          try {
+            monetagStageRef.current.removeChild(monetagStageRef.current.firstChild);
+          } catch {}
+        }
+      }
+
       const abortController = new AbortController();
       runAbortControllerRef.current = abortController;
       pauseRunRef.current = false;
@@ -3497,6 +3570,21 @@ export default function App() {
       await Promise.all(Array.from({ length: workerCount }, () => worker()));
       flushPendingBatch();
 
+      if (sandboxStageRef.current) {
+        while (sandboxStageRef.current.firstChild) {
+          try {
+            sandboxStageRef.current.removeChild(sandboxStageRef.current.firstChild);
+          } catch {}
+        }
+      }
+      if (monetagStageRef.current) {
+        while (monetagStageRef.current.firstChild) {
+          try {
+            monetagStageRef.current.removeChild(monetagStageRef.current.firstChild);
+          } catch {}
+        }
+      }
+
       const wasCancelled = abortController.signal.aborted;
       pauseRunRef.current = false;
       setExecutionState(wasCancelled ? EXECUTION_STATE.CANCELLED : EXECUTION_STATE.COMPLETED);
@@ -3512,6 +3600,20 @@ export default function App() {
     pauseRunRef.current = false;
     if (runAbortControllerRef.current) {
       runAbortControllerRef.current.abort();
+    }
+    if (sandboxStageRef.current) {
+      while (sandboxStageRef.current.firstChild) {
+        try {
+          sandboxStageRef.current.removeChild(sandboxStageRef.current.firstChild);
+        } catch {}
+      }
+    }
+    if (monetagStageRef.current) {
+      while (monetagStageRef.current.firstChild) {
+        try {
+          monetagStageRef.current.removeChild(monetagStageRef.current.firstChild);
+        } catch {}
+      }
     }
   }, []);
 
@@ -3609,10 +3711,13 @@ export default function App() {
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      document.body.appendChild(a);
+      a.click();
+    } finally {
+      if (a.parentNode) a.parentNode.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
     notify(`Exported ${filename}`, 'success');
   };
 
@@ -3695,6 +3800,7 @@ export default function App() {
     if (activeTab === 'workbench' || activeTab === 'layers' || activeTab === 'run') return 'results';
     if (activeTab === 'learn' || activeTab === 'verification') return 'methodology';
     if (activeTab === 'scoring' || activeTab === 'monetag' || activeTab === 'architecture') return 'settings';
+    if (activeTab === 'real-ads' || activeTab === 'stress-lab') return 'real-ads';
     return activeTab;
   }, [activeTab]);
 
@@ -3801,6 +3907,7 @@ export default function App() {
           {[
             { id: 'overview', label: 'Overview & Scanner', icon: ShieldCheck },
             { id: 'results', label: 'Results & Workbench', icon: CheckCircle2 },
+            { id: 'real-ads', label: 'Real Ads Stress Lab', icon: Zap },
             { id: 'methodology', label: 'Methodology & Audit', icon: Layers },
             { id: 'settings', label: 'Settings & Lab', icon: Sliders }
           ].map((tab) => {
@@ -3827,13 +3934,9 @@ export default function App() {
 
         <div className="flex items-center gap-3 text-[11px] font-mono">
           <span className={muted}>Mode: <strong className="text-current">{fixtureServerStatus.mode}</strong></span>
-          <div
-            ref={sandboxStageRef}
-            aria-label="Isolated DOM Fixture Stage"
-            className="w-16 h-4 overflow-hidden border border-dashed border-slate-500 rounded-xs px-1 text-[9px] leading-4 text-center opacity-60"
-          >
-            DOM READY
-          </div>
+          <span className="px-2 py-0.5 rounded-sm border border-slate-300 dark:border-slate-700 bg-black/5 dark:bg-white/5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
+            SANDBOX ISOLATED
+          </span>
         </div>
       </div>
 
@@ -4464,6 +4567,10 @@ export default function App() {
           </div>
         )}
 
+        {normalizedTab === 'real-ads' && (
+          <RealAdsStressLab surface={surface} subSurface={subSurface} muted={muted} focusRing={FOCUS_RING} />
+        )}
+
         {normalizedTab === 'methodology' && (
           <div className="space-y-6">
             {/* Principles & Evidence Hierarchy */}
@@ -4654,7 +4761,6 @@ export default function App() {
                   { id: 'weights', label: 'Scoring Weights' },
                   { id: 'context', label: 'User Context' },
                   { id: 'monetag', label: 'Monetag Chamber' },
-                  { id: 'real-ads', label: 'Real Ads Stress Lab' },
                   { id: 'backend', label: 'Backend APIs' }
                 ].map((st) => (
                   <button
@@ -4930,10 +5036,6 @@ export default function App() {
               </div>
             )}
 
-            {settingsSubTab === 'real-ads' && (
-              <RealAdsStressLab surface={surface} subSurface={subSurface} muted={muted} focusRing={FOCUS_RING} />
-            )}
-
             {/* Sub-tab 4: Backend APIs */}
             {settingsSubTab === 'backend' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
@@ -5005,6 +5107,27 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Authoritative Isolated DOM Fixture Sandbox Stage:
+          Strictly isolated off-screen to prevent test scripts, bait elements, and generated nodes
+          from ever visually appearing or altering layout in visible application sections. */}
+      <div
+        ref={sandboxStageRef}
+        id="adblocker-test-lab-sandbox"
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: -9999,
+          width: 320,
+          height: 200,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -9999,
+          contain: 'strict',
+          opacity: 0.001
+        }}
+      />
 
       {toast && (
         <div

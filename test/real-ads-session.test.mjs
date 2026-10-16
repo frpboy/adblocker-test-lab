@@ -52,3 +52,31 @@ test('reload replaces owned nodes with one new placement', () => {
   assert.equal(document.body.children.length, 1);
   assert.equal(document.head.children[0].src, 'https://example.test/banner.js');
 });
+
+test('mounts synchronous banner into isolated provider iframe within target container', () => {
+  const document = createDocument();
+  const session = createRealAdsSession({ document, window: {} });
+  const slotContainer = { children: [], append(node) { this.children.push(node); node.parentNode = this; } };
+  const bannerWithOptions = {
+    id: 'adsterra-banner-728x90',
+    kind: 'banner',
+    size: '728x90',
+    scriptUrl: 'https://example.test/invoke.js',
+    options: { key: 'sample-key', format: 'iframe', height: 90, width: 728, params: {} }
+  };
+
+  const started = session.start(bannerWithOptions, slotContainer);
+  assert.equal(started.started, true);
+  assert.equal(slotContainer.children.length, 1);
+  assert.equal(document.head.children.length, 0);
+
+  const iframe = slotContainer.children[0];
+  assert.equal(iframe.tagName, 'iframe');
+  assert.equal(iframe.width, '728');
+  assert.equal(iframe.height, '90');
+  assert.match(iframe.srcdoc, /sample-key/);
+  assert.match(iframe.srcdoc, /https:\/\/example\.test\/invoke\.js/);
+
+  session.stop();
+  assert.equal(slotContainer.children.length, 0);
+});
