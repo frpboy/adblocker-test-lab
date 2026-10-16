@@ -1,5 +1,9 @@
 # Measurement and Scoring
 
+## Real Ads Stress Lab evidence
+
+Live-provider observations are exploratory placement evidence, never benchmark inputs. `REAL_CREATIVE_RENDERED` requires a direct observation of a visible, non-zero owned layout; a loaded script or iframe alone is insufficient. No-fill, request failures, provider errors, and possible filtering retain alternative causes such as CSP, DNS, connectivity, and provider availability. None of these observations can raise the authoritative core score or privacy-signal index.
+
 ## Evidence classes
 
 Every test is labelled with one of three validity classes.

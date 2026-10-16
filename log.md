@@ -127,3 +127,9 @@ This is an append-only record of repository changes and their verification. Add 
 - Added inert adapters for Adsterra, Monetag, and ExoClick. Adsterra exposes level-based banner/native/social/popunder composition, labels Smartlinks as manual-only, and excludes Popunder from compatible maximum mode. Monetag and ExoClick return no placements until valid configured formats exist.
 - Added sequential Adsterra option consumption so one supplied options object is set immediately before its corresponding placement start and removed afterward. The adapter never appends a script itself.
 - Validation: focused adapter tests cover six distinct banners, popunder exclusion, manual Smartlink handling, empty provider fallback, and sequential options. No live provider request or creative was observed.
+
+## 2026-10-16 - Real Ads Stress Lab evidence normalization
+
+- Added independent statuses for not-started, script-loading, script-loaded, rendered creative, no-fill, request failure, possible filtering, provider error, and inconclusive observations. A rendered-creative label now requires a direct visible-layout observation.
+- Every normalized live-ad observation explicitly remains ineligible for the authoritative benchmark score and privacy-signal index.
+- Validation: focused evidence tests cover every status and reject hidden/indirect rendered claims. No provider creative was observed.
