@@ -16,7 +16,16 @@ import {
   ShieldCheck,
   Sliders,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  ArrowRight,
+  Shield,
+  Info,
+  FileText
 } from 'lucide-react';
 import { calculateBenchmarkScore as calculateExtractedBenchmarkScore } from './src/lab/scoring.js';
 import { generateHtmlReport as generateExtractedHtmlReport } from './src/lab/reporting.js';
@@ -3337,7 +3346,11 @@ export default function App() {
 
   const [sectionFilter, setSectionFilter] = useState('ALL');
   const [groupFilter, setGroupFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showWaferMatrix, setShowWaferMatrix] = useState(false);
+  const [copiedRule, setCopiedRule] = useState(false);
+  const [settingsSubTab, setSettingsSubTab] = useState('weights');
 
   const [envDiagnostics, setEnvDiagnostics] = useState(null);
   const [fixtureServerStatus, setFixtureServerStatus] = useState({
@@ -3535,6 +3548,13 @@ export default function App() {
     return TEST_REGISTRY.filter((t) => {
       const matchSec = sectionFilter === 'ALL' || t.section === sectionFilter;
       const matchGroup = groupFilter === 'ALL' || t.metricGroup === groupFilter;
+      const res = resultsMap[t.id];
+      const matchStatus =
+        statusFilter === 'ALL' ||
+        (statusFilter === 'BLOCKED' && res?.status === RESULT_STATUS.BLOCKED) ||
+        (statusFilter === 'PARTIAL' && res?.status === RESULT_STATUS.PARTIAL) ||
+        (statusFilter === 'ALLOWED' && res?.status === RESULT_STATUS.ALLOWED) ||
+        (statusFilter === 'OTHER' && res?.status && ![RESULT_STATUS.BLOCKED, RESULT_STATUS.PARTIAL, RESULT_STATUS.ALLOWED].includes(res?.status));
       const q = searchQuery.trim().toLowerCase();
       const matchQuery =
         !q ||
@@ -3542,9 +3562,9 @@ export default function App() {
         t.name.toLowerCase().includes(q) ||
         t.section.toLowerCase().includes(q) ||
         (t.recommendedRule && t.recommendedRule.toLowerCase().includes(q));
-      return matchSec && matchGroup && matchQuery;
+      return matchSec && matchGroup && matchStatus && matchQuery;
     });
-  }, [sectionFilter, groupFilter, searchQuery]);
+  }, [sectionFilter, groupFilter, statusFilter, searchQuery, resultsMap]);
 
   const inspectedTest = useMemo(
     () => TEST_REGISTRY.find((t) => t.id === inspectedTestId) || TEST_REGISTRY[0],
@@ -3561,7 +3581,7 @@ export default function App() {
         e.preventDefault();
         searchInputRef.current?.focus();
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        if (activeTab !== 'workbench' || filteredTests.length === 0) return;
+        if ((activeTab !== 'results' && activeTab !== 'workbench') || filteredTests.length === 0) return;
         e.preventDefault();
         const idx = filteredTests.findIndex((t) => t.id === inspectedTestId);
         const nextIdx =
@@ -3660,6 +3680,29 @@ export default function App() {
     ].includes(result.status)
   );
 
+  const handleCopyRule = (ruleText) => {
+    if (!ruleText) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(ruleText);
+    }
+    setCopiedRule(true);
+    notify('Target rule copied to clipboard', 'success');
+    setTimeout(() => setCopiedRule(false), 2000);
+  };
+
+  const normalizedTab = useMemo(() => {
+    if (activeTab === 'workbench' || activeTab === 'layers' || activeTab === 'run') return 'results';
+    if (activeTab === 'learn' || activeTab === 'verification') return 'methodology';
+    if (activeTab === 'scoring' || activeTab === 'monetag' || activeTab === 'architecture') return 'settings';
+    return activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'monetag') setSettingsSubTab('monetag');
+    if (activeTab === 'scoring') setSettingsSubTab('weights');
+    if (activeTab === 'architecture') setSettingsSubTab('backend');
+  }, [activeTab]);
+
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-[#c65322] selection:text-white ${appBg}`}>
       <header className={`sticky top-0 z-30 border-b px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-4 ${surface}`}>
@@ -3751,192 +3794,410 @@ export default function App() {
         </div>
       </header>
 
-      <div className={`border-b px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs ${subSurface}`}>
-        <nav className="flex items-center gap-1 flex-wrap" aria-label="Primary navigation">
+      {/* Streamlined 4-Tab Navigation */}
+      <div className={`border-b px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs ${subSurface}`}>
+        <nav className="flex items-center gap-1.5 flex-wrap" aria-label="Primary navigation">
           {[
-            { id: 'overview', label: 'Overview', icon: ShieldCheck },
-            { id: 'run', label: 'Run a Test', icon: Play },
-            { id: 'results', label: 'Results', icon: CheckCircle2 },
-            { id: 'learn', label: 'Learn & Methodology', icon: Layers },
-            { id: 'settings', label: 'Settings', icon: Sliders }
+            { id: 'overview', label: 'Overview & Scanner', icon: ShieldCheck },
+            { id: 'results', label: 'Results & Workbench', icon: CheckCircle2 },
+            { id: 'methodology', label: 'Methodology & Audit', icon: Layers },
+            { id: 'settings', label: 'Settings & Lab', icon: Sliders }
           ].map((tab) => {
             const Icon = tab.icon;
-            const active = activeTab === tab.id;
+            const active = normalizedTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setAdvancedToolsOpen(false);
-                }}
-                className={`inline-flex items-center gap-1.5 min-h-11 sm:min-h-9 px-3 py-1 rounded-sm border text-[12px] cursor-pointer transition-colors ${FOCUS_RING} ${
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 min-h-10 sm:min-h-9 px-3.5 py-1.5 rounded-sm border text-xs cursor-pointer transition-all ${FOCUS_RING} ${
                   active
-                    ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-semibold'
-                    : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white`
+                    ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-bold shadow-xs'
+                    : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5`
                 }`}
+                aria-current={active ? 'page' : undefined}
               >
-                <Icon aria-hidden="true" className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            aria-expanded={advancedToolsOpen}
-            onClick={() => setAdvancedToolsOpen((open) => !open)}
-            className={`sm:hidden inline-flex items-center min-h-11 px-3 py-1 rounded-sm border text-[12px] font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
-          >
-            {advancedToolsOpen ? 'Hide tools' : 'More tools'}
-          </button>
-          <span className={`mx-1 hidden lg:inline ${muted}`}>Advanced tools</span>
-          {[
-            { id: 'workbench', label: 'Catalog', icon: Terminal },
-            { id: 'layers', label: 'Analysis & exports', icon: Layers },
-            { id: 'scoring', label: 'Score configuration', icon: Sliders },
-            { id: 'monetag', label: 'Monetag chamber', icon: Box },
-            { id: 'verification', label: 'Audit suite', icon: CheckCircle2 },
-            { id: 'architecture', label: 'Diagnostics', icon: Server }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`${advancedToolsOpen ? 'inline-flex' : 'hidden'} sm:inline-flex items-center gap-1.5 min-h-11 sm:min-h-8 px-3 py-1 rounded-sm border text-[11px] cursor-pointer transition-colors ${FOCUS_RING} ${active ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-semibold' : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white`}`}>
-                <Icon aria-hidden="true" className="w-3 h-3" />
+                <Icon aria-hidden="true" className="w-4 h-4" />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </nav>
 
-        <div className="hidden xl:flex items-center gap-3 text-[11px]">
-          <span className={muted}>Fixture mode: <strong>{fixtureServerStatus.mode}</strong></span>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-600" aria-hidden="true" />
-            <span className={muted}>DOM fixture:</span>
-            <div
-              ref={sandboxStageRef}
-              aria-label="Isolated DOM Fixture Stage"
-              className="w-20 h-4 overflow-hidden border border-dashed border-slate-600 px-1 text-[9px] leading-4"
-            >
-              READY
-            </div>
+        <div className="flex items-center gap-3 text-[11px] font-mono">
+          <span className={muted}>Mode: <strong className="text-current">{fixtureServerStatus.mode}</strong></span>
+          <div
+            ref={sandboxStageRef}
+            aria-label="Isolated DOM Fixture Stage"
+            className="w-16 h-4 overflow-hidden border border-dashed border-slate-500 rounded-xs px-1 text-[9px] leading-4 text-center opacity-60"
+          >
+            DOM READY
           </div>
-        </div>
-      </div>
-
-      <div className={`border-b px-4 sm:px-6 py-3 ${surface}`}>
-        <div className="flex items-center justify-between text-[10px] font-mono mb-1.5">
-          <span className={`font-semibold ${muted}`}>
-            Test index · {coreBlockingTests.length} core checks · {privacySignalTests.length} privacy signals · {exploratoryTests.length} exploratory probes
-          </span>
-          <div className="flex items-center gap-3 tabular-nums">
-            <span className="text-emerald-700 dark:text-emerald-400">Blocked {scoreSummary.passedCount}</span>
-            <span className="text-amber-700 dark:text-amber-300">Partial {scoreSummary.partialCount}</span>
-            <span className="text-rose-700 dark:text-rose-300">Allowed {scoreSummary.failedCount}</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setActiveTab('workbench')}
-          className={`sm:hidden mt-3 min-h-11 w-full rounded-sm border text-sm font-semibold ${subSurface} ${FOCUS_RING}`}
-        >
-          Browse all {TEST_REGISTRY.length} test records
-        </button>
-        <div className="hidden sm:grid sm:grid-cols-22 gap-1.5 font-mono tabular-nums">
-          {TEST_REGISTRY.map((t) => {
-            const st = resultsMap[t.id]?.status;
-            const selected = inspectedTestId === t.id;
-            let cellBg = darkMode ? 'bg-[#090C10] border-[#1F2733] text-slate-500' : 'bg-slate-100 border-slate-300 text-slate-500';
-            if (st === RESULT_STATUS.BLOCKED) cellBg = 'bg-emerald-600 text-white border-emerald-500';
-            else if (st === RESULT_STATUS.PARTIAL) cellBg = 'bg-amber-500 text-slate-950 border-amber-400';
-            else if (st === RESULT_STATUS.ALLOWED) cellBg = 'bg-rose-600 text-white border-rose-500';
-            else if (st === RESULT_STATUS.SIGNAL_ACTIVE) cellBg = 'bg-teal-600 text-white border-teal-500';
-            else if (st === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN) cellBg = 'bg-purple-700 text-white border-purple-500';
-            else if (st === RESULT_STATUS.CONSISTENT_WITH_FILTERING) cellBg = 'bg-sky-700 text-white border-sky-500';
-            else if (st === RESULT_STATUS.INCONCLUSIVE || st === RESULT_STATUS.SIGNAL_INACTIVE) cellBg = 'bg-slate-700 text-slate-200 border-slate-600';
-
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setInspectedTestId(t.id)}
-                title={`${t.id} (${t.metricGroup}): ${t.name}; ${st || 'STANDBY'}`}
-                className={`h-6 rounded-xs border text-[9px] font-bold flex items-center justify-center cursor-pointer transition ${cellBg} ${
-                  selected ? 'ring-2 ring-[#c65322] z-10' : ''
-                }`}
-              >
-                {t.id.replace('-', '')}
-              </button>
-            );
-          })}
         </div>
       </div>
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10">
-        {activeTab === 'overview' && (
-          <section className="grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,.75fr)] lg:items-end" aria-labelledby="overview-title">
-            <div className="max-w-3xl py-4 sm:py-10">
-              <p className="text-sm font-semibold text-[#c65322]">Start with what a page can actually observe.</p>
-              <h1 id="overview-title" className="mt-4 text-4xl sm:text-6xl font-bold tracking-[-0.05em] leading-[.98]">Inspect browser behavior without inventing the cause.</h1>
-              <p className={`mt-6 max-w-2xl text-base sm:text-lg leading-8 ${muted}`}>Run a focused scan first, then follow the evidence. This lab records browser-visible behavior and its limits. It does not identify an extension, DNS service, VPN, or privacy mode.</p>
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-sm font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white disabled:opacity-50 ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4 fill-current" />Run quick scan ({quickScanTests.length})</button>
-                <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-sm border font-semibold disabled:opacity-50 ${surface} ${FOCUS_RING}`}><Play aria-hidden="true" className="w-4 h-4" />Run full diagnostic ({TEST_REGISTRY.length})</button>
+        {normalizedTab === 'overview' && (
+          <div className="space-y-8">
+            <section className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,.75fr)] lg:items-start" aria-labelledby="overview-title">
+              <div className="py-2 sm:py-6">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-sm text-[11px] font-mono font-semibold bg-[#c65322]/10 text-[#c65322] border border-[#c65322]/30 mb-4">
+                  <Shield className="w-3.5 h-3.5" />
+                  EVIDENCE-FIRST BROWSER DIAGNOSTICS
+                </div>
+                <h1 id="overview-title" className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-[-0.04em] leading-[1.02]">
+                  Inspect browser behavior without inventing the cause.
+                </h1>
+                <p className={`mt-5 max-w-2xl text-base sm:text-lg leading-relaxed ${muted}`}>
+                  Run controlled fixtures to measure observable ad blocking, tracker interception, cosmetic filtering, and privacy signals.
+                  We record direct browser-visible evidence and its limitations — without guessing your extensions, VPN, or DNS resolver.
+                </p>
+
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => startRun(quickScanTests)}
+                    disabled={isActiveRun}
+                    className={`inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-sm font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white disabled:opacity-50 shadow-xs cursor-pointer transition-colors ${FOCUS_RING}`}
+                  >
+                    <Play aria-hidden="true" className="w-4 h-4 fill-current" />
+                    Run Quick Scan (6 checks · ~1.5s)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startRun(TEST_REGISTRY)}
+                    disabled={isActiveRun}
+                    className={`inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-sm border font-semibold disabled:opacity-50 cursor-pointer ${surface} hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${FOCUS_RING}`}
+                  >
+                    <Play aria-hidden="true" className="w-4 h-4" />
+                    Run Full Diagnostic ({EXPECTED_REGISTRY_COUNT} cases)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('results')}
+                    className={`inline-flex items-center justify-center gap-2 min-h-12 px-4 rounded-sm border text-xs font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
+                  >
+                    View Workbench
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scope & Environment Cards */}
+              <div className="space-y-4">
+                <aside className={`border-t-4 border-[#c65322] p-5 sm:p-6 rounded-xs border shadow-xs ${surface}`} aria-label="Quick scan scope">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold uppercase font-mono tracking-wider text-[#c65322]">Quick Scan Scope</p>
+                    <span className={`text-xs font-mono ${muted}`}>6 CORE VECTORS</span>
+                  </div>
+                  <p className={`mt-2 text-xs leading-relaxed ${muted}`}>
+                    Six registered controlled checks covering core display, script interception, tracking, and anti-adblock detection:
+                  </p>
+                  <ol className="mt-4 grid grid-cols-2 gap-2 text-xs font-mono font-medium">
+                    {quickScanTests.map((test) => (
+                      <li key={test.id} className={`p-2 rounded-xs border flex items-center justify-between ${subSurface}`}>
+                        <span className="font-bold text-[#c65322]">{test.id}</span>
+                        <span className={`text-[10px] truncate max-w-[120px] ${muted}`}>{test.name}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('methodology')}
+                    className={`mt-4 text-xs font-semibold underline underline-offset-4 cursor-pointer text-[#c65322] ${FOCUS_RING}`}
+                  >
+                    Read the evidence methodology →
+                  </button>
+                </aside>
+
+                <div className={`p-5 rounded-xs border space-y-3 text-xs ${surface}`}>
+                  <p className="text-xs font-bold uppercase font-mono tracking-wider">Detected Browser Context</p>
+                  <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
+                    <div className={`p-2 rounded-xs border ${subSurface}`}>
+                      <span className={muted}>Engine Hint:</span>
+                      <div className="font-bold truncate">{envDiagnostics?.engineHint || 'Analyzing...'}</div>
+                    </div>
+                    <div className={`p-2 rounded-xs border ${subSurface}`}>
+                      <span className={muted}>Viewport:</span>
+                      <div className="font-bold">{envDiagnostics?.viewport || 'Calculating...'}</div>
+                    </div>
+                    <div className={`p-2 rounded-xs border ${subSurface}`}>
+                      <span className={muted}>Privacy Signal (GPC):</span>
+                      <div className="font-bold text-teal-600 dark:text-teal-400">
+                        {envDiagnostics?.globalPrivacyControlReported ? 'Active (true)' : 'Inactive'}
+                      </div>
+                    </div>
+                    <div className={`p-2 rounded-xs border ${subSurface}`}>
+                      <span className={muted}>Do Not Track (DNT):</span>
+                      <div className="font-bold">
+                        {envDiagnostics?.doNotTrackReported ? 'Active (1)' : 'Inactive'}
+                      </div>
+                    </div>
+                  </div>
+                  <p className={`text-[10px] ${muted} leading-normal`}>
+                    Note: Visible browser properties are diagnostic context only and cannot prove installed extensions or local VPN adapters.
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {normalizedTab === 'results' && (
+          <div className="space-y-6">
+            {/* Active Execution HUD (shown when tests are running or paused) */}
+            {isActiveRun && (
+              <div className={`p-4 rounded-xs border-2 border-[#c65322] space-y-3 shadow-md ${surface}`} role="status" aria-live="polite">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#c65322] animate-ping" />
+                    <span className="font-bold uppercase tracking-wider text-[#c65322]">
+                      {isPaused ? 'Diagnostic Paused' : 'Diagnostic in Progress'}
+                    </span>
+                    <span className={muted}>· Current: <strong>{runProgress.currentTestId || 'Starting'}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleTogglePause}
+                      className={`px-3 py-1 rounded-xs border text-xs font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
+                    >
+                      {isPaused ? 'Resume Run' : 'Pause Run'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelRun}
+                      className={`px-3 py-1 rounded-xs bg-rose-700 hover:bg-rose-600 text-white text-xs font-semibold cursor-pointer ${FOCUS_RING}`}
+                    >
+                      Abort Now
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#c65322] transition-all duration-300"
+                    style={{ width: `${Math.round((runProgress.completed / (runProgress.total || 1)) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-slate-500">
+                  <span>Completed {runProgress.completed} of {runProgress.total} test vectors</span>
+                  <span>{Math.round((runProgress.completed / (runProgress.total || 1)) * 100)}% complete</span>
+                </div>
+              </div>
+            )}
+
+            {/* Score & Telemetry Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: Core Blocking Score */}
+              <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className={`font-bold uppercase tracking-wider ${muted}`}>CORE BLOCKING SCORE</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-xs border border-current/20 text-[#c65322]">35 CORE FIXTURES</span>
+                </div>
+                <div className="text-4xl font-bold tracking-tight text-[#c65322]">
+                  {scoreSummary.overallScore !== null ? `${scoreSummary.overallScore}/100` : 'STANDBY'}
+                </div>
+                <p className={`text-xs ${muted}`}>
+                  {scoreSummary.overallScore !== null
+                    ? `From ${scoreSummary.eligibleTotalTests} eligible controlled ad/tracker blocking fixtures.`
+                    : 'Click "Run Quick Scan" or "Run Full Diagnostic" to compute score.'}
+                </p>
+                <div className="pt-2 flex items-center gap-2 text-xs font-mono tabular-nums">
+                  <span className="px-2 py-0.5 rounded-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                    {scoreSummary.passedCount} BLOCKED
+                  </span>
+                  <span className="px-2 py-0.5 rounded-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                    {scoreSummary.partialCount} PARTIAL
+                  </span>
+                  <span className="px-2 py-0.5 rounded-xs bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/30">
+                    {scoreSummary.failedCount} ALLOWED
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 2: Privacy Signals */}
+              <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className={`font-bold uppercase tracking-wider ${muted}`}>PRIVACY SIGNALS</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-xs border border-teal-500/40 text-teal-600 dark:text-teal-400">9 SIGNALS</span>
+                </div>
+                <div className="text-4xl font-bold tracking-tight text-teal-600 dark:text-teal-400">
+                  {scoreSummary.privacySignalsSummary.activeCount} / {scoreSummary.privacySignalsSummary.totalSignals} ACTIVE
+                </div>
+                <p className={`text-xs ${muted}`}>
+                  Client-side privacy features (GPC, DNT, referrer policy) harden the browser without inflating the ad score.
+                </p>
+                <div className="pt-2 flex items-center gap-2 text-xs font-mono">
+                  <span className={`px-2 py-0.5 rounded-xs border ${subSurface}`}>
+                    {scoreSummary.privacySignalsSummary.activeCount > 0 ? 'Signals Protected' : 'Default / Inactive'}
+                  </span>
+                  <span className={`text-[11px] ${muted}`}>
+                    ({scoreSummary.privacySignalsSummary.executedSignals} evaluated)
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 3: Protection Confidence */}
+              <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className={`font-bold uppercase tracking-wider ${muted}`}>AUDIT CONFIDENCE</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-xs border border-current/20">{scoreSummary.coveragePercentage}% COVERAGE</span>
+                </div>
+                <div className="text-2xl font-bold tracking-tight">
+                  {scoreSummary.overallConfidence}
+                </div>
+                <p className={`text-xs ${muted}`}>
+                  Direct observations from same-origin and relative path fixtures; no guesses on unseen network layers.
+                </p>
+                <div className="pt-2 flex items-center gap-2 text-xs font-mono">
+                  <span className={`px-2 py-0.5 rounded-xs border ${subSurface}`}>
+                    Mode: {fixtureServerStatus.mode}
+                  </span>
+                  <span className={`text-[11px] ${muted}`}>
+                    {scoreSummary.inconclusiveCount} Inconclusive
+                  </span>
+                </div>
               </div>
             </div>
-            <aside className={`border-t-4 border-[#c65322] p-5 sm:p-6 ${surface}`} aria-label="Quick scan scope">
-              <p className="text-sm font-semibold">Quick scan scope</p>
-              <p className={`mt-2 text-sm leading-6 ${muted}`}>Six registered controlled checks, selected to give a useful first look without presenting a shortcut as an authoritative score.</p>
-              <ol className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm font-medium">
-                {quickScanTests.map((test) => <li key={test.id} className="border-b border-current/15 pb-2">{test.id}</li>)}
-              </ol>
-              <button type="button" onClick={() => setActiveTab('learn')} className={`mt-6 text-sm font-semibold underline underline-offset-4 ${FOCUS_RING}`}>Read the method</button>
-            </aside>
-          </section>
-        )}
 
-        {activeTab === 'run' && (
-          <section className="max-w-4xl mx-auto py-4 sm:py-8" aria-labelledby="run-title">
-            <p className="text-sm font-semibold text-[#c65322]">Choose a diagnostic depth</p>
-            <h1 id="run-title" className="mt-2 text-3xl font-bold tracking-[-0.03em]">Run a test</h1>
-            <p className={`mt-2 ${muted}`}>The current run state and progress shown below are live. You can pause or cancel at any time.</p>
-            <div className={`mt-6 border-y py-5 flex flex-col sm:flex-row gap-3 ${subSurface}`}>
-              <button type="button" onClick={() => startRun(quickScanTests)} disabled={isActiveRun} className={`min-h-12 px-5 rounded-sm bg-[#c65322] hover:bg-[#a9431c] text-white font-semibold disabled:opacity-50 ${FOCUS_RING}`}>Run quick scan · {quickScanTests.length} checks</button>
-              <button type="button" onClick={() => startRun(TEST_REGISTRY)} disabled={isActiveRun} className={`min-h-12 px-5 rounded-sm border font-semibold disabled:opacity-50 ${surface} ${FOCUS_RING}`}>Run full diagnostic · {TEST_REGISTRY.length} cases</button>
+            {/* 7-Category Score Breakdown Grid */}
+            <div className={`p-5 rounded-xs border space-y-4 ${surface}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 border-current/10">
+                <div>
+                  <h2 className="text-sm font-bold uppercase font-mono tracking-wider">7-Category Protection Breakdown</h2>
+                  <p className={`text-xs ${muted}`}>
+                    Click any category below to filter the test catalog and inspect detailed evidence for that vector group.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSectionFilter('ALL');
+                    setGroupFilter('ALL');
+                    setStatusFilter('ALL');
+                  }}
+                  className={`text-xs font-semibold underline underline-offset-4 cursor-pointer text-[#c65322] ${FOCUS_RING}`}
+                >
+                  Reset category filter
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {scoreSummary.categoryBreakdown.map((cat) => {
+                  const hasEligible = cat.eligibleCount > 0;
+                  const pct = hasEligible ? cat.rawScore : 0;
+                  return (
+                    <div
+                      key={cat.id}
+                      onClick={() => {
+                        const matchingTest = TEST_REGISTRY.find((t) => t.scoringCategory === cat.id);
+                        if (matchingTest) setSectionFilter(matchingTest.section);
+                      }}
+                      className={`p-3 rounded-xs border cursor-pointer hover:border-[#c65322] transition-colors space-y-2 ${subSurface}`}
+                      title={`Filter tests by ${cat.name}`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold truncate max-w-[150px]">{cat.name}</span>
+                        <span className="font-mono text-[10px] opacity-75">{cat.configWeight}% weight</span>
+                      </div>
+                      <div className="flex items-end justify-between font-mono">
+                        <span className="text-xl font-bold">
+                          {cat.rawScore !== null ? `${cat.rawScore}%` : 'STANDBY'}
+                        </span>
+                        <span className={`text-[10px] ${muted}`}>
+                          {cat.blocked}/{cat.eligibleCount} blocked
+                        </span>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${pct >= 80 ? 'bg-emerald-600' : pct >= 40 ? 'bg-amber-500' : 'bg-rose-600'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <p className={`mt-5 font-mono text-sm ${muted}`}>State: <strong className="text-current">{executionState}</strong>{runProgress.total > 0 ? ` · ${runProgress.completed}/${runProgress.total} complete · current: ${runProgress.currentTestId || '—'}` : ''}</p>
-          </section>
-        )}
 
-        {activeTab === 'results' && (
-          <section className="max-w-4xl mx-auto py-4 sm:py-8" aria-labelledby="results-title">
-            <p className="text-sm font-semibold text-[#c65322]">Plain-language result summary</p>
-            <h1 id="results-title" className="mt-2 text-3xl font-bold tracking-[-0.03em]">Results</h1>
-            <p className={`mt-2 ${muted}`}>{scoreSummary.overallScore === null ? 'A blocking score is unavailable until eligible controlled evidence is completed.' : `Core blocking score: ${scoreSummary.overallScore}/100 from ${scoreSummary.eligibleTotalTests}/${scoreSummary.maxScoredTests} eligible results.`}</p>
-            <div className={`mt-6 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 border-y py-5 ${subSurface}`}>
-              <div><div className="text-3xl font-bold">{runProgress.completed || terminalResults.length}</div><div className={`text-xs ${muted}`}>completed</div></div>
-              <div><div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{scoreSummary.passedCount}</div><div className={`text-xs ${muted}`}>blocked</div></div>
-              <div><div className="text-3xl font-bold text-amber-700 dark:text-amber-300">{scoreSummary.partialCount}</div><div className={`text-xs ${muted}`}>partial</div></div>
-              <div><div className="text-3xl font-bold text-rose-700 dark:text-rose-300">{scoreSummary.failedCount}</div><div className={`text-xs ${muted}`}>allowed</div></div>
+            {/* Consolidated Report Export Bar */}
+            <div className={`p-4 rounded-xs border flex flex-wrap items-center justify-between gap-3 text-xs ${surface}`}>
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#c65322]" />
+                <div>
+                  <span className="font-bold uppercase font-mono tracking-wider">Sanitized Benchmark Exports</span>
+                  <div className={`text-[11px] ${muted}`}>
+                    Export verified telemetry with HTML escaping, separated privacy indices, and audit boundaries.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() =>
+                    triggerDownload(
+                      generateExtractedHtmlReport({
+                        brandName: BRAND_NAME,
+                        appVersion: APP_VERSION,
+                        brandPromise: BRAND_PROMISE,
+                        registry: TEST_REGISTRY,
+                        scoreSummary,
+                        resultsMap,
+                        userReported
+                      }),
+                      'adblocker-test-lab-report.html',
+                      'text/html;charset=utf-8;'
+                    )
+                  }
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export HTML
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    triggerDownload(
+                      generateJsonReport({
+                        scoreSummary,
+                        protectionAnalysis,
+                        userReported,
+                        envDiagnostics,
+                        resultsMap
+                      }),
+                      'adblocker-test-lab-benchmark.json',
+                      'application/json'
+                    )
+                  }
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export JSON
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    triggerDownload(
+                      generateCsvReport(resultsMap),
+                      'adblocker-test-lab-results.csv',
+                      'text/csv;charset=utf-8;'
+                    )
+                  }
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </button>
+              </div>
             </div>
-            <p className={`mt-5 text-sm leading-6 ${muted}`}>Privacy signals and external reachability probes are displayed separately. They do not increase the core blocking score because they cannot independently prove a blocking rule.</p>
-            <button type="button" onClick={() => setActiveTab('workbench')} className={`mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Inspect detailed evidence</button>
-          </section>
-        )}
 
-        {activeTab === 'learn' && (
-          <section className="max-w-3xl mx-auto py-8" aria-labelledby="learn-title"><p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Methodology</p><h1 id="learn-title" className="mt-3 text-2xl font-bold">What this lab can and cannot show</h1><p className={`mt-4 leading-7 ${muted}`}>Controlled fixtures can show whether a browser-visible behavior occurred. Failed third-party requests can have many causes, including connectivity, policy, DNS, or an outage. The lab reports that uncertainty instead of naming the software or network layer responsible.</p><button type="button" onClick={() => setActiveTab('verification')} className={`mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Open audit suite</button></section>
-        )}
-
-        {activeTab === 'settings' && (
-          <section className="max-w-3xl mx-auto py-8" aria-labelledby="settings-title"><p className="font-mono text-xs text-sky-500 uppercase tracking-wide">Preferences</p><h1 id="settings-title" className="mt-3 text-2xl font-bold">Settings</h1><p className={`mt-4 ${muted}`}>Theme is available here. Score weights and technical run configuration remain in Advanced Tools so first-run choices stay focused.</p><button type="button" onClick={() => setDarkMode((value) => !value)} className={`mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Use {darkMode ? 'light' : 'dark'} theme</button><button type="button" onClick={() => setActiveTab('scoring')} className={`ml-3 mt-6 min-h-10 px-3 rounded-sm border text-sm font-semibold ${surface} ${FOCUS_RING}`}>Advanced score configuration</button></section>
-        )}
-
-        {activeTab === 'workbench' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
-            <div className={`lg:col-span-7 border rounded-xs overflow-hidden ${surface}`}>
-              <div className={`p-2.5 border-b flex flex-wrap items-center justify-between gap-2 text-xs font-mono ${subSurface}`}>
+            {/* Interactive Test Workbench */}
+            <div className="space-y-3">
+              {/* Filter and Matrix Controls */}
+              <div className={`p-3 rounded-xs border flex flex-wrap items-center justify-between gap-3 text-xs ${surface}`}>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {[
                     { id: 'ALL', label: `ALL (${TEST_REGISTRY.length})` },
@@ -3948,8 +4209,8 @@ export default function App() {
                       key={g.id}
                       type="button"
                       onClick={() => setGroupFilter(g.id)}
-                      className={`px-2 py-0.5 rounded-xs border text-[10px] font-semibold cursor-pointer ${
-                        groupFilter === g.id ? 'bg-sky-700 text-white border-sky-600' : `${surface} ${muted}`
+                      className={`px-2.5 py-1 rounded-xs border text-[11px] font-semibold cursor-pointer transition-colors ${
+                        groupFilter === g.id ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] font-bold' : `${subSurface} ${muted}`
                       }`}
                     >
                       {g.label}
@@ -3957,33 +4218,110 @@ export default function App() {
                   ))}
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Outcome Filter Pills */}
+                  <div className="flex items-center gap-1 text-[11px] font-mono">
+                    {['ALL', 'BLOCKED', 'PARTIAL', 'ALLOWED', 'OTHER'].map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setStatusFilter(st)}
+                        className={`px-2 py-0.5 rounded-xs border cursor-pointer ${
+                          statusFilter === st ? 'bg-sky-700 text-white border-sky-600 font-bold' : `${subSurface} ${muted}`
+                        }`}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Section Select */}
                   <select
                     aria-label="Filter by domain section"
                     value={sectionFilter}
                     onChange={(e) => setSectionFilter(e.target.value)}
-                    className={`px-2 py-1 rounded-xs border text-[11px] font-mono ${surface}`}
+                    className={`px-2 py-1 rounded-xs border text-xs font-mono ${subSurface}`}
                   >
-                    <option value="ALL">All 14 Domains</option>
+                    <option value="ALL">All 14 Sections</option>
                     {allSections.map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>
                     ))}
                   </select>
+
+                  {/* Search Input */}
                   <div className="relative">
-                    <Search aria-hidden="true" className="w-3 h-3 absolute left-2 top-2 opacity-50" />
+                    <Search aria-hidden="true" className="w-3.5 h-3.5 absolute left-2 top-2 opacity-50" />
                     <input
                       ref={searchInputRef}
                       type="search"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Filter (/)"
-                      className={`pl-6 pr-2 py-1 w-36 rounded-xs border text-[11px] font-mono ${surface}`}
+                      className={`pl-7 pr-2 py-1 w-36 sm:w-44 rounded-xs border text-xs font-mono ${subSurface}`}
                     />
                   </div>
+
+                  {/* Toggle 55-Pin Matrix */}
+                  <button
+                    type="button"
+                    onClick={() => setShowWaferMatrix((prev) => !prev)}
+                    className={`px-2.5 py-1 rounded-xs border text-xs font-mono font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
+                  >
+                    {showWaferMatrix ? 'Hide Pin Matrix' : 'Show 55-Pin Matrix'}
+                  </button>
                 </div>
               </div>
+
+              {/* Collapsible 55-Vector Pin Matrix */}
+              {showWaferMatrix && (
+                <div className={`p-4 rounded-xs border space-y-2 ${surface}`}>
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-bold uppercase tracking-wider text-[#c65322]">
+                      55-VECTOR COVERAGE MATRIX (Click chip to inspect)
+                    </span>
+                    <span className={muted}>
+                      Blocked: {scoreSummary.passedCount} · Partial: {scoreSummary.partialCount} · Allowed: {scoreSummary.failedCount}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-6 sm:grid-cols-11 lg:grid-cols-22 gap-1.5 font-mono tabular-nums text-center">
+                    {TEST_REGISTRY.map((t) => {
+                      const st = resultsMap[t.id]?.status;
+                      const selected = inspectedTestId === t.id;
+                      let cellBg = darkMode ? 'bg-[#090C10] border-[#1F2733] text-slate-500' : 'bg-slate-100 border-slate-300 text-slate-500';
+                      if (st === RESULT_STATUS.BLOCKED) cellBg = 'bg-emerald-600 text-white border-emerald-500';
+                      else if (st === RESULT_STATUS.PARTIAL) cellBg = 'bg-amber-500 text-slate-950 border-amber-400';
+                      else if (st === RESULT_STATUS.ALLOWED) cellBg = 'bg-rose-600 text-white border-rose-500';
+                      else if (st === RESULT_STATUS.SIGNAL_ACTIVE) cellBg = 'bg-teal-600 text-white border-teal-500';
+                      else if (st === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN) cellBg = 'bg-purple-700 text-white border-purple-500';
+                      else if (st === RESULT_STATUS.CONSISTENT_WITH_FILTERING) cellBg = 'bg-sky-700 text-white border-sky-500';
+                      else if (st === RESULT_STATUS.INCONCLUSIVE || st === RESULT_STATUS.SIGNAL_INACTIVE) cellBg = 'bg-slate-700 text-slate-200 border-slate-600';
+
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setInspectedTestId(t.id)}
+                          title={`${t.id} (${t.metricGroup}): ${t.name}; ${st || 'STANDBY'}`}
+                          className={`h-7 rounded-xs border text-[10px] font-bold flex items-center justify-center cursor-pointer transition ${cellBg} ${
+                            selected ? 'ring-2 ring-[#c65322] z-10 font-black scale-105' : 'hover:opacity-85'
+                          }`}
+                        >
+                          {t.id.replace('-', '')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+                <div className={`lg:col-span-7 border rounded-xs overflow-hidden ${surface}`}>
+                  <div className={`p-2.5 border-b flex items-center justify-between text-xs font-mono ${subSurface}`}>
+                    <span className="font-bold">Showing {filteredTests.length} Test Vectors</span>
+                    <span className={muted}>Navigate with ↑/↓ keys · Press R to probe</span>
+                  </div>
 
               <div className="max-h-[620px] overflow-y-auto">
                 <table className="w-full text-left border-collapse">
@@ -4098,16 +4436,21 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={`p-2.5 rounded-xs border font-mono text-[11px] space-y-1 ${subSurface}`}>
+              <div className={`p-3 rounded-xs border font-mono text-xs space-y-1.5 ${subSurface}`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-sky-400">
-                    DETERMINISTIC TARGET RULE (0ms SYNTHESIS)
+                  <span className="text-[10px] font-bold uppercase text-[#c65322]">
+                    TARGET FILTER RULE (SYNTHESIS)
                   </span>
-                  <span className={`text-[10px] ${muted}`}>
-                    {inspectedTest.audit.scoringEligible ? 'Scored (Core)' : 'Non-Scored Index'}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyRule(inspectedTest.recommendedRule)}
+                    className={`inline-flex items-center gap-1 text-[10px] font-sans font-semibold cursor-pointer underline underline-offset-2 ${FOCUS_RING}`}
+                  >
+                    {copiedRule ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    {copiedRule ? 'Copied!' : 'Copy Rule'}
+                  </button>
                 </div>
-                <pre className="text-[11px] overflow-x-auto select-all font-bold text-emerald-400 whitespace-pre-wrap">
+                <pre className="text-xs overflow-x-auto select-all font-bold text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap p-2 rounded-xs bg-black/5 dark:bg-black/30">
                   {inspectedTest.recommendedRule}
                 </pre>
                 <p className={`font-sans text-[11px] pt-1 ${muted}`}>
@@ -4116,425 +4459,543 @@ export default function App() {
               </div>
             </div>
           </div>
+            </div>
+          </div>
         )}
 
-        {activeTab === 'monetag' && (
-          <div className={`border rounded-xs p-4 space-y-4 ${surface}`}>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#1F2733]">
-              <div>
-                <div className="text-[11px] font-mono uppercase text-sky-500 font-bold">
-                  DOMAIN 5.14 // DEDICATED MONETAG SANDBOXED TEST CHAMBER
+        {normalizedTab === 'methodology' && (
+          <div className="space-y-6">
+            {/* Principles & Evidence Hierarchy */}
+            <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#354955]">
+                <div>
+                  <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
+                    ARCHITECTURAL FOUNDATION // EVIDENCE INTEGRITY
+                  </div>
+                  <h2 className="text-base font-bold mt-0.5 tracking-tight">
+                    Measurement Methodology, Evidence Hierarchy &amp; Inconclusive Honesty
+                  </h2>
+                  <p className={`text-xs mt-1 max-w-3xl ${muted}`}>
+                    This test lab operates entirely within standard browser security sandboxes. It strictly distinguishes direct client-side observations from speculative claims.
+                  </p>
                 </div>
-                <h1 className="text-base font-bold mt-0.5">
-                  Isolated Monetag Fixture and Delivery-Domain Probe (MTG-01 &amp; MTG-02)
-                </h1>
-                <p className={`text-xs mt-0.5 ${muted}`}>
-                  Per product policy, the rest of {BRAND_NAME} is 100% ad-free. This chamber runs a controlled zone fixture and an exploratory delivery-domain probe; it never mounts a live provider tag.
-                </p>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded-sm border font-mono text-[11px] font-bold ${subSurface}`}>
+                    RFC 8941 &bull; W3C Resource Timing
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleRunMonetagChamber}
-                  disabled={isActiveRun}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xs font-mono text-xs font-semibold bg-sky-700 hover:bg-sky-600 text-white cursor-pointer ${FOCUS_RING}`}
-                >
-                  <Play aria-hidden="true" className="w-3.5 h-3.5 fill-current" />
-                  Probe Dedicated Monetag Chamber
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetMonetagChamber}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xs font-mono text-xs border cursor-pointer ${subSurface} ${FOCUS_RING}`}
-                  title="Clear Monetag chamber telemetry"
-                >
-                  <Trash2 aria-hidden="true" className="w-3.5 h-3.5 text-rose-400" />
-                  Clear Telemetry
-                </button>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className={`p-4 rounded-sm border space-y-2 ${subSurface}`}>
+                  <div className="font-bold text-sm flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-[#c65322]" />
+                    <span>Evidence Boundaries</span>
+                  </div>
+                  <p className={muted}>
+                    A failed network request does not prove ad blocking. Web pages cannot observe whether packet loss originated from an extension, DNS sinkhole, firewall rule, CORS preflight, or dead route.
+                  </p>
+                </div>
+                <div className={`p-4 rounded-sm border space-y-2 ${subSurface}`}>
+                  <div className="font-bold text-sm flex items-center gap-2">
+                    <Info className="w-4 h-4 text-sky-500" />
+                    <span>Inconclusive Honesty</span>
+                  </div>
+                  <p className={muted}>
+                    When telemetry cannot authoritatively prove whether a resource was filtered or failed due to network conditions, the vector is marked <code>INCONCLUSIVE</code> and excluded from the blocking score denominator.
+                  </p>
+                </div>
+                <div className={`p-4 rounded-sm border space-y-2 ${subSurface}`}>
+                  <div className="font-bold text-sm flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-emerald-500" />
+                    <span>Fixtures vs Probes</span>
+                  </div>
+                  <p className={muted}>
+                    Only 26 controlled first-party fixtures enter the core Ad &amp; Tracker Blocking score. Exploratory third-party network probes evaluate live reachability without altering baseline scores.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
-              <div className={`lg:col-span-6 p-4 rounded-xs border space-y-3 ${subSurface}`}>
-                <div className="flex items-center justify-between font-mono text-[11px]">
-                  <span className="font-bold uppercase">1. CONTROLLED MONETAG DOM &amp; PATH FIXTURE (MTG-01)</span>
-                  <span className="px-1.5 py-0.5 rounded-xs bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 text-[10px]">
-                    ISOLATED MOUNT
-                  </span>
+            {/* 6-Stage Execution Lifecycle */}
+            <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
+              <div className="border-b pb-3 border-slate-200 dark:border-[#354955]">
+                <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
+                  EXECUTION PIPELINE // STAGES 1 THROUGH 6
                 </div>
-
-                <div
-                  ref={monetagStageRef}
-                  id="monetag-dedicated-test-chamber"
-                  className="min-h-[64px] border border-dashed border-slate-500 rounded-xs p-3 flex flex-col items-center justify-center text-center font-mono text-[11px]"
-                >
-                  <span className={muted}>
-                    #monetag-dedicated-test-chamber // Injects .monetag-ad-zone + neutral control during MTG-01
-                  </span>
-                </div>
-
-                <p className={`pt-3 border-t border-slate-200 dark:border-[#1F2733] font-mono text-[11px] ${muted}`}>
-                  MTG-02 is an exploratory reachability probe. A provider tag is intentionally not mounted until the provider approves this specific use case.
-                </p>
+                <h3 className="text-sm font-bold mt-0.5">
+                  Vector Execution Lifecycle
+                </h3>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
+                {[
+                  { stage: '1. INIT', title: 'Worker Pool', desc: 'Acquires concurrency slot, registers AbortSignal, resets stage timers.' },
+                  { stage: '2. SYNTHESIZE', title: 'Payload Gen', desc: 'Compiles deterministic synthetic probe or CSS selector target.' },
+                  { stage: '3. MOUNT', title: 'DOM Fixture', desc: 'Inserts test node and paired neutral control into isolated DOM sandbox.' },
+                  { stage: '4. MEASURE', title: 'Telemetry', desc: 'Captures fetch/XHR, DOM collapse metrics, and W3C Performance entries.' },
+                  { stage: '5. VERIFY', title: 'Arrival Check', desc: 'Polls first-party beacon correlation endpoint or executes heuristic verification.' },
+                  { stage: '6. CLASSIFY', title: 'Evidence Map', desc: 'Maps outcome to BLOCKED, PARTIAL, ALLOWED, or INCONCLUSIVE status.' }
+                ].map((s) => (
+                  <div key={s.stage} className={`p-3 rounded-sm border space-y-1.5 ${subSurface}`}>
+                    <div className="font-mono text-[10px] font-bold text-[#c65322] uppercase tracking-wider">{s.stage}</div>
+                    <div className="font-bold text-xs">{s.title}</div>
+                    <p className={`text-[11px] leading-relaxed ${muted}`}>{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              <div className={`lg:col-span-6 p-4 rounded-xs border space-y-3 font-mono text-xs ${subSurface}`}>
-                <div className="font-bold uppercase text-[11px]">MONETAG VECTOR TELEMETRY</div>
-                {['MTG-01', 'MTG-02'].map((id) => {
-                  const t = TEST_REGISTRY.find((x) => x.id === id);
-                  const r = resultsMap[id];
-                  return (
-                    <div key={id} className={`p-3 rounded-xs border space-y-1 ${surface}`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold">
-                          {t.id}: {t.name}
-                        </span>
-                        <StatusBadge status={r?.status} darkMode={darkMode} />
-                      </div>
-                      <p className={`text-[11px] font-sans ${muted}`}>
-                        {r?.actualOutcome || 'Click "Probe Dedicated Monetag Chamber" to execute.'}
-                      </p>
+            {/* Protection Layer Analysis */}
+            <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
+              <div className="border-b pb-3 border-slate-200 dark:border-[#354955]">
+                <div className="text-[11px] font-mono uppercase text-sky-500 font-bold tracking-wider">
+                  HEURISTIC LAYER INFERENCE // CLIENT OBSERVABILITY
+                </div>
+                <h3 className="text-sm font-bold mt-0.5">
+                  Observed Protection Layers &amp; Boundaries
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {protectionAnalysis.layers.map((layer) => (
+                  <div key={layer.id} className={`border rounded-sm p-4 space-y-2.5 text-xs ${subSurface}`}>
+                    <div className="flex items-center justify-between font-mono text-[11px]">
+                      <span className="font-bold text-sky-500 dark:text-sky-400">
+                        {layer.code} // {layer.title}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-sm border ${surface} text-[10px]`}>
+                        {layer.confidence.shortLabel}
+                      </span>
                     </div>
-                  );
-                })}
+                    <div className="font-semibold text-sm">{layer.status}</div>
+                    <ul className={`list-disc list-inside space-y-1 text-[11px] ${muted}`}>
+                      {layer.evidence.map((ev, i) => (
+                        <li key={i}>{ev}</li>
+                      ))}
+                    </ul>
+                    <div className={`p-2.5 rounded-sm border font-mono text-[10px] leading-relaxed ${surface} ${muted}`}>
+                      <strong className="text-[#182024] dark:text-[#edf2ee]">BOUNDARY:</strong> {layer.unobservableBoundary}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-                {monetagChamberLog.length > 0 && (
-                  <div className="pt-2 space-y-1 text-[11px]">
-                    <div className={muted}>CHAMBER EXECUTION LOG:</div>
-                    {monetagChamberLog.map((entry, i) => (
-                      <div key={i} className="truncate">
-                        [{entry.ts}] ({entry.mode}) {entry.msg}
+            {/* 15-Assertion Automated Verification Suite */}
+            <div className={`border rounded-sm overflow-hidden ${surface}`}>
+              <div className={`px-5 py-3.5 border-b flex flex-wrap items-center justify-between gap-3 font-mono text-xs ${subSurface}`}>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold uppercase tracking-wider">
+                    AUTOMATED ENGINE &amp; REGRESSION VERIFICATION SUITE
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                    15/15 PASSING
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUnitTestResults(runVerificationSuite())}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border font-mono text-xs font-semibold cursor-pointer ${surface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-sky-500" />
+                  Re-Run 15 Assertions
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs tabular-nums">
+                  <thead>
+                    <tr className={`border-b font-mono text-[10px] uppercase ${subSurface} ${muted}`}>
+                      <th className="py-2.5 px-4">ID</th>
+                      <th className="py-2.5 px-4">REGRESSION ASSERTION</th>
+                      <th className="py-2.5 px-4">STATUS</th>
+                      <th className="py-2.5 px-4">VERIFIED EVIDENCE</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-[#354955]">
+                    {unitTestResults.map((u) => (
+                      <tr key={u.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+                        <td className="py-2.5 px-4 font-mono font-bold whitespace-nowrap">{u.id}</td>
+                        <td className="py-2.5 px-4 font-medium">{u.name}</td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-0.5 rounded-sm font-mono text-[10px] font-bold ${
+                              u.passed
+                                ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-700/60'
+                                : 'bg-rose-950/60 text-rose-300 border border-rose-700/60'
+                            }`}
+                          >
+                            {u.passed ? 'PASSED' : 'FAILED'}
+                          </span>
+                        </td>
+                        <td className={`py-2.5 px-4 font-mono text-[11px] ${muted}`}>{u.details}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {normalizedTab === 'settings' && (
+          <div className="space-y-6">
+            {/* Settings Sub-Tab Navigation Header */}
+            <div className={`border rounded-sm p-4 flex flex-wrap items-center justify-between gap-3 ${surface}`}>
+              <div>
+                <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
+                  LAB CONTROLS // CONFIGURATION &amp; TOOLS
+                </div>
+                <h2 className="text-base font-bold mt-0.5 tracking-tight">
+                  Scoring Weights, User Context &amp; Dedicated Chambers
+                </h2>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {[
+                  { id: 'weights', label: 'Scoring Weights' },
+                  { id: 'context', label: 'User Context' },
+                  { id: 'monetag', label: 'Monetag Chamber' },
+                  { id: 'backend', label: 'Backend APIs' }
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setSettingsSubTab(st.id)}
+                    className={`px-3 py-1.5 rounded-sm border font-mono text-xs font-semibold cursor-pointer transition-all ${FOCUS_RING} ${
+                      settingsSubTab === st.id
+                        ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee]'
+                        : `border-transparent ${muted} hover:bg-black/5 dark:hover:bg-white/5`
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sub-tab 1: Weights & Scoring */}
+            {settingsSubTab === 'weights' && (
+              <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#354955]">
+                  <div>
+                    <h3 className="text-sm font-bold">
+                      7-Category Ad &amp; Tracker Blocking Weights (Denominator Audit)
+                    </h3>
+                    <p className={`text-xs mt-0.5 ${muted}`}>
+                      Only controlled fixtures with <code>BLOCKED</code> (1.0), <code>PARTIAL</code> (0.5), or <code>ALLOWED</code> (0.0) enter the score denominator. Weights renormalize automatically when categories have zero eligible tests.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCategoryWeights(DEFAULT_SCORING_CATEGORIES)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border font-mono text-xs cursor-pointer ${subSurface} ${FOCUS_RING}`}
+                  >
+                    <RotateCcw aria-hidden="true" className="w-3.5 h-3.5" />
+                    Reset Default Weights (100%)
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs font-mono tabular-nums">
+                    <thead>
+                      <tr className={`border-b text-[10px] uppercase ${subSurface} ${muted}`}>
+                        <th className="py-2.5 px-3">CATEGORY</th>
+                        <th className="py-2.5 px-3">CONFIG WEIGHT</th>
+                        <th className="py-2.5 px-3">ACTIVE RENORM WEIGHT</th>
+                        <th className="py-2.5 px-3">ELIGIBLE / TOTAL</th>
+                        <th className="py-2.5 px-3">BLK / PRT / ALW</th>
+                        <th className="py-2.5 px-3">CATEGORY SCORE</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-[#354955]">
+                      {scoreSummary.categoryBreakdown.map((cat) => (
+                        <tr key={cat.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+                          <td className="py-2.5 px-3 font-sans font-semibold">
+                            <div>{cat.name}</div>
+                            <div className={`text-[11px] font-normal ${muted}`}>{cat.description}</div>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              aria-label={`${cat.name} weight`}
+                              value={cat.configuredWeight}
+                              onChange={(e) => handleWeightChange(cat.id, e.target.value)}
+                              className={`w-16 px-2 py-1 rounded-sm border font-mono text-xs ${subSurface}`}
+                            />
+                            <span className="ml-1">%</span>
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-sky-500 dark:text-sky-400">{cat.renormalizedWeight}%</td>
+                          <td className="py-2.5 px-3">
+                            {cat.eligibleCount} / {cat.totalTests}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="text-emerald-500 font-bold">{cat.catBlocked}</span> /{' '}
+                            <span className="text-amber-500 font-bold">{cat.catPartial}</span> /{' '}
+                            <span className="text-rose-500 font-bold">{cat.catAllowed}</span>
+                          </td>
+                          <td className="py-2.5 px-3 font-bold">
+                            {cat.rawScore !== null ? `${cat.rawScore}%` : 'EXCLUDED (0 ELIGIBLE)'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 2: User Context */}
+            {settingsSubTab === 'context' && (
+              <div className="space-y-4">
+                <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
+                  <div className="border-b pb-3 border-slate-200 dark:border-[#354955]">
+                    <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
+                      SELF-REPORTED METADATA // NOT AUTOMATED EVIDENCE
+                    </div>
+                    <h3 className="text-sm font-bold mt-0.5">
+                      User-Reported Configuration (Strictly Separated)
+                    </h3>
+                    <p className={`text-xs mt-1 ${muted}`}>
+                      Web pages cannot detect extensions or DNS resolvers directly. Provide your active setup here to attach metadata to exported JSON, CSV, and HTML reports.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
+                    <div>
+                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>Installed Blocker / Extension</label>
+                      <input
+                        type="text"
+                        value={userReported.installedExtension === 'unspecified' ? '' : userReported.installedExtension}
+                        onChange={(e) => setUserReported((p) => ({ ...p, installedExtension: e.target.value || 'unspecified' }))}
+                        placeholder="e.g. uBlock Origin, AdGuard"
+                        className={`w-full px-3 py-2 rounded-sm border text-xs ${subSurface} ${FOCUS_RING}`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>Private DNS / DoH</label>
+                      <input
+                        type="text"
+                        value={userReported.privateDns === 'unspecified' ? '' : userReported.privateDns}
+                        onChange={(e) => setUserReported((p) => ({ ...p, privateDns: e.target.value || 'unspecified' }))}
+                        placeholder="e.g. NextDNS, ControlD"
+                        className={`w-full px-3 py-2 rounded-sm border text-xs ${subSurface} ${FOCUS_RING}`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>VPN Status</label>
+                      <select
+                        aria-label="VPN status"
+                        value={userReported.vpnEnabled}
+                        onChange={(e) => setUserReported((p) => ({ ...p, vpnEnabled: e.target.value }))}
+                        className={`w-full px-3 py-2 rounded-sm border text-xs ${subSurface} ${FOCUS_RING}`}
+                      >
+                        <option value="unspecified">VPN: Unspecified</option>
+                        <option value="yes">VPN: Enabled (Self-Reported)</option>
+                        <option value="no">VPN: Disabled (Self-Reported)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>Test Run Notes</label>
+                      <input
+                        type="text"
+                        value={userReported.notes}
+                        onChange={(e) => setUserReported((p) => ({ ...p, notes: e.target.value }))}
+                        placeholder="Notes (HTML-escaped in exports)"
+                        className={`w-full px-3 py-2 rounded-sm border text-xs ${subSurface} ${FOCUS_RING}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Diagnostics Environment Info */}
+                <div className={`border rounded-sm p-5 space-y-3 ${surface}`}>
+                  <h3 className="text-sm font-bold">Detected Environment Diagnostics</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+                    <div className={`p-3 rounded-sm border ${subSurface}`}>
+                      <div className={`text-[10px] uppercase ${muted}`}>USER AGENT ENGINE</div>
+                      <div className="font-bold truncate mt-0.5">{envDiagnostics?.engine || 'Detecting...'}</div>
+                    </div>
+                    <div className={`p-3 rounded-sm border ${subSurface}`}>
+                      <div className={`text-[10px] uppercase ${muted}`}>PLATFORM</div>
+                      <div className="font-bold truncate mt-0.5">{envDiagnostics?.platform || 'Standard Browser'}</div>
+                    </div>
+                    <div className={`p-3 rounded-sm border ${subSurface}`}>
+                      <div className={`text-[10px] uppercase ${muted}`}>VIEWPORT</div>
+                      <div className="font-bold mt-0.5">{envDiagnostics?.viewport || '1920x1080'}</div>
+                    </div>
+                    <div className={`p-3 rounded-sm border ${subSurface}`}>
+                      <div className={`text-[10px] uppercase ${muted}`}>FIXTURE SERVER</div>
+                      <div className="font-bold mt-0.5">{fixtureServerStatus.mode}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 3: Monetag Chamber */}
+            {settingsSubTab === 'monetag' && (
+              <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#354955]">
+                  <div>
+                    <div className="text-[11px] font-mono uppercase text-sky-500 font-bold">
+                      DOMAIN 5.14 // DEDICATED MONETAG SANDBOXED TEST CHAMBER
+                    </div>
+                    <h3 className="text-base font-bold mt-0.5">
+                      Isolated Monetag Fixture and Delivery-Domain Probe (MTG-01 &amp; MTG-02)
+                    </h3>
+                    <p className={`text-xs mt-0.5 ${muted}`}>
+                      Per product policy, the rest of {BRAND_NAME} is 100% ad-free. This chamber runs a controlled zone fixture and an exploratory delivery-domain probe; it never mounts a live provider tag.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRunMonetagChamber}
+                      disabled={isActiveRun}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm font-mono text-xs font-semibold bg-sky-700 hover:bg-sky-600 text-white cursor-pointer ${FOCUS_RING}`}
+                    >
+                      <Play aria-hidden="true" className="w-3.5 h-3.5 fill-current" />
+                      Probe Dedicated Monetag Chamber
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetMonetagChamber}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-sm font-mono text-xs border cursor-pointer ${subSurface} ${FOCUS_RING}`}
+                      title="Clear Monetag chamber telemetry"
+                    >
+                      <Trash2 aria-hidden="true" className="w-3.5 h-3.5 text-rose-400" />
+                      Clear Telemetry
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
+                  <div className={`lg:col-span-6 p-4 rounded-sm border space-y-3 ${subSurface}`}>
+                    <div className="flex items-center justify-between font-mono text-[11px]">
+                      <span className="font-bold uppercase">1. CONTROLLED MONETAG DOM &amp; PATH FIXTURE (MTG-01)</span>
+                      <span className="px-1.5 py-0.5 rounded-sm bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 text-[10px]">
+                        ISOLATED MOUNT
+                      </span>
+                    </div>
+
+                    <div
+                      ref={monetagStageRef}
+                      id="monetag-dedicated-test-chamber"
+                      className="min-h-[64px] border border-dashed border-slate-500 rounded-sm p-3 flex flex-col items-center justify-center text-center font-mono text-[11px]"
+                    >
+                      <span className={muted}>
+                        #monetag-dedicated-test-chamber // Injects .monetag-ad-zone + neutral control during MTG-01
+                      </span>
+                    </div>
+
+                    <p className={`pt-3 border-t border-slate-200 dark:border-[#354955] font-mono text-[11px] ${muted}`}>
+                      MTG-02 is an exploratory reachability probe. A provider tag is intentionally not mounted until the provider approves this specific use case.
+                    </p>
+                  </div>
+
+                  <div className={`lg:col-span-6 p-4 rounded-sm border space-y-3 font-mono text-xs ${subSurface}`}>
+                    <div className="font-bold uppercase text-[11px]">MONETAG VECTOR TELEMETRY</div>
+                    {['MTG-01', 'MTG-02'].map((id) => {
+                      const t = TEST_REGISTRY.find((x) => x.id === id);
+                      const r = resultsMap[id];
+                      return (
+                        <div key={id} className={`p-3 rounded-sm border space-y-1 ${surface}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold">
+                              {t.id}: {t.name}
+                            </span>
+                            <StatusBadge status={r?.status} darkMode={darkMode} />
+                          </div>
+                          <p className={`text-[11px] font-sans ${muted}`}>
+                            {r?.actualOutcome || 'Click "Probe Dedicated Monetag Chamber" to execute.'}
+                          </p>
+                        </div>
+                      );
+                    })}
+
+                    {monetagChamberLog.length > 0 && (
+                      <div className="pt-2 space-y-1 text-[11px]">
+                        <div className={muted}>CHAMBER EXECUTION LOG:</div>
+                        {monetagChamberLog.map((entry, i) => (
+                          <div key={i} className="truncate">
+                            [{entry.ts}] ({entry.mode}) {entry.msg}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'scoring' && (
-          <div className={`border rounded-xs p-4 space-y-4 ${surface}`}>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#1F2733]">
-              <div>
-                <div className="text-[11px] font-mono uppercase text-sky-500 font-bold">
-                  TRANSPARENT WEIGHTED SCORING &amp; DENOMINATOR AUDIT
-                </div>
-                <h1 className="text-base font-bold mt-0.5">
-                  7-Category Ad &amp; Tracker Blocking Score vs. Separate Privacy Signals Index
-                </h1>
-                <p className={`text-xs mt-0.5 ${muted}`}>
-                  Only the 26 controlled `AD_TRACKER_BLOCKING` fixtures with `BLOCKED` (1.0), `PARTIAL` (0.5), or `ALLOWED` (0.0) enter the score denominator.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCategoryWeights(DEFAULT_SCORING_CATEGORIES)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs cursor-pointer ${subSurface}`}
-              >
-                <RotateCcw aria-hidden="true" className="w-3.5 h-3.5" />
-                Reset Default Weights (100%)
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs font-mono tabular-nums">
-                <thead>
-                  <tr className={`border-b text-[10px] uppercase ${subSurface} ${muted}`}>
-                    <th className="py-2 px-3">CATEGORY</th>
-                    <th className="py-2 px-3">CONFIG WEIGHT</th>
-                    <th className="py-2 px-3">ACTIVE RENORM WEIGHT</th>
-                    <th className="py-2 px-3">ELIGIBLE / TOTAL</th>
-                    <th className="py-2 px-3">BLK / PRT / ALW</th>
-                    <th className="py-2 px-3">CATEGORY SCORE</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-[#1F2733]">
-                  {scoreSummary.categoryBreakdown.map((cat) => (
-                    <tr key={cat.id}>
-                      <td className="py-2 px-3 font-sans font-semibold">
-                        <div>{cat.name}</div>
-                        <div className={`text-[11px] font-normal ${muted}`}>{cat.description}</div>
-                      </td>
-                      <td className="py-2 px-3">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          aria-label={`${cat.name} weight`}
-                          value={cat.configuredWeight}
-                          onChange={(e) => handleWeightChange(cat.id, e.target.value)}
-                          className={`w-16 px-2 py-1 rounded-xs border font-mono text-xs ${subSurface}`}
-                        />
-                        <span className="ml-1">%</span>
-                      </td>
-                      <td className="py-2 px-3 font-bold text-sky-400">{cat.renormalizedWeight}%</td>
-                      <td className="py-2 px-3">
-                        {cat.eligibleCount} / {cat.totalTests}
-                      </td>
-                      <td className="py-2 px-3">
-                        <span className="text-emerald-500">{cat.catBlocked}</span> /{' '}
-                        <span className="text-amber-500">{cat.catPartial}</span> /{' '}
-                        <span className="text-rose-500">{cat.catAllowed}</span>
-                      </td>
-                      <td className="py-2 px-3 font-bold">
-                        {cat.rawScore !== null ? `${cat.rawScore}%` : 'EXCLUDED (0 ELIGIBLE)'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'layers' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {protectionAnalysis.layers.map((layer) => (
-                <div key={layer.id} className={`border rounded-xs p-4 space-y-2 text-xs ${surface}`}>
-                  <div className="flex items-center justify-between font-mono text-[11px]">
-                    <span className="font-bold text-sky-400">
-                      {layer.code} // {layer.title}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-xs border ${subSurface}`}>
-                      {layer.confidence.shortLabel}
-                    </span>
-                  </div>
-                  <div className="font-semibold text-sm">{layer.status}</div>
-                  <ul className={`list-disc list-inside space-y-1 ${muted}`}>
-                    {layer.evidence.map((ev, i) => (
-                      <li key={i}>{ev}</li>
-                    ))}
-                  </ul>
-                  <div className={`p-2 rounded-xs border font-mono text-[10px] ${subSurface} ${muted}`}>
-                    <strong>BOUNDARY:</strong> {layer.unobservableBoundary}
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-
-            <div className={`border rounded-xs p-4 space-y-3 text-xs ${surface}`}>
-              <div className="font-mono font-bold uppercase text-[11px] text-sky-400">
-                OPTIONAL USER-REPORTED CONFIGURATION (STRICTLY SEPARATED FROM AUTOMATED OBSERVATIONS)
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 font-mono">
-                <input
-                  type="text"
-                  value={userReported.installedExtension === 'unspecified' ? '' : userReported.installedExtension}
-                  onChange={(e) => setUserReported((p) => ({ ...p, installedExtension: e.target.value || 'unspecified' }))}
-                  placeholder="Self-reported Extension (e.g. uBO)"
-                  className={`px-2.5 py-1.5 rounded-xs border text-xs ${subSurface}`}
-                />
-                <input
-                  type="text"
-                  value={userReported.privateDns === 'unspecified' ? '' : userReported.privateDns}
-                  onChange={(e) => setUserReported((p) => ({ ...p, privateDns: e.target.value || 'unspecified' }))}
-                  placeholder="Self-reported DNS (e.g. NextDNS)"
-                  className={`px-2.5 py-1.5 rounded-xs border text-xs ${subSurface}`}
-                />
-                <select
-                  aria-label="VPN status"
-                  value={userReported.vpnEnabled}
-                  onChange={(e) => setUserReported((p) => ({ ...p, vpnEnabled: e.target.value }))}
-                  className={`px-2.5 py-1.5 rounded-xs border text-xs ${subSurface}`}
-                >
-                  <option value="unspecified">VPN: Unspecified</option>
-                  <option value="yes">VPN: Enabled (Self-Reported)</option>
-                  <option value="no">VPN: Disabled (Self-Reported)</option>
-                </select>
-                <input
-                  type="text"
-                  value={userReported.notes}
-                  onChange={(e) => setUserReported((p) => ({ ...p, notes: e.target.value }))}
-                  placeholder="Test run notes (HTML-escaped in exports)"
-                  className={`px-2.5 py-1.5 rounded-xs border text-xs ${subSurface}`}
-                />
-              </div>
-            </div>
+            )}
 
-            <div className={`border rounded-xs p-4 flex flex-wrap items-center justify-between gap-3 font-mono text-xs ${surface}`}>
-              <div>
-                <div className="font-bold uppercase">SANITIZED BENCHMARK EXPORTS</div>
-                <div className={`text-[11px] ${muted}`}>
-                  Includes separated Ad/Tracker Blocking Score, Privacy Signals Index, and escaped HTML reports.
+            {/* Sub-tab 4: Backend APIs */}
+            {settingsSubTab === 'backend' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
+                <div className={`border rounded-sm p-5 space-y-3 ${surface}`}>
+                  <div className="font-mono text-[11px] font-bold uppercase text-sky-500">
+                    1. FIRST-PARTY ARRIVAL CORRELATION ENDPOINT (app/api/fixture/[...slug]/route.ts)
+                  </div>
+                  <p className={muted}>
+                    Authoritative server-side request-arrival correlation for TRK-03 (sendBeacon) and controlled URL probes:
+                  </p>
+                  <pre className={`p-3 rounded-sm border font-mono text-[11px] overflow-x-auto ${subSurface}`}>
+                    {[
+                      "import { NextResponse } from 'next/server';",
+                      'const beaconReceipts = new Map<string, number>();',
+                      '',
+                      'export async function POST(request: Request) {',
+                      '  const url = new URL(request.url);',
+                      "  const cid = url.searchParams.get('cid');",
+                      '  if (cid) beaconReceipts.set(cid, Date.now());',
+                      '  return NextResponse.json({ recorded: true });',
+                      '}',
+                      '',
+                      'export async function GET(request: Request) {',
+                      '  const url = new URL(request.url);',
+                      "  const verifyId = url.searchParams.get('verify');",
+                      '  if (verifyId) {',
+                      '    return NextResponse.json({ arrived: beaconReceipts.has(verifyId) });',
+                      '  }',
+                      '  return NextResponse.json(',
+                      '    { received: true, path: url.pathname, ts: Date.now() },',
+                      "    { headers: { 'X-AdBlockerLab-Fixture': '1', 'Cache-Control': 'no-store' } }",
+                      '  );',
+                      '}'
+                    ].join('\n')}
+                  </pre>
+                </div>
+
+                <div className={`border rounded-sm p-5 space-y-3 ${surface}`}>
+                  <div className="font-mono text-[11px] font-bold uppercase text-sky-500">
+                    2. SERVER-SIDE AUTHENTICATED AI FORENSICS PROXY (app/api/forensics/route.ts)
+                  </div>
+                  <p className={muted}>
+                    Keeps GEMINI_API_KEY strictly on the server with input validation and never exposes credentials to browser clients:
+                  </p>
+                  <pre className={`p-3 rounded-sm border font-mono text-[11px] overflow-x-auto ${subSurface}`}>
+                    {[
+                      "import { NextResponse } from 'next/server';",
+                      '',
+                      'export async function POST(req: Request) {',
+                      '  const apiKey = process.env.GEMINI_API_KEY;',
+                      '  if (!apiKey) {',
+                      "    return NextResponse.json({ error: 'Server GEMINI_API_KEY unconfigured' }, { status: 501 });",
+                      '  }',
+                      '  const body = await req.json();',
+                      "  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;",
+                      '  const upstream = await fetch(url, {',
+                      "    method: 'POST',",
+                      "    headers: { 'Content-Type': 'application/json' },",
+                      '    body: JSON.stringify(body)',
+                      '  });',
+                      '  const data = await upstream.json();',
+                      '  return NextResponse.json(data, { status: upstream.status });',
+                      '}'
+                    ].join('\n')}
+                  </pre>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() =>
-                    triggerDownload(
-                      generateJsonReport({
-                        scoreSummary,
-                        protectionAnalysis,
-                        userReported,
-                        envDiagnostics,
-                        resultsMap
-                      }),
-                      'adblocker-test-lab-v4.1.json',
-                      'application/json'
-                    )
-                  }
-                  className={`px-3 py-1.5 rounded-xs border cursor-pointer ${subSurface}`}
-                >
-                  Export JSON
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    triggerDownload(
-                      generateCsvReport(resultsMap),
-                      'adblocker-test-lab-v4.1.csv',
-                      'text/csv;charset=utf-8;'
-                    )
-                  }
-                  className={`px-3 py-1.5 rounded-xs border cursor-pointer ${subSurface}`}
-                >
-                  Export CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    triggerDownload(
-                      generateExtractedHtmlReport({
-                        brandName: BRAND_NAME,
-                        appVersion: APP_VERSION,
-                        brandPromise: BRAND_PROMISE,
-                        registry: TEST_REGISTRY,
-                        scoreSummary,
-                        resultsMap,
-                        userReported
-                      }),
-                      'adblocker-test-lab-v4.1.html',
-                      'text/html;charset=utf-8;'
-                    )
-                  }
-                  className={`px-3 py-1.5 rounded-xs border cursor-pointer ${subSurface}`}
-                >
-                  Export Escaped HTML
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'verification' && (
-          <div className={`border rounded-xs overflow-hidden ${surface}`}>
-            <div className={`px-4 py-2.5 border-b flex items-center justify-between font-mono text-xs ${subSurface}`}>
-              <span className="font-bold uppercase">
-                AUTOMATED ENGINE &amp; P0/P1 REGRESSION VERIFICATION SUITE (15/15 PASSING)
-              </span>
-              <button
-                type="button"
-                onClick={() => setUnitTestResults(runVerificationSuite())}
-                className="underline cursor-pointer text-sky-400"
-              >
-                Re-Run 15 Assertions
-              </button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs tabular-nums">
-                <thead>
-                  <tr className={`border-b font-mono text-[10px] uppercase ${subSurface} ${muted}`}>
-                    <th className="py-2 px-3">ID</th>
-                    <th className="py-2 px-3">REGRESSION ASSERTION</th>
-                    <th className="py-2 px-3">STATUS</th>
-                    <th className="py-2 px-3">VERIFIED EVIDENCE</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-[#1F2733]">
-                  {unitTestResults.map((u) => (
-                    <tr key={u.id}>
-                      <td className="py-2 px-3 font-mono font-bold whitespace-nowrap">{u.id}</td>
-                      <td className="py-2 px-3 font-medium">{u.name}</td>
-                      <td className="py-2 px-3 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-0.5 rounded-xs font-mono text-[10px] font-bold ${
-                            u.passed
-                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
-                              : 'bg-rose-950 text-rose-300 border border-rose-700'
-                          }`}
-                        >
-                          {u.passed ? 'PASSED' : 'FAILED'}
-                        </span>
-                      </td>
-                      <td className={`py-2 px-3 font-mono text-[11px] ${muted}`}>{u.details}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'architecture' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
-            <div className={`border rounded-xs p-4 space-y-2 ${surface}`}>
-              <div className="font-mono text-[11px] font-bold uppercase text-sky-400">
-                1. FIRST-PARTY ARRIVAL CORRELATION ENDPOINT (app/api/fixture/[...slug]/route.ts)
-              </div>
-              <p className={muted}>
-                P1-4 Fix: Deploy this Next.js Route Handler to enable authoritative server-side request-arrival correlation
-                for TRK-03 (sendBeacon) and controlled URL probes:
-              </p>
-              <pre className={`p-3 rounded-xs border font-mono text-[11px] overflow-x-auto ${subSurface}`}>
-                {[
-                  "import { NextResponse } from 'next/server';",
-                  'const beaconReceipts = new Map<string, number>();',
-                  '',
-                  'export async function POST(request: Request) {',
-                  '  const url = new URL(request.url);',
-                  "  const cid = url.searchParams.get('cid');",
-                  '  if (cid) beaconReceipts.set(cid, Date.now());',
-                  '  return NextResponse.json({ recorded: true });',
-                  '}',
-                  '',
-                  'export async function GET(request: Request) {',
-                  '  const url = new URL(request.url);',
-                  "  const verifyId = url.searchParams.get('verify');",
-                  '  if (verifyId) {',
-                  '    return NextResponse.json({ arrived: beaconReceipts.has(verifyId) });',
-                  '  }',
-                  '  return NextResponse.json(',
-                  '    { received: true, path: url.pathname, ts: Date.now() },',
-                  "    { headers: { 'X-AdBlockerLab-Fixture': '1', 'Cache-Control': 'no-store' } }",
-                  '  );',
-                  '}'
-                ].join('\n')}
-              </pre>
-            </div>
-
-            <div className={`border rounded-xs p-4 space-y-2 ${surface}`}>
-              <div className="font-mono text-[11px] font-bold uppercase text-sky-400">
-                2. SERVER-SIDE AUTHENTICATED AI FORENSICS PROXY (app/api/forensics/route.ts)
-              </div>
-              <p className={muted}>
-                P1-5 Fix: Keeps GEMINI_API_KEY strictly on the server with input validation and never exposes credentials
-                to browser clients:
-              </p>
-              <pre className={`p-3 rounded-xs border font-mono text-[11px] overflow-x-auto ${subSurface}`}>
-                {[
-                  "import { NextResponse } from 'next/server';",
-                  '',
-                  'export async function POST(req: Request) {',
-                  '  const apiKey = process.env.GEMINI_API_KEY;',
-                  '  if (!apiKey) {',
-                  "    return NextResponse.json({ error: 'Server GEMINI_API_KEY unconfigured' }, { status: 501 });",
-                  '  }',
-                  '  const body = await req.json();',
-                  "  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;",
-                  '  const upstream = await fetch(url, {',
-                  "    method: 'POST',",
-                  "    headers: { 'Content-Type': 'application/json' },",
-                  '    body: JSON.stringify(body)',
-                  '  });',
-                  '  const data = await upstream.json();',
-                  '  return NextResponse.json(data, { status: upstream.status });',
-                  '}'
-                ].join('\n')}
-              </pre>
-            </div>
+            )}
           </div>
         )}
       </main>

@@ -34,9 +34,13 @@ At mount the app:
 2. Executes the in-app verification suite and stores its results for the Methodology view.
 3. Reads `prefers-reduced-motion` when available.
 
-The initial route is an Overview with a Quick Scan and Full Diagnostic. Quick Scan runs exactly `DSP-01`, `TPA-01`, `TPA-05`, `TRK-01`, `INT-03`, and `AAB-01`; Full Diagnostic uses `TEST_REGISTRY`. Both invoke the same batch runner and route to the Results view. The live workbench, isolated Monetag chamber, scoring view, layer/export view, verification suite, and architecture view remain reachable under Advanced Tools.
+The initial route is an Overview with a Quick Scan and Full Diagnostic. Quick Scan runs exactly `DSP-01`, `TPA-01`, `TPA-05`, `TRK-01`, `INT-03`, and `AAB-01`; Full Diagnostic uses `TEST_REGISTRY`. Both invoke the same batch runner and route to the Results view.
 
-The current visual shell is a responsive evidence workspace. Light mode is the default for extended evidence review, with a working dark-mode preference. The Overview gives diagnostic actions precedence over telemetry, and its scope panel exposes the actual Quick Scan case IDs. The shared test index remains available above each view on wider layouts; mobile exposes its full catalog through a labelled action and keeps advanced tools behind a labelled expandable control.
+The application organizes all functionality into a streamlined 4-tab navigation structure:
+1. **Overview & Scanner**: Hero header, instant primary actions (Quick Scan & Full 55-Vector Diagnostic), diagnostic scope details, and detected browser context.
+2. **Results & Workbench**: Live execution HUD, high-level metrics (Score, Privacy Signals, Inconclusive count), 7-category progress breakdown, sanitized benchmark exports (HTML, JSON, CSV), collapsible 55-pin vector matrix, outcome filters (All, Blocked, Partial, Allowed, Other), keyboard-navigable results table, and vector inspection pane with rule-copying.
+3. **Methodology & Audit**: Foundational principles (evidence boundaries, inconclusive honesty, fixtures vs probes), 6-stage execution lifecycle breakdown, heuristic protection layers, and the automated 15-assertion verification suite with re-run capabilities.
+4. **Settings & Lab**: Sub-tab navigation for category weights & denominator audit, user-reported environment configuration, isolated Monetag test chamber (MTG-01/MTG-02), and first-party backend route handler architecture.
 
 ## Registry and configuration
 
