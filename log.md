@@ -115,3 +115,9 @@ This is an append-only record of repository changes and their verification. Add 
 - Added a pure configuration catalog for six optional Adsterra banner sizes, optional Adsterra Native/Popunder/Social Bar/Smartlink formats, and optional Monetag and ExoClick format lists. It accepts only valid HTTPS values and leaves malformed or absent values unavailable.
 - Added blank `VITE_REAL_ADS_*` variable names to `.env.example` and deployment guidance. No provider tag, zone ID, publisher identifier, Smartlink, or live script was committed.
 - Validation: focused configuration tests cover blank configuration, an individual banner, six distinct banners, and unavailable malformed Monetag/ExoClick input. Live-provider delivery remains unverified and no app UI starts a provider session yet.
+
+## 2026-10-16 - Real Ads Stress Lab session ownership
+
+- Added an explicit client-side session lifecycle with `IDLE`, `STARTING`, `ACTIVE`, `STOPPING`, `STOPPED`, and `ERROR` states. It creates only app-owned mount/script nodes after a caller invokes Start, refuses duplicate Starts, and removes owned nodes/listeners/observers on Stop.
+- Popunder Stop responses flag that an already-triggered third-party effect can require a document reload; the implementation never clicks, reloads, or generates impressions automatically.
+- Validation: focused lifecycle tests cover idle/start/duplicate-start, cleanup and popunder reload flag, and replacement reload. No provider configuration was supplied and no live script was loaded during this validation.
