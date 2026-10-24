@@ -4,6 +4,11 @@
 
 A browser-based lab for exploring ad-resource blocking, tracking protection, cosmetic filtering, privacy signals, popup containment, and observable resource-loading behavior.
 
+## Links
+
+- **Live demo:** https://lab.frpboy.in/
+- **Source code:** https://github.com/frpboy/adblocker-test-lab
+
 ## Documentation
 
 See [docs/README.md](docs/README.md) for the current architecture, measurement model, operational guidance, known limitations, roadmap, and the detailed review of the supplied project attachments.
@@ -32,7 +37,7 @@ npm run preview
 
 ## Deploying to Vercel
 
-Import the repository into Vercel, use the Vite framework preset, and keep the default build command (`npm run build`) and output directory (`dist`). After deployment, add the chosen subdomain (planned: `lab.frpboy.in`) in the Vercel project settings and configure the DNS record Vercel specifies.
+The current production deployment uses [lab.frpboy.in](https://lab.frpboy.in/). To reproduce the deployment, import the repository into Vercel, choose the Vite framework preset, and use the default build command (`npm run build`) and output directory (`dist`). Domain and DNS changes should be handled separately from application-code changes.
 
 ## Monetag integration
 
