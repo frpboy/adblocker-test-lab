@@ -37,7 +37,7 @@ npm run preview
 
 ## Deploying to Vercel
 
-Import the repository into Vercel, use the Vite framework preset, and keep the default build command (`npm run build`) and output directory (`dist`). The current production deployment uses [lab.frpboy.in](https://lab.frpboy.in/). For a new Vercel deployment, import the repository, use the Vite framework preset, and keep the default build command (`npm run build`) and output directory (`dist`). Domain or DNS changes should be handled separately from application-code changes.
+The current production deployment uses [lab.frpboy.in](https://lab.frpboy.in/). To reproduce the deployment, import the repository into Vercel, choose the Vite framework preset, and use the default build command (`npm run build`) and output directory (`dist`). Domain and DNS changes should be handled separately from application-code changes.
 
 ## Monetag integration
 
