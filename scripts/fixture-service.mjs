@@ -59,7 +59,7 @@ export function createFixtureService({ receiptFile, retentionMs = 300_000, now =
       response.writeHead(204, { 'cache-control': 'no-store' });
       return response.end();
     }
-    const arrived = await withReceiptLock(async () => {
+    const arrived = await withReceiptFileLock(receiptFile, async () => {
       const receipts = await readReceipts(receiptFile, retentionMs, now());
       await persist(receipts);
       return receipts.some((receipt) => receipt.runId === runId && receipt.testId === testId);
