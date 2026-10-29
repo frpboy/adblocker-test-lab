@@ -19,6 +19,14 @@ async function readReceipts(receiptFile, retentionMs, now) {
 export function createFixtureService({ receiptFile, retentionMs = 300_000, now = () => Date.now() }) {
   if (!receiptFile) throw new Error('receiptFile is required');
   let server;
+  let receiptQueue = Promise.resolve();
+
+  // Serialize receipt transactions so concurrent requests cannot overwrite one another.
+  const withReceiptLock = (operation) => {
+    const result = receiptQueue.then(operation, operation);
+    receiptQueue = result.catch(() => {});
+    return result;
+  };
 
   const persist = async (receipts) => {
     await mkdir(dirname(receiptFile), { recursive: true });
@@ -39,15 +47,20 @@ export function createFixtureService({ receiptFile, retentionMs = 300_000, now =
     const runId = url.searchParams.get('run') || '';
     const testId = url.searchParams.get('test') || '';
     if (!RUN_ID.test(runId) || !TEST_ID.test(testId)) return respond(response, 400, { error: 'invalid_correlation' });
-    const receipts = await readReceipts(receiptFile, retentionMs, now());
     if (url.pathname === '/api/fixture/resource') {
-      receipts.push({ runId, testId, arrivedAt: now() });
-      await persist(receipts);
+      await withReceiptLock(async () => {
+        const receipts = await readReceipts(receiptFile, retentionMs, now());
+        receipts.push({ runId, testId, arrivedAt: now() });
+        await persist(receipts);
+      });
       response.writeHead(204, { 'cache-control': 'no-store' });
       return response.end();
     }
-    await persist(receipts);
-    const arrived = receipts.some((receipt) => receipt.runId === runId && receipt.testId === testId);
+    const arrived = await withReceiptLock(async () => {
+      const receipts = await readReceipts(receiptFile, retentionMs, now());
+      await persist(receipts);
+      return receipts.some((receipt) => receipt.runId === runId && receipt.testId === testId);
+    });
     return respond(response, 200, { arrived, runId, testId });
   };
 
