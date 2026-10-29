@@ -5,6 +5,18 @@ import { randomUUID } from 'node:crypto';
 
 const RUN_ID = /^[a-f0-9-]{36}$/i;
 const TEST_ID = /^[A-Z]{2,4}-\d{2}$/;
+const receiptQueues = new Map();
+
+function withReceiptFileLock(receiptFile, operation) {
+  const previous = receiptQueues.get(receiptFile) ?? Promise.resolve();
+  const current = previous.then(operation, operation);
+  const settled = current.catch(() => {});
+  receiptQueues.set(receiptFile, settled);
+  void settled.finally(() => {
+    if (receiptQueues.get(receiptFile) === settled) receiptQueues.delete(receiptFile);
+  });
+  return current;
+}
 
 async function readReceipts(receiptFile, retentionMs, now) {
   try {
@@ -19,15 +31,6 @@ async function readReceipts(receiptFile, retentionMs, now) {
 export function createFixtureService({ receiptFile, retentionMs = 300_000, now = () => Date.now() }) {
   if (!receiptFile) throw new Error('receiptFile is required');
   let server;
-  let receiptQueue = Promise.resolve();
-
-  // Serialize receipt transactions so concurrent requests cannot overwrite one another.
-  const withReceiptLock = (operation) => {
-    const result = receiptQueue.then(operation, operation);
-    receiptQueue = result.catch(() => {});
-    return result;
-  };
-
   const persist = async (receipts) => {
     await mkdir(dirname(receiptFile), { recursive: true });
     await writeFile(receiptFile, JSON.stringify(receipts), 'utf8');
@@ -48,7 +51,7 @@ export function createFixtureService({ receiptFile, retentionMs = 300_000, now =
     const testId = url.searchParams.get('test') || '';
     if (!RUN_ID.test(runId) || !TEST_ID.test(testId)) return respond(response, 400, { error: 'invalid_correlation' });
     if (url.pathname === '/api/fixture/resource') {
-      await withReceiptLock(async () => {
+      await withReceiptFileLock(receiptFile, async () => {
         const receipts = await readReceipts(receiptFile, retentionMs, now());
         receipts.push({ runId, testId, arrivedAt: now() });
         await persist(receipts);
