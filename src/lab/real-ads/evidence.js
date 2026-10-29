@@ -1,3 +1,44 @@
+function getVisibleDimensions(element) {
+  try {
+    const view = element.ownerDocument?.defaultView;
+    const style = view?.getComputedStyle?.(element);
+    const opacity = style?.opacity;
+    if (
+      style &&
+      (style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        style.visibility === 'collapse' ||
+        (opacity !== undefined && opacity !== null && opacity !== '' && Number(opacity) === 0))
+    ) {
+      return null;
+    }
+
+    // Opacity and display:none on ancestors cannot be overridden by descendants.
+    // visibility:hidden can be overridden by a descendant's visibility:visible.
+    for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      const ancestorStyle = view?.getComputedStyle?.(ancestor);
+      const ancestorOpacity = ancestorStyle?.opacity;
+      if (
+        ancestorStyle &&
+        (ancestorStyle.display === 'none' ||
+          (ancestorOpacity !== undefined && ancestorOpacity !== null &&
+            ancestorOpacity !== '' && Number(ancestorOpacity) === 0))
+      ) {
+        return null;
+      }
+    }
+
+    const rect = typeof element.getBoundingClientRect === 'function'
+      ? element.getBoundingClientRect()
+      : null;
+    const width = rect && Number.isFinite(rect.width) ? rect.width : Number(element.offsetWidth) || 0;
+    const height = rect && Number.isFinite(rect.height) ? rect.height : Number(element.offsetHeight) || 0;
+    return width > 20 && height > 20 ? { width, height } : null;
+  } catch {
+    return null;
+  }
+}
+
 const STATUSES = new Set([
   'NOT_STARTED',
   'SCRIPT_LOADING',
@@ -55,88 +96,107 @@ export function inspectPlacementEvidence(containerElement, placement = {}) {
     // Non-DOM or restricted environment
   }
 
-  // Look for iframes (either provider iframe or nested creative iframe)
+  // A visible iframe is not proof that the creative inside it rendered.
+  // Only inspectable, visible creative content is positive evidence; cross-origin
+  // or opaque frame contents remain inconclusive.
   const iframes = Array.from(containerElement.querySelectorAll?.('iframe') ?? []);
   if (iframes.length > 0) {
-    let renderedCreativeFound = false;
-    let measuredWidth = 0;
-    let measuredHeight = 0;
+    let unknownFrameContent = false;
 
     for (const iframe of iframes) {
+      if (!getVisibleDimensions(iframe)) continue;
+
+      let frameDocument;
       try {
-        const rect = iframe.getBoundingClientRect?.() ?? { width: iframe.offsetWidth ?? 0, height: iframe.offsetHeight ?? 0 };
-        const iframeStyle = iframe.ownerDocument?.defaultView?.getComputedStyle?.(iframe);
-        if (iframeStyle && (iframeStyle.display === 'none' || iframeStyle.visibility === 'hidden')) {
-          continue;
-        }
-
-        let innerContentVisible = false;
-        try {
-          const doc = iframe.contentDocument;
-          if (doc) {
-            const innerIframes = doc.querySelectorAll('iframe');
-            const images = doc.querySelectorAll('img');
-            const links = doc.querySelectorAll('a');
-            const body = doc.body;
-            if (innerIframes.length > 0 || images.length > 0 || links.length > 0 || (body && (body.children.length > 0 || body.innerText.trim().length > 0))) {
-              innerContentVisible = true;
-            }
-          }
-        } catch {
-          // Cross-origin iframe: inaccessible contentDocument is expected for real third-party creatives
-          innerContentVisible = true;
-        }
-
-        const width = rect.width || iframe.offsetWidth || 0;
-        const height = rect.height || iframe.offsetHeight || 0;
-
-        if ((width > 20 && height > 20) || innerContentVisible) {
-          renderedCreativeFound = true;
-          measuredWidth = Math.max(measuredWidth, width);
-          measuredHeight = Math.max(measuredHeight, height);
-        }
+        frameDocument = iframe.contentDocument;
       } catch {
-        // Fallback for mock environments
+        unknownFrameContent = true;
+        continue;
       }
+
+      if (!frameDocument) {
+        unknownFrameContent = true;
+        continue;
+      }
+
+      const candidates = Array.from(
+        frameDocument.querySelectorAll?.('img, video, canvas, svg, a, [role="img"], p, span, div') ?? []
+      );
+      const visibleCreative = candidates.find((element) => {
+        if (!getVisibleDimensions(element)) return false;
+
+        const tagName = String(element.tagName ?? '').toUpperCase();
+        if (tagName === 'IMG') {
+          return Number(element.naturalWidth) > 0 && Number(element.naturalHeight) > 0;
+        }
+        if (tagName === 'VIDEO') {
+          return Number(element.videoWidth) > 0 && Number(element.videoHeight) > 0;
+        }
+        if (tagName === 'CANVAS') {
+          // Canvas dimensions do not prove that pixels were actually drawn.
+          return false;
+        }
+        if (tagName === 'SVG') {
+          return Boolean(element.querySelector?.('path, text, image, use'));
+        }
+        if (tagName === 'A') {
+          return Boolean(String(element.innerText ?? element.textContent ?? '').trim() ||
+            element.querySelector?.('img, svg, [role="img"]'));
+        }
+        if (element.getAttribute?.('role') === 'img') {
+          return Boolean(element.getAttribute?.('aria-label') || element.getAttribute?.('title') ||
+            String(element.innerText ?? element.textContent ?? '').trim());
+        }
+        return Boolean(String(element.innerText ?? element.textContent ?? '').trim());
+      });
+
+      if (visibleCreative) {
+        const dimensions = getVisibleDimensions(visibleCreative);
+        return {
+          status: 'REAL_CREATIVE_RENDERED',
+          visible: true,
+          note: 'Visible creative content observed inside a non-zero frame',
+          metrics: { width: dimensions.width, height: dimensions.height }
+        };
+      }
+
+      // A nested frame may contain a creative we cannot inspect. Do not promote
+      // the nested iframe itself into rendered-creative evidence.
+      if (frameDocument.querySelector?.('iframe')) unknownFrameContent = true;
     }
 
-    if (renderedCreativeFound) {
+    if (unknownFrameContent) {
       return {
-        status: 'REAL_CREATIVE_RENDERED',
-        visible: true,
-        note: `Creative rendered in frame (${measuredWidth || placement.size || 'detected'}px)`,
-        metrics: { width: measuredWidth, height: measuredHeight }
+        status: 'INCONCLUSIVE',
+        visible: false,
+        note: 'Visible frame detected, but creative content could not be independently inspected',
+        alternatives: ['cross_origin_frame', 'opaque_provider_content']
       };
     }
 
     return {
       status: 'EMPTY_OR_NO_FILL',
       visible: false,
-      note: 'Frame present but empty or zero-sized'
+      note: 'Visible frame detected without inspectable creative content'
     };
   }
 
   // Check for native creative elements or custom injected DOM
-  const children = Array.from(containerElement.children ?? []).filter(
+  const directChildren = Array.from(containerElement.children ?? []);
+  const descendants = Array.from(containerElement.querySelectorAll?.('*') ?? []);
+  const children = [...new Set([...directChildren, ...descendants])].filter(
     (el) => el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE'
   );
 
   if (children.length > 0) {
-    const hasVisibleChild = children.some((child) => {
-      try {
-        const rect = child.getBoundingClientRect?.() ?? { width: child.offsetWidth ?? 0, height: child.offsetHeight ?? 0 };
-        return (rect.width > 20 && rect.height > 20) || (child.innerText && child.innerText.trim().length > 0);
-      } catch {
-        return false;
-      }
-    });
+    const visibleChildren = children.filter((child) => getVisibleDimensions(child));
 
-    if (hasVisibleChild) {
+    if (visibleChildren.length > 0) {
       return {
         status: 'REAL_CREATIVE_RENDERED',
         visible: true,
-        note: `Rendered ${children.length} creative elements in container`,
-        metrics: { childCount: children.length }
+        note: `Rendered ${visibleChildren.length} creative elements in container`,
+        metrics: { childCount: visibleChildren.length }
       };
     }
 
