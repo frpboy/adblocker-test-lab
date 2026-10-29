@@ -4,7 +4,7 @@
 
 Live-provider observations are exploratory placement evidence, never benchmark inputs. `REAL_CREATIVE_RENDERED` requires a direct observation of a visible, non-zero owned layout; a loaded script or iframe alone is insufficient. No-fill, request failures, provider errors, and possible filtering retain alternative causes such as CSP, DNS, connectivity, and provider availability. None of these observations can raise the authoritative core score or privacy-signal index.
 
-A rendered-creative outcome requires visible computed styling and measured non-zero layout on the iframe or native creative node. DOM text or access to iframe document contents alone is insufficient; inaccessible frame contents remain unknown, not positive evidence.
+A rendered-creative outcome requires visible computed styling and measured non-zero layout on creative content. A visible iframe alone, accessible frame document alone, or non-empty canvas dimensions are insufficient; unreadable or opaque frame contents remain inconclusive, not positive evidence.
 
 ## Evidence classes
 

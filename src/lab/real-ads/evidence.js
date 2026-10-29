@@ -79,35 +79,88 @@ export function inspectPlacementEvidence(containerElement, placement = {}) {
     // Non-DOM or restricted environment
   }
 
-  // Look for iframes (either provider iframe or nested creative iframe)
+  // A visible iframe is not proof that the creative inside it rendered.
+  // Only inspectable, visible creative content is positive evidence; cross-origin
+  // or opaque frame contents remain inconclusive.
   const iframes = Array.from(containerElement.querySelectorAll?.('iframe') ?? []);
   if (iframes.length > 0) {
-    let renderedCreativeFound = false;
-    let measuredWidth = 0;
-    let measuredHeight = 0;
+    let unknownFrameContent = false;
 
     for (const iframe of iframes) {
-      const dimensions = getVisibleDimensions(iframe);
-      if (!dimensions) continue;
+      if (!getVisibleDimensions(iframe)) continue;
 
-      renderedCreativeFound = true;
-      measuredWidth = Math.max(measuredWidth, dimensions.width);
-      measuredHeight = Math.max(measuredHeight, dimensions.height);
+      let frameDocument;
+      try {
+        frameDocument = iframe.contentDocument;
+      } catch {
+        unknownFrameContent = true;
+        continue;
+      }
+
+      if (!frameDocument) {
+        unknownFrameContent = true;
+        continue;
+      }
+
+      const candidates = Array.from(
+        frameDocument.querySelectorAll?.('img, video, canvas, svg, a, [role="img"], p, span, div') ?? []
+      );
+      const visibleCreative = candidates.find((element) => {
+        if (!getVisibleDimensions(element)) return false;
+
+        const tagName = String(element.tagName ?? '').toUpperCase();
+        if (tagName === 'IMG') {
+          return Number(element.naturalWidth) > 0 && Number(element.naturalHeight) > 0;
+        }
+        if (tagName === 'VIDEO') {
+          return Number(element.videoWidth) > 0 && Number(element.videoHeight) > 0;
+        }
+        if (tagName === 'CANVAS') {
+          // Canvas dimensions do not prove that pixels were actually drawn.
+          return false;
+        }
+        if (tagName === 'SVG') {
+          return Boolean(element.querySelector?.('path, text, image, use'));
+        }
+        if (tagName === 'A') {
+          return Boolean(String(element.innerText ?? element.textContent ?? '').trim() ||
+            element.querySelector?.('img, svg, [role="img"]'));
+        }
+        if (element.getAttribute?.('role') === 'img') {
+          return Boolean(element.getAttribute?.('aria-label') || element.getAttribute?.('title') ||
+            String(element.innerText ?? element.textContent ?? '').trim());
+        }
+        return Boolean(String(element.innerText ?? element.textContent ?? '').trim());
+      });
+
+      if (visibleCreative) {
+        const dimensions = getVisibleDimensions(visibleCreative);
+        return {
+          status: 'REAL_CREATIVE_RENDERED',
+          visible: true,
+          note: 'Visible creative content observed inside a non-zero frame',
+          metrics: { width: dimensions.width, height: dimensions.height }
+        };
+      }
+
+      // A nested frame may contain a creative we cannot inspect. Do not promote
+      // the nested iframe itself into rendered-creative evidence.
+      if (frameDocument.querySelector?.('iframe')) unknownFrameContent = true;
     }
 
-    if (renderedCreativeFound) {
+    if (unknownFrameContent) {
       return {
-        status: 'REAL_CREATIVE_RENDERED',
-        visible: true,
-        note: `Creative rendered in frame (${measuredWidth || placement.size || 'detected'}px)`,
-        metrics: { width: measuredWidth, height: measuredHeight }
+        status: 'INCONCLUSIVE',
+        visible: false,
+        note: 'Visible frame detected, but creative content could not be independently inspected',
+        alternatives: ['cross_origin_frame', 'opaque_provider_content']
       };
     }
 
     return {
       status: 'EMPTY_OR_NO_FILL',
       visible: false,
-      note: 'Frame present but empty or zero-sized'
+      note: 'Visible frame detected without inspectable creative content'
     };
   }
 

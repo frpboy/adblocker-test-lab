@@ -30,27 +30,60 @@ test('inspectPlacementEvidence returns INCONCLUSIVE when container is null', () 
   assert.equal(result.visible, false);
 });
 
-test('inspectPlacementEvidence detects visible iframe as REAL_CREATIVE_RENDERED', () => {
-  const container = {
-    children: [],
-    querySelectorAll(selector) {
-      if (selector === 'iframe') {
-        return [{
-          tagName: 'IFRAME',
-          offsetWidth: 728,
-          offsetHeight: 90,
-          getBoundingClientRect: () => ({ width: 728, height: 90 })
-        }];
-      }
-      return [];
-    }
+test('does not treat visible iframe dimensions alone as a rendered creative', () => {
+  const iframe = {
+    tagName: 'IFRAME',
+    offsetWidth: 728,
+    offsetHeight: 90,
+    getBoundingClientRect: () => ({ width: 728, height: 90 }),
+    contentDocument: { querySelectorAll: () => [], querySelector: () => null }
   };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
+
+  const result = inspectPlacementEvidence(container, { size: '728x90' });
+  assert.equal(result.status, 'EMPTY_OR_NO_FILL');
+  assert.equal(result.visible, false);
+});
+
+test('keeps visible opaque iframe content inconclusive instead of claiming a render', () => {
+  const iframe = {
+    tagName: 'IFRAME',
+    offsetWidth: 728,
+    offsetHeight: 90,
+    getBoundingClientRect: () => ({ width: 728, height: 90 })
+    // No accessible contentDocument represents an opaque/cross-origin frame.
+  };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
+
+  const result = inspectPlacementEvidence(container, { size: '728x90' });
+  assert.equal(result.status, 'INCONCLUSIVE');
+  assert.equal(result.visible, false);
+  assert.deepEqual(result.alternatives, ['cross_origin_frame', 'opaque_provider_content']);
+});
+
+test('detects visible inspectable creative content inside a visible iframe', () => {
+  const child = {
+    tagName: 'IMG',
+    naturalWidth: 300,
+    naturalHeight: 250,
+    getBoundingClientRect: () => ({ width: 300, height: 250 })
+  };
+  const frameDocument = {
+    querySelectorAll: (selector) => selector.includes('img') ? [child] : [],
+    querySelector: () => null
+  };
+  child.ownerDocument = { defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } };
+  const iframe = {
+    tagName: 'IFRAME',
+    getBoundingClientRect: () => ({ width: 728, height: 90 }),
+    contentDocument: frameDocument
+  };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
 
   const result = inspectPlacementEvidence(container, { size: '728x90' });
   assert.equal(result.status, 'REAL_CREATIVE_RENDERED');
   assert.equal(result.visible, true);
-  assert.equal(result.metrics.width, 728);
-  assert.equal(result.metrics.height, 90);
+  assert.deepEqual(result.metrics, { width: 300, height: 250 });
 });
 
 test('inspectPlacementEvidence detects empty container as EMPTY_OR_NO_FILL', () => {
