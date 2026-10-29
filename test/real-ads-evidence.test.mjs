@@ -244,3 +244,43 @@ test('continues to recognize a visible native creative with non-zero dimensions'
   assert.equal(result.visible, true);
   assert.equal(result.metrics.childCount, 1);
 });
+
+test('rejects creatives hidden by ancestor opacity and visibility collapse', () => {
+  const cases = [
+    { label: 'ancestor opacity zero', parentStyle: { display: 'block', visibility: 'visible', opacity: '0' }, childStyle: { display: 'block', visibility: 'visible', opacity: '1' } },
+    { label: 'collapsed creative', parentStyle: { display: 'block', visibility: 'visible', opacity: '1' }, childStyle: { display: 'block', visibility: 'collapse', opacity: '1' } }
+  ];
+  for (const scenario of cases) {
+    const parent = { parentElement: null };
+    const child = { tagName: 'DIV', innerText: 'creative', parentElement: parent, getBoundingClientRect: () => ({ width: 300, height: 250 }) };
+    const view = { getComputedStyle: (element) => element === parent ? scenario.parentStyle : scenario.childStyle };
+    const document = { defaultView: view };
+    parent.ownerDocument = document;
+    child.ownerDocument = document;
+    const container = { children: [child], querySelectorAll: () => [], ownerDocument: document };
+    assert.notEqual(inspectPlacementEvidence(container).status, 'REAL_CREATIVE_RENDERED', scenario.label);
+  }
+});
+
+test('detects a visible descendant inside a visibility-hidden native wrapper', () => {
+  const wrapper = { tagName: 'DIV', parentElement: null, getBoundingClientRect: () => ({ width: 300, height: 250 }) };
+  const creative = { tagName: 'SPAN', innerText: 'visible creative', parentElement: wrapper, getBoundingClientRect: () => ({ width: 300, height: 250 }) };
+  const document = {
+    defaultView: {
+      getComputedStyle: (element) => element === wrapper
+        ? { display: 'block', visibility: 'hidden', opacity: '1' }
+        : { display: 'block', visibility: 'visible', opacity: '1' }
+    }
+  };
+  wrapper.ownerDocument = document;
+  creative.ownerDocument = document;
+  const container = {
+    children: [wrapper],
+    querySelectorAll: (selector) => selector === '*' ? [creative] : [],
+    ownerDocument: document
+  };
+
+  const result = inspectPlacementEvidence(container);
+  assert.equal(result.status, 'REAL_CREATIVE_RENDERED');
+  assert.equal(result.visible, true);
+});

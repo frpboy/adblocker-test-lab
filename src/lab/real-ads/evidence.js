@@ -1,14 +1,31 @@
 function getVisibleDimensions(element) {
   try {
-    const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element);
+    const view = element.ownerDocument?.defaultView;
+    const style = view?.getComputedStyle?.(element);
     const opacity = style?.opacity;
     if (
       style &&
       (style.display === 'none' ||
         style.visibility === 'hidden' ||
+        style.visibility === 'collapse' ||
         (opacity !== undefined && opacity !== null && opacity !== '' && Number(opacity) === 0))
     ) {
       return null;
+    }
+
+    // Opacity and display:none on ancestors cannot be overridden by descendants.
+    // visibility:hidden can be overridden by a descendant's visibility:visible.
+    for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      const ancestorStyle = view?.getComputedStyle?.(ancestor);
+      const ancestorOpacity = ancestorStyle?.opacity;
+      if (
+        ancestorStyle &&
+        (ancestorStyle.display === 'none' ||
+          (ancestorOpacity !== undefined && ancestorOpacity !== null &&
+            ancestorOpacity !== '' && Number(ancestorOpacity) === 0))
+      ) {
+        return null;
+      }
     }
 
     const rect = typeof element.getBoundingClientRect === 'function'
@@ -165,7 +182,9 @@ export function inspectPlacementEvidence(containerElement, placement = {}) {
   }
 
   // Check for native creative elements or custom injected DOM
-  const children = Array.from(containerElement.children ?? []).filter(
+  const directChildren = Array.from(containerElement.children ?? []);
+  const descendants = Array.from(containerElement.querySelectorAll?.('*') ?? []);
+  const children = [...new Set([...directChildren, ...descendants])].filter(
     (el) => el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE'
   );
 
