@@ -126,3 +126,88 @@ test('does not claim a creative rendered when its iframe is zero-sized or displa
   assert.equal(result.visible, false);
 });
 
+
+test('does not treat text in hidden or zero-sized native children as rendered', () => {
+  const cases = [
+    {
+      label: 'zero-sized text child',
+      dimensions: { width: 0, height: 0 },
+      childStyle: { display: 'block', visibility: 'visible', opacity: '1' }
+    },
+    {
+      label: 'display-hidden text child',
+      dimensions: { width: 300, height: 250 },
+      childStyle: { display: 'none', visibility: 'visible', opacity: '1' }
+    },
+    {
+      label: 'transparent text child',
+      dimensions: { width: 300, height: 250 },
+      childStyle: { display: 'block', visibility: 'visible', opacity: '0' }
+    }
+  ];
+
+  for (const scenario of cases) {
+    const child = {
+      tagName: 'DIV',
+      innerText: 'ad creative',
+      getBoundingClientRect: () => scenario.dimensions
+    };
+    const document = {
+      defaultView: {
+        getComputedStyle: (element) => element === child
+          ? scenario.childStyle
+          : { display: 'block', visibility: 'visible', opacity: '1' }
+      }
+    };
+    child.ownerDocument = document;
+    const container = {
+      children: [child],
+      querySelectorAll: () => [],
+      ownerDocument: document
+    };
+
+    assert.equal(inspectPlacementEvidence(container).status, 'EMPTY_OR_NO_FILL', scenario.label);
+  }
+});
+
+test('does not infer a rendered creative from iframe document content without visible outer geometry', () => {
+  const iframe = {
+    tagName: 'IFRAME',
+    offsetWidth: 0,
+    offsetHeight: 0,
+    getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    contentDocument: {
+      querySelectorAll: () => [{}],
+      body: { children: [{}], innerText: 'provider creative' }
+    }
+  };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
+
+  const result = inspectPlacementEvidence(container);
+  assert.equal(result.status, 'EMPTY_OR_NO_FILL');
+  assert.equal(result.visible, false);
+});
+
+test('continues to recognize a visible native creative with non-zero dimensions', () => {
+  const child = {
+    tagName: 'DIV',
+    innerText: 'ad creative',
+    getBoundingClientRect: () => ({ width: 300, height: 250 })
+  };
+  const document = {
+    defaultView: {
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' })
+    }
+  };
+  child.ownerDocument = document;
+  const container = {
+    children: [child],
+    querySelectorAll: () => [],
+    ownerDocument: document
+  };
+
+  const result = inspectPlacementEvidence(container);
+  assert.equal(result.status, 'REAL_CREATIVE_RENDERED');
+  assert.equal(result.visible, true);
+  assert.equal(result.metrics.childCount, 1);
+});

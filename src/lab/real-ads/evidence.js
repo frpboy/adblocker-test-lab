@@ -1,3 +1,27 @@
+function getVisibleDimensions(element) {
+  try {
+    const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element);
+    const opacity = style?.opacity;
+    if (
+      style &&
+      (style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        (opacity !== undefined && opacity !== null && opacity !== '' && Number(opacity) === 0))
+    ) {
+      return null;
+    }
+
+    const rect = typeof element.getBoundingClientRect === 'function'
+      ? element.getBoundingClientRect()
+      : null;
+    const width = rect && Number.isFinite(rect.width) ? rect.width : Number(element.offsetWidth) || 0;
+    const height = rect && Number.isFinite(rect.height) ? rect.height : Number(element.offsetHeight) || 0;
+    return width > 20 && height > 20 ? { width, height } : null;
+  } catch {
+    return null;
+  }
+}
+
 const STATUSES = new Set([
   'NOT_STARTED',
   'SCRIPT_LOADING',
@@ -63,41 +87,12 @@ export function inspectPlacementEvidence(containerElement, placement = {}) {
     let measuredHeight = 0;
 
     for (const iframe of iframes) {
-      try {
-        const rect = iframe.getBoundingClientRect?.() ?? { width: iframe.offsetWidth ?? 0, height: iframe.offsetHeight ?? 0 };
-        const iframeStyle = iframe.ownerDocument?.defaultView?.getComputedStyle?.(iframe);
-        if (iframeStyle && (iframeStyle.display === 'none' || iframeStyle.visibility === 'hidden')) {
-          continue;
-        }
+      const dimensions = getVisibleDimensions(iframe);
+      if (!dimensions) continue;
 
-        let innerContentVisible = false;
-        try {
-          const doc = iframe.contentDocument;
-          if (doc) {
-            const innerIframes = doc.querySelectorAll('iframe');
-            const images = doc.querySelectorAll('img');
-            const links = doc.querySelectorAll('a');
-            const body = doc.body;
-            if (innerIframes.length > 0 || images.length > 0 || links.length > 0 || (body && (body.children.length > 0 || body.innerText.trim().length > 0))) {
-              innerContentVisible = true;
-            }
-          }
-        } catch {
-          // Cross-origin iframe: inaccessible contentDocument is expected for real third-party creatives
-          innerContentVisible = true;
-        }
-
-        const width = rect.width || iframe.offsetWidth || 0;
-        const height = rect.height || iframe.offsetHeight || 0;
-
-        if ((width > 20 && height > 20) || innerContentVisible) {
-          renderedCreativeFound = true;
-          measuredWidth = Math.max(measuredWidth, width);
-          measuredHeight = Math.max(measuredHeight, height);
-        }
-      } catch {
-        // Fallback for mock environments
-      }
+      renderedCreativeFound = true;
+      measuredWidth = Math.max(measuredWidth, dimensions.width);
+      measuredHeight = Math.max(measuredHeight, dimensions.height);
     }
 
     if (renderedCreativeFound) {
@@ -122,21 +117,14 @@ export function inspectPlacementEvidence(containerElement, placement = {}) {
   );
 
   if (children.length > 0) {
-    const hasVisibleChild = children.some((child) => {
-      try {
-        const rect = child.getBoundingClientRect?.() ?? { width: child.offsetWidth ?? 0, height: child.offsetHeight ?? 0 };
-        return (rect.width > 20 && rect.height > 20) || (child.innerText && child.innerText.trim().length > 0);
-      } catch {
-        return false;
-      }
-    });
+    const visibleChildren = children.filter((child) => getVisibleDimensions(child));
 
-    if (hasVisibleChild) {
+    if (visibleChildren.length > 0) {
       return {
         status: 'REAL_CREATIVE_RENDERED',
         visible: true,
-        note: `Rendered ${children.length} creative elements in container`,
-        metrics: { childCount: children.length }
+        note: `Rendered ${visibleChildren.length} creative elements in container`,
+        metrics: { childCount: visibleChildren.length }
       };
     }
 
