@@ -2,6 +2,16 @@ export function escapeHtml(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+export function formatCsvField(val) {
+  let s = String(val ?? '').replace(/"/g, '""');
+  // Security: Mitigate CSV / Formula Injection (CWE-1236)
+  // Prefix cells starting with formula trigger characters with a single quote
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
+  return `"${s}"`;
+}
+
 export function generateHtmlReport({ brandName, appVersion, brandPromise, registry, scoreSummary, resultsMap, userReported }) {
   const reported = userReported || {};
   const rows = registry.map((test) => {

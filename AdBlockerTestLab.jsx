@@ -29,7 +29,7 @@ import {
   Zap
 } from 'lucide-react';
 import { calculateBenchmarkScore as calculateExtractedBenchmarkScore } from './src/lab/scoring.js';
-import { generateHtmlReport as generateExtractedHtmlReport } from './src/lab/reporting.js';
+import { generateHtmlReport as generateExtractedHtmlReport, formatCsvField as formatExtractedCsvField } from './src/lab/reporting.js';
 import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
 import NavigationRibbon from './src/components/NavigationRibbon.jsx';
 import OverviewView from './src/components/OverviewView.jsx';
@@ -1785,8 +1785,7 @@ export function escapeHtml(unsafeInput) {
 }
 
 export function formatCsvField(val) {
-  const s = String(val ?? '').replace(/"/g, '""');
-  return `"${s}"`;
+  return formatExtractedCsvField(val);
 }
 
 export function generateJsonReport({ scoreSummary, protectionAnalysis, userReported, envDiagnostics, resultsMap }) {
