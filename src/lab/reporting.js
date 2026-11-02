@@ -2,6 +2,16 @@ export function escapeHtml(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+// Security: Neutralize CSV/formula injection (CWE-1236) by prepending a single quote
+// if cell starts with formula trigger characters (=, +, -, @, tab, CR).
+export function formatCsvField(val) {
+  let s = String(val ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
 export function generateHtmlReport({ brandName, appVersion, brandPromise, registry, scoreSummary, resultsMap, userReported }) {
   const reported = userReported || {};
   const rows = registry.map((test) => {

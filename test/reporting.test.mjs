@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateHtmlReport } from '../src/lab/reporting.js';
+import { generateHtmlReport, formatCsvField } from '../src/lab/reporting.js';
 
 test('escapes hostile user-reported text in standalone HTML', () => {
   const html = generateHtmlReport({
@@ -15,4 +15,17 @@ test('escapes hostile user-reported text in standalone HTML', () => {
 
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+});
+
+test('neutralizes formula injection characters in formatCsvField (CWE-1236)', () => {
+  assert.equal(formatCsvField('=1+1'), `"'=1+1"`);
+  assert.equal(formatCsvField('+cmd|'), ` "'+cmd|"`.trim());
+  assert.equal(formatCsvField('-SUM(A1:A10)'), `"'-SUM(A1:A10)"`);
+  assert.equal(formatCsvField('@calc'), `"'@calc"`);
+  assert.equal(formatCsvField('\tcmd'), `"'\tcmd"`);
+  assert.equal(formatCsvField('\rcmd'), `"'\rcmd"`);
+  assert.equal(formatCsvField('Normal Text'), '"Normal Text"');
+  assert.equal(formatCsvField('Quotes "here"'), '"Quotes ""here"""');
+  assert.equal(formatCsvField(null), '""');
+  assert.equal(formatCsvField(undefined), '""');
 });

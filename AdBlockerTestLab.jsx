@@ -1784,9 +1784,14 @@ export function escapeHtml(unsafeInput) {
     .replace(/'/g, '&#039;');
 }
 
+// Security: Neutralize CSV/formula injection (CWE-1236) by prepending a single quote
+// if cell starts with formula trigger characters (=, +, -, @, tab, CR).
 export function formatCsvField(val) {
-  const s = String(val ?? '').replace(/"/g, '""');
-  return `"${s}"`;
+  let s = String(val ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
+  return `"${s.replace(/"/g, '""')}"`;
 }
 
 export function generateJsonReport({ scoreSummary, protectionAnalysis, userReported, envDiagnostics, resultsMap }) {
