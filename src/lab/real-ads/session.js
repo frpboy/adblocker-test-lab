@@ -60,8 +60,15 @@ export function createRealAdsSession({ document, window, onEvidence = () => {}, 
         iframe.style.overflow = 'hidden';
       }
 
-      const safeOptions = JSON.stringify(placement.options);
-      const safeScriptUrl = placement.scriptUrl.replace(/"/g, '&quot;');
+      // Escape '<' as unicode escape sequence to prevent </script> injection from closing script tag prematurely
+      const safeOptions = JSON.stringify(placement.options).replace(/</g, '\\u003c');
+      // Escape HTML characters to prevent breaking out of src attribute or script tag
+      const safeScriptUrl = placement.scriptUrl
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank"><style>body{margin:0;padding:0;overflow:hidden;background:transparent;}</style></head><body><script type="text/javascript">var atOptions = ${safeOptions};</script><script type="text/javascript" src="${safeScriptUrl}"></script></body></html>`;
       iframe.srcdoc = html;
 
