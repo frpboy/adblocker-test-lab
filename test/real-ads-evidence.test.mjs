@@ -125,4 +125,31 @@ test('does not claim a creative rendered when its iframe is zero-sized or displa
   assert.equal(result.status, 'EMPTY_OR_NO_FILL');
   assert.equal(result.visible, false);
 });
+test('detects container hidden by zero opacity', () => {
+  const container = {
+    children: [],
+    querySelectorAll: () => [],
+    ownerDocument: {
+      defaultView: {
+        getComputedStyle: () => ({
+          display: 'block',
+          visibility: 'visible',
+          opacity: '0'
+        })
+      }
+    }
+  };
 
+  const result = inspectPlacementEvidence(container);
+
+  assert.equal(result.status, 'BLOCKED_OR_FILTERED_POSSIBLE');
+  assert.equal(result.visible, false);
+  assert.deepEqual(result.alternatives, [
+    'cosmetic_filter',
+    'custom_css',
+    'element_hiding'
+  ]);
+
+  const observation = normalizeRealAdsObservation(result);
+  assert.equal(observation.benchmarkEligible, false);
+});
