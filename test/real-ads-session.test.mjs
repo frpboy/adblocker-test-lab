@@ -80,3 +80,33 @@ test('mounts synchronous banner into isolated provider iframe within target cont
   session.stop();
   assert.equal(slotContainer.children.length, 0);
 });
+
+test('safely escapes hostile script tags in options and scriptUrl within provider iframe', () => {
+  const document = createDocument();
+  const session = createRealAdsSession({ document, window: {} });
+  const slotContainer = { children: [], append(node) { this.children.push(node); node.parentNode = this; } };
+  const hostileBanner = {
+    id: 'adsterra-banner-malicious',
+    kind: 'banner',
+    size: '300x250',
+    scriptUrl: 'https://example.test/invoke.js?foo="><script>alert(2)</script>',
+    options: {
+      key: '</script><script>alert(1)</script>',
+      nested: '<img src=x onerror=alert(3)>'
+    }
+  };
+
+  const started = session.start(hostileBanner, slotContainer);
+  assert.equal(started.started, true);
+  const iframe = slotContainer.children[0];
+
+  // Options must not contain raw unescaped </script>
+  assert.doesNotMatch(iframe.srcdoc, /<\/script><script>alert\(1\)<\/script>/);
+  assert.match(iframe.srcdoc, /\\u003c\/script>\\u003cscript>alert\(1\)\\u003c\/script>/);
+
+  // scriptUrl must not contain unescaped quotes or raw tags
+  assert.doesNotMatch(iframe.srcdoc, /foo="><script>alert\(2\)<\/script>/);
+  assert.match(iframe.srcdoc, /&quot;&gt;&lt;script&gt;alert\(2\)&lt;\/script&gt;/);
+
+  session.stop();
+});
