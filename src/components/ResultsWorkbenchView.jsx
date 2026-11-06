@@ -13,7 +13,8 @@ import {
   Sparkles,
   ShieldAlert,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 
 export function StatusBadge({ status, darkMode, RESULT_STATUS }) {
@@ -502,16 +503,37 @@ export default function ResultsWorkbenchView({
             </select>
 
             {/* Search Input */}
-            <div className="relative">
-              <Search aria-hidden="true" className="w-3.5 h-3.5 absolute left-2 top-2 opacity-50" />
+            <div className="relative flex items-center">
+              <Search aria-hidden="true" className="w-3.5 h-3.5 absolute left-2 opacity-50 pointer-events-none" />
               <input
                 ref={searchInputRef}
-                type="search"
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && searchQuery) {
+                    e.stopPropagation();
+                    setSearchQuery('');
+                  }
+                }}
+                aria-label="Filter tests by name or domain"
                 placeholder="Filter (/)"
-                className={`pl-7 pr-2 py-1 w-36 sm:w-44 rounded-xs border text-xs font-mono ${subSurface}`}
+                className={`pl-7 ${searchQuery ? 'pr-7' : 'pr-2'} py-1 w-36 sm:w-44 rounded-xs border text-xs font-mono ${subSurface} ${focusRing}`}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    searchInputRef.current?.focus();
+                  }}
+                  aria-label="Clear search filter"
+                  title="Clear search filter (Esc)"
+                  className={`absolute right-1.5 p-0.5 rounded-xs opacity-60 hover:opacity-100 cursor-pointer ${focusRing}`}
+                >
+                  <X aria-hidden="true" className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
             {/* Reset Filters Pill (visible when filtered) */}
