@@ -53,4 +53,4 @@ Monetag is the planned advertising provider, but no ad tag is included by defaul
 
 ## License
 
-No license has been selected yet. All rights reserved by default until a license is added.
+Apache-2.0 — see [LICENSE](LICENSE).
