@@ -46,7 +46,7 @@ test('preserves independent fixture arrivals when requests run concurrently', as
   assert.deepEqual(results.map(({ arrived, testId }) => ({ arrived, testId })), testIds.map((testId) => ({ arrived: true, testId })));
 });
 
-test('serializes arrivals across service instances sharing one receipt file', async (t) => {
+test('serializes verification with other in-flight arrivals across service instances', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'adblocker-fixture-shared-'));
   const receiptFile = join(directory, 'receipts.json');
   const first = createFixtureService({ receiptFile, retentionMs: 60_000 });
@@ -57,19 +57,23 @@ test('serializes arrivals across service instances sharing one receipt file', as
     await rm(directory, { recursive: true, force: true });
   });
 
-  const created = await fetch(`${first.url}/api/fixture/runs`, { method: 'POST' });
+  const created = await fetch(first.url + '/api/fixture/runs', { method: 'POST' });
   const { runId } = await created.json();
-  const ids = Array.from({ length: 20 }, (_, index) => `NET-${String(index + 1).padStart(2, '0')}`);
-  const arrivals = await Promise.all(ids.map((testId, index) => {
-    const service = index % 2 ? second : first;
-    return fetch(`${service.url}/api/fixture/resource?run=${encodeURIComponent(runId)}&test=${testId}`);
-  }));
-  assert.deepEqual(arrivals.map((response) => response.status), Array(ids.length).fill(204));
+  const ids = Array.from({ length: 20 }, (_, index) => 'NET-' + String(index + 1).padStart(2, '0'));
 
-  const verification = await Promise.all(ids.map(async (testId, index) => {
-    const service = index % 2 ? first : second;
-    const response = await fetch(`${service.url}/api/fixture/verify?run=${encodeURIComponent(runId)}&test=${testId}`);
-    return response.json();
+  // Start each verification immediately after its own arrival is acknowledged.
+  // Other independent arrivals are still being processed, so reads and writes
+  // exercise the same shared file transaction boundary under mixed concurrency.
+  const results = await Promise.all(ids.map(async (testId, index) => {
+    const arrivalService = index % 2 ? second : first;
+    const verifyService = index % 2 ? first : second;
+    const arrival = await fetch(arrivalService.url + '/api/fixture/resource?run=' + encodeURIComponent(runId) + '&test=' + testId);
+    assert.equal(arrival.status, 204);
+
+    const verification = await fetch(verifyService.url + '/api/fixture/verify?run=' + encodeURIComponent(runId) + '&test=' + testId);
+    assert.equal(verification.status, 200);
+    return verification.json();
   }));
-  assert.deepEqual(verification.map((item) => item.arrived), Array(ids.length).fill(true));
+
+  assert.deepEqual(results.map(({ arrived, testId }) => ({ arrived, testId })), ids.map((testId) => ({ arrived: true, testId })));
 });
