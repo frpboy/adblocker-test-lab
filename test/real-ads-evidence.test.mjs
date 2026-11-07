@@ -30,27 +30,60 @@ test('inspectPlacementEvidence returns INCONCLUSIVE when container is null', () 
   assert.equal(result.visible, false);
 });
 
-test('inspectPlacementEvidence detects visible iframe as REAL_CREATIVE_RENDERED', () => {
-  const container = {
-    children: [],
-    querySelectorAll(selector) {
-      if (selector === 'iframe') {
-        return [{
-          tagName: 'IFRAME',
-          offsetWidth: 728,
-          offsetHeight: 90,
-          getBoundingClientRect: () => ({ width: 728, height: 90 })
-        }];
-      }
-      return [];
-    }
+test('does not treat visible iframe dimensions alone as a rendered creative', () => {
+  const iframe = {
+    tagName: 'IFRAME',
+    offsetWidth: 728,
+    offsetHeight: 90,
+    getBoundingClientRect: () => ({ width: 728, height: 90 }),
+    contentDocument: { querySelectorAll: () => [], querySelector: () => null }
   };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
+
+  const result = inspectPlacementEvidence(container, { size: '728x90' });
+  assert.equal(result.status, 'EMPTY_OR_NO_FILL');
+  assert.equal(result.visible, false);
+});
+
+test('keeps visible opaque iframe content inconclusive instead of claiming a render', () => {
+  const iframe = {
+    tagName: 'IFRAME',
+    offsetWidth: 728,
+    offsetHeight: 90,
+    getBoundingClientRect: () => ({ width: 728, height: 90 })
+    // No accessible contentDocument represents an opaque/cross-origin frame.
+  };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
+
+  const result = inspectPlacementEvidence(container, { size: '728x90' });
+  assert.equal(result.status, 'INCONCLUSIVE');
+  assert.equal(result.visible, false);
+  assert.deepEqual(result.alternatives, ['cross_origin_frame', 'opaque_provider_content']);
+});
+
+test('detects visible inspectable creative content inside a visible iframe', () => {
+  const child = {
+    tagName: 'IMG',
+    naturalWidth: 300,
+    naturalHeight: 250,
+    getBoundingClientRect: () => ({ width: 300, height: 250 })
+  };
+  const frameDocument = {
+    querySelectorAll: (selector) => selector.includes('img') ? [child] : [],
+    querySelector: () => null
+  };
+  child.ownerDocument = { defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } };
+  const iframe = {
+    tagName: 'IFRAME',
+    getBoundingClientRect: () => ({ width: 728, height: 90 }),
+    contentDocument: frameDocument
+  };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
 
   const result = inspectPlacementEvidence(container, { size: '728x90' });
   assert.equal(result.status, 'REAL_CREATIVE_RENDERED');
   assert.equal(result.visible, true);
-  assert.equal(result.metrics.width, 728);
-  assert.equal(result.metrics.height, 90);
+  assert.deepEqual(result.metrics, { width: 300, height: 250 });
 });
 
 test('inspectPlacementEvidence detects empty container as EMPTY_OR_NO_FILL', () => {
@@ -126,3 +159,128 @@ test('does not claim a creative rendered when its iframe is zero-sized or displa
   assert.equal(result.visible, false);
 });
 
+
+test('does not treat text in hidden or zero-sized native children as rendered', () => {
+  const cases = [
+    {
+      label: 'zero-sized text child',
+      dimensions: { width: 0, height: 0 },
+      childStyle: { display: 'block', visibility: 'visible', opacity: '1' }
+    },
+    {
+      label: 'display-hidden text child',
+      dimensions: { width: 300, height: 250 },
+      childStyle: { display: 'none', visibility: 'visible', opacity: '1' }
+    },
+    {
+      label: 'transparent text child',
+      dimensions: { width: 300, height: 250 },
+      childStyle: { display: 'block', visibility: 'visible', opacity: '0' }
+    }
+  ];
+
+  for (const scenario of cases) {
+    const child = {
+      tagName: 'DIV',
+      innerText: 'ad creative',
+      getBoundingClientRect: () => scenario.dimensions
+    };
+    const document = {
+      defaultView: {
+        getComputedStyle: (element) => element === child
+          ? scenario.childStyle
+          : { display: 'block', visibility: 'visible', opacity: '1' }
+      }
+    };
+    child.ownerDocument = document;
+    const container = {
+      children: [child],
+      querySelectorAll: () => [],
+      ownerDocument: document
+    };
+
+    assert.equal(inspectPlacementEvidence(container).status, 'EMPTY_OR_NO_FILL', scenario.label);
+  }
+});
+
+test('does not infer a rendered creative from iframe document content without visible outer geometry', () => {
+  const iframe = {
+    tagName: 'IFRAME',
+    offsetWidth: 0,
+    offsetHeight: 0,
+    getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    contentDocument: {
+      querySelectorAll: () => [{}],
+      body: { children: [{}], innerText: 'provider creative' }
+    }
+  };
+  const container = { children: [], querySelectorAll: (selector) => selector === 'iframe' ? [iframe] : [] };
+
+  const result = inspectPlacementEvidence(container);
+  assert.equal(result.status, 'EMPTY_OR_NO_FILL');
+  assert.equal(result.visible, false);
+});
+
+test('continues to recognize a visible native creative with non-zero dimensions', () => {
+  const child = {
+    tagName: 'DIV',
+    innerText: 'ad creative',
+    getBoundingClientRect: () => ({ width: 300, height: 250 })
+  };
+  const document = {
+    defaultView: {
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' })
+    }
+  };
+  child.ownerDocument = document;
+  const container = {
+    children: [child],
+    querySelectorAll: () => [],
+    ownerDocument: document
+  };
+
+  const result = inspectPlacementEvidence(container);
+  assert.equal(result.status, 'REAL_CREATIVE_RENDERED');
+  assert.equal(result.visible, true);
+  assert.equal(result.metrics.childCount, 1);
+});
+
+test('rejects creatives hidden by ancestor opacity and visibility collapse', () => {
+  const cases = [
+    { label: 'ancestor opacity zero', parentStyle: { display: 'block', visibility: 'visible', opacity: '0' }, childStyle: { display: 'block', visibility: 'visible', opacity: '1' } },
+    { label: 'collapsed creative', parentStyle: { display: 'block', visibility: 'visible', opacity: '1' }, childStyle: { display: 'block', visibility: 'collapse', opacity: '1' } }
+  ];
+  for (const scenario of cases) {
+    const parent = { parentElement: null };
+    const child = { tagName: 'DIV', innerText: 'creative', parentElement: parent, getBoundingClientRect: () => ({ width: 300, height: 250 }) };
+    const view = { getComputedStyle: (element) => element === parent ? scenario.parentStyle : scenario.childStyle };
+    const document = { defaultView: view };
+    parent.ownerDocument = document;
+    child.ownerDocument = document;
+    const container = { children: [child], querySelectorAll: () => [], ownerDocument: document };
+    assert.notEqual(inspectPlacementEvidence(container).status, 'REAL_CREATIVE_RENDERED', scenario.label);
+  }
+});
+
+test('detects a visible descendant inside a visibility-hidden native wrapper', () => {
+  const wrapper = { tagName: 'DIV', parentElement: null, getBoundingClientRect: () => ({ width: 300, height: 250 }) };
+  const creative = { tagName: 'SPAN', innerText: 'visible creative', parentElement: wrapper, getBoundingClientRect: () => ({ width: 300, height: 250 }) };
+  const document = {
+    defaultView: {
+      getComputedStyle: (element) => element === wrapper
+        ? { display: 'block', visibility: 'hidden', opacity: '1' }
+        : { display: 'block', visibility: 'visible', opacity: '1' }
+    }
+  };
+  wrapper.ownerDocument = document;
+  creative.ownerDocument = document;
+  const container = {
+    children: [wrapper],
+    querySelectorAll: (selector) => selector === '*' ? [creative] : [],
+    ownerDocument: document
+  };
+
+  const result = inspectPlacementEvidence(container);
+  assert.equal(result.status, 'REAL_CREATIVE_RENDERED');
+  assert.equal(result.visible, true);
+});
