@@ -3709,6 +3709,13 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-[#c65322] selection:text-white ${appBg}`}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:bg-[#c65322] focus:text-white focus:font-semibold focus:rounded-sm focus:shadow-md focus:outline-none focus:ring-2 focus:ring-white"
+      >
+        Skip to main content
+      </a>
+
       <NavigationRibbon
         brandName={BRAND_NAME}
         appVersion={APP_VERSION}
@@ -3733,7 +3740,7 @@ export default function App() {
         focusRing={FOCUS_RING}
       />
 
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10 outline-none">
         {normalizedTab === 'overview' && (
           <OverviewView
             startRun={startRun}

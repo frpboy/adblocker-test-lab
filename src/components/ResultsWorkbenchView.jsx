@@ -731,25 +731,51 @@ export default function ResultsWorkbenchView({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTests.map((t) => {
-                    const res = resultsMap[t.id];
-                    const isSelected = inspectedTestId === t.id;
+                  {filteredTests.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto">
+                          <div className={`p-3 rounded-full ${subSurface} text-[#c65322]`}>
+                            <Search className="w-5 h-5" aria-hidden="true" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">No matching test vectors</p>
+                            <p className={`text-xs ${muted}`}>
+                              No diagnostic tests match your active search query or filter combination.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={resetAllFilters}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border text-xs font-semibold font-mono text-[#c65322] cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${focusRing}`}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                            Reset all filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTests.map((t) => {
+                      const res = resultsMap[t.id];
+                      const isSelected = inspectedTestId === t.id;
 
-                    return (
-                      <WaterfallRow
-                        key={t.id}
-                        test={t}
-                        result={res}
-                        isSelected={isSelected}
-                        onSelect={setInspectedTestId}
-                        onRunSingle={runTestsBatch}
-                        isRunning={isActiveRun}
-                        darkMode={darkMode}
-                        RESULT_STATUS={RESULT_STATUS}
-                        metricGroups={metricGroups}
-                      />
-                    );
-                  })}
+                      return (
+                        <WaterfallRow
+                          key={t.id}
+                          test={t}
+                          result={res}
+                          isSelected={isSelected}
+                          onSelect={setInspectedTestId}
+                          onRunSingle={runTestsBatch}
+                          isRunning={isActiveRun}
+                          darkMode={darkMode}
+                          RESULT_STATUS={RESULT_STATUS}
+                          metricGroups={metricGroups}
+                        />
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
