@@ -849,13 +849,22 @@ export default function ResultsWorkbenchView({
                   <button
                     type="button"
                     onClick={() => handleCopyRule(inspectedTest.recommendedRule)}
+                    aria-label={copiedRule ? `Copied filter rule for ${inspectedTest.id} to clipboard` : `Copy filter rule for ${inspectedTest.id}`}
+                    title={copiedRule ? 'Copied to clipboard' : `Copy filter rule for ${inspectedTest.id}`}
                     className={`inline-flex items-center gap-1 text-[10px] font-sans font-semibold cursor-pointer underline underline-offset-2 ${focusRing}`}
                   >
-                    {copiedRule ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                    {copiedRule ? 'Copied!' : 'Copy Rule'}
+                    {copiedRule ? <Check aria-hidden="true" className="w-3 h-3 text-emerald-500" /> : <Copy aria-hidden="true" className="w-3 h-3" />}
+                    <span>{copiedRule ? 'Copied!' : 'Copy Rule'}</span>
+                    <span className="sr-only" role="status" aria-live="polite">
+                      {copiedRule ? `Copied filter rule for ${inspectedTest.id} to clipboard` : ''}
+                    </span>
                   </button>
                 </div>
-                <pre className="text-xs overflow-x-auto select-all font-bold text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap p-2 rounded-xs bg-black/5 dark:bg-black/30">
+                <pre
+                  tabIndex={0}
+                  aria-label={`Target filter rule syntax for ${inspectedTest.id}`}
+                  className={`text-xs overflow-x-auto select-all font-bold text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap p-2 rounded-xs bg-black/5 dark:bg-black/30 ${focusRing}`}
+                >
                   {inspectedTest.recommendedRule}
                 </pre>
                 <p className={`font-sans text-[11px] pt-1 ${muted}`}>
