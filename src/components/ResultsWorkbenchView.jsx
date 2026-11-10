@@ -114,6 +114,7 @@ export const WaterfallRow = React.memo(function WaterfallRow({
     <tr
       onClick={() => onSelect(test.id)}
       tabIndex={0}
+      aria-selected={isSelected}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -170,6 +171,7 @@ export const WaterfallRow = React.memo(function WaterfallRow({
           onClick={() => onRunSingle([test])}
           disabled={isRunning}
           title={`Probe ${test.id}`}
+          aria-label={`Probe ${test.id}: ${test.name}`}
           className={`px-1.5 py-0.5 rounded-xs border font-mono text-[10px] cursor-pointer disabled:opacity-40 ${
             darkMode
               ? 'bg-[#0D1117] border-slate-700 hover:border-sky-500 text-slate-300'
@@ -713,7 +715,7 @@ export default function ResultsWorkbenchView({
           {/* Main List Column (Desktop Table / Mobile Cards) */}
           <div className={`lg:col-span-7 border rounded-xs overflow-hidden ${surface}`}>
             <div className={`p-2.5 border-b flex items-center justify-between text-xs font-mono ${subSurface}`}>
-              <span className="font-bold">Showing {filteredTests.length} Test Vectors</span>
+              <span className="font-bold" aria-live="polite">Showing {filteredTests.length} Test Vectors</span>
               <span className={muted}>Navigate with ↑/↓ keys · Press R to probe</span>
             </div>
 
@@ -731,25 +733,55 @@ export default function ResultsWorkbenchView({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTests.map((t) => {
-                    const res = resultsMap[t.id];
-                    const isSelected = inspectedTestId === t.id;
+                  {filteredTests.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">
+                          <div className={`p-3 rounded-full ${subSurface} text-slate-400`}>
+                            <Search className="w-5 h-5" aria-hidden="true" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="font-semibold text-xs">No test vectors match your filters</p>
+                            <p className={`text-[11px] leading-relaxed ${muted}`}>
+                              {searchQuery
+                                ? `No results found for "${searchQuery}". Try adjusting your keywords or clearing active filters.`
+                                : 'No tests found matching the selected group, status, or section filter.'}
+                            </p>
+                          </div>
+                          {isFiltered && (
+                            <button
+                              type="button"
+                              onClick={resetAllFilters}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border text-xs font-mono font-semibold text-[#c65322] cursor-pointer hover:bg-[#c65322]/10 transition-colors ${focusRing}`}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                              Reset All Filters
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTests.map((t) => {
+                      const res = resultsMap[t.id];
+                      const isSelected = inspectedTestId === t.id;
 
-                    return (
-                      <WaterfallRow
-                        key={t.id}
-                        test={t}
-                        result={res}
-                        isSelected={isSelected}
-                        onSelect={setInspectedTestId}
-                        onRunSingle={runTestsBatch}
-                        isRunning={isActiveRun}
-                        darkMode={darkMode}
-                        RESULT_STATUS={RESULT_STATUS}
-                        metricGroups={metricGroups}
-                      />
-                    );
-                  })}
+                      return (
+                        <WaterfallRow
+                          key={t.id}
+                          test={t}
+                          result={res}
+                          isSelected={isSelected}
+                          onSelect={setInspectedTestId}
+                          onRunSingle={runTestsBatch}
+                          isRunning={isActiveRun}
+                          darkMode={darkMode}
+                          RESULT_STATUS={RESULT_STATUS}
+                          metricGroups={metricGroups}
+                        />
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
