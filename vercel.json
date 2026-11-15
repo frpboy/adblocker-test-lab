@@ -1,0 +1,7 @@
+{
+  "git": {
+    "deploymentEnabled": {
+      "review/minimal-error-reporting-20261115": false
+    }
+  }
+}
