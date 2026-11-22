@@ -120,7 +120,7 @@ export const WaterfallRow = React.memo(function WaterfallRow({
           onSelect(test.id);
         }
       }}
-      className={`cursor-pointer border-b transition-colors text-xs tabular-nums ${
+      className={`cursor-pointer border-b transition-colors text-xs tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#c65322] ${
         darkMode ? 'border-[#1B222C]' : 'border-slate-200'
       } ${
         isSelected
@@ -170,6 +170,7 @@ export const WaterfallRow = React.memo(function WaterfallRow({
           onClick={() => onRunSingle([test])}
           disabled={isRunning}
           title={`Probe ${test.id}`}
+          aria-label={`Probe ${test.id}: ${test.name}`}
           className={`px-1.5 py-0.5 rounded-xs border font-mono text-[10px] cursor-pointer disabled:opacity-40 ${
             darkMode
               ? 'bg-[#0D1117] border-slate-700 hover:border-sky-500 text-slate-300'
@@ -731,25 +732,47 @@ export default function ResultsWorkbenchView({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTests.map((t) => {
-                    const res = resultsMap[t.id];
-                    const isSelected = inspectedTestId === t.id;
+                  {filteredTests.length > 0 ? (
+                    filteredTests.map((t) => {
+                      const res = resultsMap[t.id];
+                      const isSelected = inspectedTestId === t.id;
 
-                    return (
-                      <WaterfallRow
-                        key={t.id}
-                        test={t}
-                        result={res}
-                        isSelected={isSelected}
-                        onSelect={setInspectedTestId}
-                        onRunSingle={runTestsBatch}
-                        isRunning={isActiveRun}
-                        darkMode={darkMode}
-                        RESULT_STATUS={RESULT_STATUS}
-                        metricGroups={metricGroups}
-                      />
-                    );
-                  })}
+                      return (
+                        <WaterfallRow
+                          key={t.id}
+                          test={t}
+                          result={res}
+                          isSelected={isSelected}
+                          onSelect={setInspectedTestId}
+                          onRunSingle={runTestsBatch}
+                          isRunning={isActiveRun}
+                          darkMode={darkMode}
+                          RESULT_STATUS={RESULT_STATUS}
+                          metricGroups={metricGroups}
+                        />
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-10 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                          <Search aria-hidden="true" className="w-6 h-6 opacity-40 text-[#c65322]" />
+                          <div className="text-xs font-semibold">No test vectors match current filters</div>
+                          <p className={`text-[11px] leading-relaxed ${muted}`}>
+                            Try adjusting your search query, section, metric group, or status filter.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={resetAllFilters}
+                            className={`mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border text-xs font-mono font-semibold cursor-pointer ${subSurface} ${focusRing}`}
+                          >
+                            <RotateCcw aria-hidden="true" className="w-3 h-3" />
+                            Reset All Filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
