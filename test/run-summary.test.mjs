@@ -71,3 +71,44 @@ test('summary copy never uses em dashes', () => {
   const text = JSON.stringify(s) + buildShareText(s);
   assert.ok(!text.includes('—'));
 });
+
+test('a blocker that is on but hides few elements gets element-hiding advice (uBO Lite case)', () => {
+  const reg = [
+    { id: 'DSP-01', metricGroup: 'AD_TRACKER_BLOCKING' },
+    { id: 'DSP-02', metricGroup: 'AD_TRACKER_BLOCKING' },
+    { id: 'TPA-05', metricGroup: 'AD_TRACKER_BLOCKING' },
+    { id: 'TRK-03', metricGroup: 'EXPLORATORY_PROBE' },
+    { id: 'INT-04', metricGroup: 'PRIVACY_SIGNAL' },
+    { id: 'TPA-02', metricGroup: 'EXPLORATORY_PROBE' }
+  ];
+  const resultsMap = {
+    'DSP-01': { status: 'ALLOWED' },
+    'DSP-02': { status: 'BLOCKED' },
+    'TPA-05': { status: 'BLOCKED' },
+    'TRK-03': { status: 'INCONCLUSIVE' },
+    'INT-04': { status: 'INCONCLUSIVE' },
+    'TPA-02': { status: 'ALLOWED' }
+  };
+  const scoreSummary = summaryOf({
+    overallScore: 12,
+    eligibleTotalTests: 35,
+    maxScoredTests: 35,
+    categoryBreakdown: [{ id: 'cosmetic_filtering', name: 'DOM Cosmetic Filtering', eligibleCount: 12, rawScore: 8.3, catBlocked: 1 }]
+  });
+  const s = buildRunSummary({ scoreSummary, resultsMap, registry: reg, lastRun: null });
+
+  assert.equal(s.blockerActive, true);
+  assert.match(s.nextSteps[0], /hid only 1 of 12 ad elements/);
+  assert.match(s.nextSteps[0], /Complete/);
+  assert.equal(s.scoredUnmeasured.length, 0);
+  assert.equal(s.otherUnmeasured, 2);
+  assert.ok(s.simple.some((l) => l === '2 privacy or extra checks could not be measured. These never count toward the score.'));
+  assert.ok(!s.simple.some((l) => /left out of the score/.test(l)), 'non-scored checks must not be described as left out of the score');
+});
+
+test('nothing blocked at all gets the "is it switched on" advice instead', () => {
+  const reg = [{ id: 'DSP-01', metricGroup: 'AD_TRACKER_BLOCKING' }];
+  const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap: { 'DSP-01': { status: 'ALLOWED' } }, registry: reg, lastRun: null });
+  assert.equal(s.blockerActive, false);
+  assert.match(s.nextSteps[0], /^Nothing was blocked/);
+});

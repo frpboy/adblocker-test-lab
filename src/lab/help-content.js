@@ -25,7 +25,8 @@ export const HELP_SECTIONS = [
       {
         q: 'I use an ad blocker. Why is my score low?',
         a: [
-          'The most common reasons: the blocker is paused or set to allow this site; element hiding (sometimes called cosmetic filtering) is turned off; or you rely on a DNS blocker or VPN.',
+          'The most common reasons: the blocker is paused or set to allow this site; element hiding (sometimes called cosmetic filtering) is turned off or limited; or you rely on a DNS blocker or VPN.',
+          'Some blockers only hide common ad elements in their strongest mode. In uBlock Origin Lite, for example, the default mode hides few of the elements tested here; switching this site to "Complete" mode hides many more.',
           'A DNS blocker stops requests to known ad servers, but the scored tests are served from this site’s own address, so it cannot tell them apart from the rest of the page. Those setups are better reflected in the extra checks, which are reported but not scored.'
         ]
       },
@@ -47,6 +48,12 @@ export const HELP_SECTIONS = [
         q: 'What do Blocked, Partial, Allowed, and Inconclusive mean?',
         a: [
           'Blocked: your setup stopped it. Partial: it was stopped in part, for example hidden on screen but still downloaded. Allowed: it reached your browser. Inconclusive: the page could not tell, so the test is left out of the score.'
+        ]
+      },
+      {
+        q: 'Why does an ad server check say "Completed" when my blocker is on?',
+        a: [
+          'The extra checks only see whether a request finished. Some blockers, including uBlock Origin, answer certain ad requests with a harmless stand-in file instead of blocking them, so the request still finishes. The page cannot tell the two apart, which is why these checks are never scored.'
         ]
       },
       {
