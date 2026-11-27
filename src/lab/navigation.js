@@ -3,7 +3,8 @@ export const PRIMARY_NAV_TABS = [
   { id: 'results', label: 'Results' },
   { id: 'real-ads', label: 'Live ads lab' },
   { id: 'methodology', label: "How it's measured" },
-  { id: 'settings', label: 'Settings' }
+  { id: 'settings', label: 'Settings' },
+  { id: 'help', label: 'Help' }
 ];
 
 export function normalizeTab(activeTab) {
@@ -21,7 +22,8 @@ export const TAB_PATHS = {
   results: '/results',
   'real-ads': '/live-ads',
   methodology: '/how-it-works',
-  settings: '/settings'
+  settings: '/settings',
+  help: '/help'
 };
 
 const PAGE_TITLES = {
@@ -29,7 +31,8 @@ const PAGE_TITLES = {
   results: 'Results | AdBlocker Test Lab',
   'real-ads': 'Live ads lab | AdBlocker Test Lab',
   methodology: "How it's measured | AdBlocker Test Lab",
-  settings: 'Settings | AdBlocker Test Lab'
+  settings: 'Settings | AdBlocker Test Lab',
+  help: 'Help | AdBlocker Test Lab'
 };
 
 export function pathForTab(tab) {

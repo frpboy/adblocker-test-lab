@@ -118,9 +118,16 @@ export default function OverviewView({
           <button
             type="button"
             onClick={() => setActiveTab('methodology')}
-            className={`mt-3 min-h-10 text-sm font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}
+            className={`mt-3 block min-h-10 text-sm font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}
           >
             How results are measured
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('help')}
+            className={`mt-1 block min-h-10 text-sm font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}
+          >
+            Questions? Read the help page
           </button>
         </div>
         <div>
