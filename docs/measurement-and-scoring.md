@@ -69,8 +69,10 @@ The repository includes a local-only fixture-protocol service for development te
 
 ## Score presentation and single-signal credit (change on branch fix/honest-score-labels-and-popup-credit)
 
-- The headline is labelled "Test-probe score". The 35 scored tests are fake probes served from this site; the number describes one browser setup on one run, not blocker quality on the real web.
+- The headline is labelled "Test-probe score". The 35 scored tests are made-up ad-like paths and page elements on this site (many probe paths return 404; no real ads are loaded); the number describes one browser setup on one run, not blocker quality on the real web.
 - The results page shows what the score is made of: element hiding (cosmetic and bait tests, 20 of 35), request blocking (same-origin path, script, XHR and pixel probes) and popup behaviour. Each group lists blocked, partial and got-through counts and an unweighted share. The headline stays category-weighted, so it is not blocked divided by 35.
 - Popup test (INT-03): a changed `window.open` alone now returns INCONCLUSIVE and is left out of the score, because browsers, in-app browsers and privacy features also change it. A hidden popunder trigger (control still visible) is BLOCKED, as before.
 - A DNS or network-level blocker cannot hide page elements or match these same-origin paths, so the scored tests do not fairly measure it. A failed external request remains REQUEST_FAILED_CAUSE_UNKNOWN and is never scored as DNS blocking.
 - Still open: pixel and bait tests give PARTIAL from a single hiding or abort signal; there is no fixture backend; only Chromium has smoke evidence.
+- "Could not be measured" at the top of the score card counts scored tests only. Privacy signals and extra checks that could not be measured are listed in the run summary and never count.
+- PARTIAL in the pixel and bait tests means one of two signals: pixel = element hidden or request aborted but not both; bait = `.adsbox` hidden without a surrogate global. Both are real observations and the result text names which one was seen. The score shows them at half credit; the results page explains what partial means. A future change could split single-signal partials into their own bucket.

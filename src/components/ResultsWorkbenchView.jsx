@@ -271,7 +271,7 @@ export default function ResultsWorkbenchView({
               <li><span aria-hidden="true">{'◐'} </span><strong className="font-semibold">{scoreSummary.partialCount}</strong> partial</li>
               <li><span aria-hidden="true">{'✕'} </span><strong className="font-semibold">{scoreSummary.failedCount}</strong> got through</li>
               <li className={muted}>
-                <span aria-hidden="true">? </span><strong className="font-semibold">{scoreSummary.scoredUnmeasuredCount}</strong> could not be measured
+                <span aria-hidden="true">? </span><strong className="font-semibold">{scoreSummary.scoredUnmeasuredCount}</strong> scored {scoreSummary.scoredUnmeasuredCount === 1 ? 'test' : 'tests'} could not be measured
               </li>
             </ul>
           )}
@@ -290,7 +290,7 @@ export default function ResultsWorkbenchView({
                 ))}
               </ul>
               <p className={`mt-3 text-xs leading-relaxed max-w-prose ${muted}`}>
-                The headline number is a weighted average of {scoreSummary.categoryBreakdown.filter((c) => c.eligibleCount > 0).length} categories (weights in Settings), so it is not simply blocked tests divided by all tests. These are fake probes served from this site. A DNS or network-level blocker cannot hide page elements or match these paths, so it is not fairly measured here.
+                The headline number is a weighted average of {scoreSummary.categoryBreakdown.filter((c) => c.eligibleCount > 0).length} categories (weights in Settings), so it is not simply blocked tests divided by all tests. The probes are made-up ad-like paths and page elements on this site; no real ads are loaded. A "partial" means one of two signals was seen (for example an element hidden but its request not stopped). A DNS or network-level blocker cannot hide page elements or match these paths, so it is not fairly measured here.
               </p>
             </div>
           )}

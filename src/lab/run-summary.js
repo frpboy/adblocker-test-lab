@@ -44,7 +44,7 @@ export function scoreVerdict(scoreSummary) {
   return {
     tone: 'weak',
     title: "Most test probes weren't blocked",
-    body: 'These are fake ads and trackers served from this site, so the score describes how this browser setup handled them, not how well it blocks ads on the web. If you use a blocker, check that it is on for this site and that element hiding is on, then run the test again. DNS or network-level blockers are not measured by the scored tests.'
+    body: 'The scored tests use made-up ad-like paths and page elements on this site (no real ads are loaded), so the score describes how this browser setup handled them, not how well it blocks ads on the web. If you use a blocker, check that it is on for this site and that element hiding is on, then run the test again. DNS or network-level blockers are not measured by the scored tests.'
   };
 }
 

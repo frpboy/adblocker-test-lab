@@ -167,8 +167,8 @@ export async function renderShareCard(summary, { url = SITE_URL, label = SITE_LA
   const counts = [
     ['✓', summary.blocked.length, 'blocked'],
     ['◐', summary.partly.length, 'partial'],
-    ['✕', summary.allowed.length, 'got through'],
-    ['?', summary.unmeasured.length, 'not measured']
+    ['✕', summary.allowed.length, 'not blocked'],
+    ['?', summary.scoredUnmeasured.length, 'unmeasured']
   ];
   let x = 72;
   const cy = 528;
