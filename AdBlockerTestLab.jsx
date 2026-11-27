@@ -3283,6 +3283,8 @@ export async function executeAuditedTest(
   }
 }
 
+const QUICK_SCAN_IDS = ['DSP-01', 'TPA-01', 'TPA-05', 'TRK-01', 'INT-03', 'AAB-01'];
+
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c65322] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f0e7] dark:focus-visible:ring-offset-[#172129]';
 
@@ -3397,6 +3399,7 @@ export default function App() {
 
   const [resultsMap, setResultsMap] = useState({});
   const [executionState, setExecutionState] = useState(EXECUTION_STATE.IDLE);
+  const [lastRun, setLastRun] = useState(null);
   const [runProgress, setRunProgress] = useState({
     completed: 0,
     total: 0,
@@ -3593,6 +3596,18 @@ export default function App() {
       const wasCancelled = abortController.signal.aborted;
       pauseRunRef.current = false;
       setExecutionState(wasCancelled ? EXECUTION_STATE.CANCELLED : EXECUTION_STATE.COMPLETED);
+      const runIds = testsToRun.map((t) => t.id);
+      setLastRun({
+        testIds: runIds,
+        label:
+          runIds.length === QUICK_SCAN_IDS.length && QUICK_SCAN_IDS.every((id) => runIds.includes(id))
+            ? 'quick'
+            : runIds.length === TEST_REGISTRY.length
+            ? 'full'
+            : 'custom',
+        finishedAt: new Date().toISOString(),
+        cancelled: wasCancelled
+      });
       notify(
         wasCancelled ? 'Run aborted immediately via AbortSignal.' : `Completed ${completed} diagnostic cases.`,
         wasCancelled ? 'warning' : 'success'
@@ -3785,9 +3800,7 @@ export default function App() {
   );
   const quickScanTests = useMemo(
     () =>
-      TEST_REGISTRY.filter((t) =>
-        ['DSP-01', 'TPA-01', 'TPA-05', 'TRK-01', 'INT-03', 'AAB-01'].includes(t.id)
-      ),
+      TEST_REGISTRY.filter((t) => QUICK_SCAN_IDS.includes(t.id)),
     []
   );
   const terminalResults = Object.values(resultsMap).filter((result) =>
@@ -3925,6 +3938,8 @@ export default function App() {
             CONFIDENCE={CONFIDENCE}
             RESULT_STATUS={RESULT_STATUS}
             notifyError={(message) => notify(message, 'error')}
+            notify={notify}
+            lastRun={lastRun}
           />
         )}
 

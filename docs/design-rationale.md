@@ -41,6 +41,8 @@ Reading this as: an evidence-focused browser diagnostic workspace for people dec
 | Primary button fill #b84a1c instead of #c65322 | White text on #c65322 measured exactly 4.50:1; #b84a1c gives 5.21:1. The original orange stays for strokes, focus, and the logo. |
 | Result grid cells carry a shape (✓ ◐ ✕ ● ? ·) and a key | Status no longer depends on seeing colour. |
 | Skip link, `role="alert"` error toasts, honest copy and download feedback | Keyboard users can bypass the header; failures are announced and never reported as success. |
+| "What happened in this run" panel (`src/components/RunSummary.jsx`, `src/lab/run-summary.js`) | After every run, a Simple view (verdict, three or four plain sentences, next steps) and a Detailed view (every test grouped as blocked, partial, got through, or could not be measured, with the reason). Announced once to screen readers. Lists cover the last run; the score covers all results so far. |
+| Landscape share card (`src/lab/share-card.js`, `src/components/ShareResultsDialog.jsx`) | 1200 x 630 PNG drawn on canvas: logo, score with bar, verdict, coverage, counts with shapes, date, and a QR code plus `lab.frpboy.in`. Partial results always say "Partial result". The card holds no device or user data. Share uses the system share sheet (with the image where the browser supports files), with Download image and Copy text and link as fallbacks. QR generation uses the `qrcode` package, pinned. |
 | Developer material (self-checks, reference server code) moved behind "For developers" | Kept for audit, out of the way for everyone else. The self-check count is computed, not hard-coded. |
 
 ## Invariants

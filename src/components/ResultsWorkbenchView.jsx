@@ -1,5 +1,7 @@
 import React from 'react';
 import { Search, Download, Copy, Check, RotateCcw } from 'lucide-react';
+import RunSummary from './RunSummary.jsx';
+import { scoreVerdict } from '../lab/run-summary.js';
 import {
   plainTestName,
   statusLabel,
@@ -42,38 +44,6 @@ function gridMark(status, RESULT_STATUS) {
   if (status === RESULT_STATUS.ALLOWED) return '✕';
   if (status === RESULT_STATUS.SIGNAL_ACTIVE) return '●';
   return '?';
-}
-
-function verdict(scoreSummary) {
-  const { overallScore, eligibleTotalTests, maxScoredTests, passedCount, failedCount } = scoreSummary;
-  if (!eligibleTotalTests) {
-    return {
-      title: 'No results yet',
-      body: 'Run the quick check or the full test. Your score appears once at least one scored test gives a clear answer.'
-    };
-  }
-  if (eligibleTotalTests * 2 < maxScoredTests) {
-    return {
-      title: 'Partial result',
-      body: `Only ${eligibleTotalTests} of ${maxScoredTests} scored tests gave a clear answer, so this number can still move a lot. Run the full test before drawing conclusions.`
-    };
-  }
-  if (overallScore >= 85) {
-    return {
-      title: 'Most ads and trackers were stopped',
-      body: `${passedCount} of ${eligibleTotalTests} scored tests were blocked outright. Filter by "Allowed" below to see what still got through.`
-    };
-  }
-  if (overallScore >= 50) {
-    return {
-      title: 'Some ads and trackers got through',
-      body: `${failedCount} of ${eligibleTotalTests} scored tests reached your browser. Filter by "Allowed" below to see which ones.`
-    };
-  }
-  return {
-    title: 'Most ads and trackers got through',
-    body: 'If you expected an ad blocker to be active, check that it is turned on for this site, then run the test again.'
-  };
 }
 
 export default function ResultsWorkbenchView({
@@ -127,7 +97,9 @@ export default function ResultsWorkbenchView({
   buildProtectionTraceStages,
   CONFIDENCE,
   RESULT_STATUS,
-  notifyError = () => {}
+  notifyError = () => {},
+  notify = () => {},
+  lastRun = null
 }) {
 
   const isFiltered = groupFilter !== 'ALL' || statusFilter !== 'ALL' || sectionFilter !== 'ALL' || searchQuery.trim() !== '';
@@ -139,7 +111,7 @@ export default function ResultsWorkbenchView({
   };
 
   const hasScore = scoreSummary.overallScore !== null;
-  const { title: verdictTitle, body: verdictBody } = verdict(scoreSummary);
+  const { title: verdictTitle, body: verdictBody } = scoreVerdict(scoreSummary);
   const privacy = scoreSummary.privacySignalsSummary;
   const activeCategory = sectionFilter.startsWith('cat:')
     ? scoreSummary.categoryBreakdown.find((c) => `cat:${c.id}` === sectionFilter)
@@ -237,6 +209,20 @@ export default function ResultsWorkbenchView({
           </button>
         </div>
       </section>
+
+      {!isActiveRun && (
+        <RunSummary
+          scoreSummary={scoreSummary}
+          resultsMap={resultsMap}
+          registry={testRegistry}
+          lastRun={lastRun}
+          notify={notify}
+          surface={surface}
+          subSurface={subSurface}
+          muted={muted}
+          focusRing={focusRing}
+        />
+      )}
 
       <section aria-labelledby="categories-title" className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-2">
