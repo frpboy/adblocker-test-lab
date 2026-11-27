@@ -29,7 +29,20 @@ function TestList({ title, mark, items, muted, empty, showReason = false, defaul
   );
 }
 
-export default function RunSummary({ scoreSummary, resultsMap, registry, lastRun, notify, surface, subSurface, muted, focusRing }) {
+export default function RunSummary({
+  scoreSummary,
+  resultsMap,
+  registry,
+  lastRun,
+  savedAt,
+  restoredFromEarlierVisit,
+  onClearResults,
+  notify,
+  surface,
+  subSurface,
+  muted,
+  focusRing
+}) {
   const [view, setView] = useState('simple');
   const [shareOpen, setShareOpen] = useState(false);
   const [card, setCard] = useState({ status: 'loading', url: '', file: null });
@@ -77,10 +90,10 @@ export default function RunSummary({ scoreSummary, resultsMap, registry, lastRun
 
   // Announce once per finished run for screen-reader users.
   useEffect(() => {
-    if (!lastRun?.finishedAt || announcedFor.current === lastRun.finishedAt) return;
+    if (restoredFromEarlierVisit || !lastRun?.finishedAt || announcedFor.current === lastRun.finishedAt) return;
     announcedFor.current = lastRun.finishedAt;
     setAnnouncement(`Run finished. ${summary.verdict.title}. ${summary.simple.join(' ')}`);
-  }, [lastRun, summary]);
+  }, [lastRun, summary, restoredFromEarlierVisit]);
 
   if (!summary.hasRun) return null;
 
@@ -158,6 +171,22 @@ export default function RunSummary({ scoreSummary, resultsMap, registry, lastRun
           <TestList title="Ad and tracker servers that were reachable" mark={'→'} items={summary.extraReached} muted={muted} empty="None in this run." />
         </div>
       )}
+
+      <div className={`flex flex-wrap items-center justify-between gap-3 text-sm border-t border-current/10 pt-4 ${muted}`}>
+        <p>
+          {restoredFromEarlierVisit && savedAt
+            ? `These are your results from ${new Date(savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}, saved on this device. `
+            : 'Saved on this device, so they stay after a reload. '}
+          Nothing is sent to a server.
+        </p>
+        <button
+          type="button"
+          onClick={onClearResults}
+          className={`min-h-10 px-3 rounded-sm border text-sm font-semibold cursor-pointer text-current ${subSurface} ${focusRing}`}
+        >
+          Clear results
+        </button>
+      </div>
 
       {summary.nextSteps.length > 0 && (
         <div className={`rounded-sm border p-4 ${subSurface}`}>
