@@ -34,8 +34,9 @@ export async function handleCounterRequest({ method, origin, body, sql }) {
   try {
     if (method === 'GET') {
       const rows = await sql`SELECT name, value FROM site_counters`;
-      // Shared caches may serve the totals for a short while; they are public numbers.
-      return { status: 200, body: toTotals(rows), headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300' } };
+      // Not cached: a cached copy can be older than the total a visitor just saw after their
+      // own visit was counted, which made the number appear to go down on reload.
+      return { status: 200, body: toTotals(rows), headers: noStore };
     }
 
     if (method === 'POST') {
