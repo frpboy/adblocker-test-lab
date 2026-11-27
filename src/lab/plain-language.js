@@ -91,8 +91,14 @@ export const STATUS_LABELS = {
   RUNNING: 'Running'
 };
 
-export function statusLabel(status) {
+// Extra checks (exploratory probes) only see that a request completed. A content blocker can
+// answer it with a harmless local stand-in, which looks identical to the page, so "Completed"
+// is used instead of "Allowed" for them.
+const EXTRA_CHECK_LABELS = { ALLOWED: 'Completed' };
+
+export function statusLabel(status, metricGroup) {
   if (!status) return 'Not run';
+  if (metricGroup === 'EXPLORATORY_PROBE' && EXTRA_CHECK_LABELS[status]) return EXTRA_CHECK_LABELS[status];
   return STATUS_LABELS[status] || status;
 }
 
@@ -101,5 +107,6 @@ export const STATUS_LEGEND = [
   ['Blocked', 'Your setup stopped it.'],
   ['Partial', 'It was stopped in part, for example hidden but still downloaded.'],
   ['Allowed', 'It reached your browser.'],
-  ['Inconclusive', 'The page could not tell, so it is left out of the score.']
+  ['Inconclusive', 'The page could not tell, so it is left out of the score.'],
+  ['Completed', 'Extra checks only: the request finished. A blocker may have answered it with a harmless stand-in, so this does not prove the server was reached.']
 ];

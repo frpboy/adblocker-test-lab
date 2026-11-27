@@ -168,7 +168,7 @@ export default function RunSummary({
             muted={muted}
             empty="None in this run. These checks are never scored, because a failure can also mean the server is down."
           />
-          <TestList title="Ad and tracker servers that were reachable" mark={'→'} items={summary.extraReached} muted={muted} empty="None in this run." />
+          <TestList title="Requests to ad and tracker servers that completed (a blocker may have answered with a stand-in)" mark={'→'} items={summary.extraReached} muted={muted} empty="None in this run." />
         </div>
       )}
 

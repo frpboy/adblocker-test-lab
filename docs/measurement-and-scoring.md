@@ -33,6 +33,8 @@ The current registry has 55 entries: 35 core ad/tracker-blocking cases, 11 explo
 | CONSISTENT_WITH_FILTERING | Observation is compatible with filtering but not sufficient to prove it | Excluded |
 | SIGNAL_ACTIVE / SIGNAL_INACTIVE | Separate browser privacy/hardening observation | Excluded |
 
+For exploratory probes, `ALLOWED` means only that the `no-cors` request completed with an opaque response. It does not prove the external server was reached: content blockers can answer a request with a local surrogate (for example uBlock Origin's redirect resources for `static.doubleclick.net/instream/ad_status.js` and AdSense loaders), which the page cannot tell apart from a real response. The UI therefore labels this outcome "Completed", in a neutral style, for extra checks. Outcome counts shown with the score (blocked, partial, got through, could not be measured) cover scored tests only; extra checks are summarised separately.
+
 Queued and running are operational states, not scored outcomes.
 
 ## Score calculation

@@ -14,13 +14,16 @@ const INK_ACTIVE = 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] d
 
 // Outcome colors carry meaning (stopped / in part / got through). Everything
 // that is not a clear outcome stays neutral so it does not read as a verdict.
-export function StatusBadge({ status, darkMode, RESULT_STATUS }) {
+export function StatusBadge({ status, darkMode, RESULT_STATUS, metricGroup }) {
+  // An extra check that "succeeded" may have been answered by a blocker's stand-in,
+  // so it is shown neutrally as "Completed" rather than as a red "Allowed".
+  const extraCompleted = metricGroup === 'EXPLORATORY_PROBE' && status === RESULT_STATUS.ALLOWED;
   const tone = {
     [RESULT_STATUS.BLOCKED]: darkMode ? 'bg-emerald-950 text-emerald-200 border-emerald-700' : 'bg-emerald-50 text-emerald-900 border-emerald-300',
     [RESULT_STATUS.PARTIAL]: darkMode ? 'bg-amber-950 text-amber-200 border-amber-700' : 'bg-amber-50 text-amber-900 border-amber-300',
     [RESULT_STATUS.ALLOWED]: darkMode ? 'bg-rose-950 text-rose-200 border-rose-700' : 'bg-rose-50 text-rose-900 border-rose-300',
     [RESULT_STATUS.SIGNAL_ACTIVE]: darkMode ? 'bg-teal-950 text-teal-200 border-teal-700' : 'bg-teal-50 text-teal-900 border-teal-300'
-  }[status];
+  }[extraCompleted ? '' : status];
   const neutral = status
     ? darkMode
       ? 'bg-slate-800 text-slate-200 border-slate-600'
@@ -31,7 +34,7 @@ export function StatusBadge({ status, darkMode, RESULT_STATUS }) {
 
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-semibold border whitespace-nowrap ${tone || neutral}`}>
-      {status === RESULT_STATUS.RUNNING ? 'Running…' : statusLabel(status)}
+      {status === RESULT_STATUS.RUNNING ? 'Running…' : statusLabel(status, metricGroup)}
     </span>
   );
 }
@@ -73,7 +76,7 @@ export const TestRow = React.memo(function TestRow({
       </td>
       <td className={`py-2.5 px-2 whitespace-nowrap hidden md:table-cell text-xs ${muted}`}>{GROUP_LABELS[t.metricGroup]}</td>
       <td className="py-2.5 px-2">
-        <StatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />
+        <StatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} metricGroup={t.metricGroup} />
       </td>
       <td className={`py-2.5 px-2 hidden sm:table-cell text-right font-mono text-xs tabular-nums whitespace-nowrap ${muted}`}>
         {res?.durationMs ? `${res.durationMs} ms` : '\u2013'}
@@ -94,8 +97,9 @@ export const TestRow = React.memo(function TestRow({
 });
 
 // Shape for each grid cell, so the result does not depend on seeing colour.
-function gridMark(status, RESULT_STATUS) {
+function gridMark(status, RESULT_STATUS, metricGroup) {
   if (!status) return '·';
+  if (metricGroup === 'EXPLORATORY_PROBE' && status === RESULT_STATUS.ALLOWED) return '→';
   if (status === RESULT_STATUS.BLOCKED) return '✓';
   if (status === RESULT_STATUS.PARTIAL) return '◐';
   if (status === RESULT_STATUS.ALLOWED) return '✕';
@@ -267,7 +271,7 @@ export default function ResultsWorkbenchView({
               <li><span aria-hidden="true">{'◐'} </span><strong className="font-semibold">{scoreSummary.partialCount}</strong> partial</li>
               <li><span aria-hidden="true">{'✕'} </span><strong className="font-semibold">{scoreSummary.failedCount}</strong> got through</li>
               <li className={muted}>
-                <span aria-hidden="true">? </span><strong className="font-semibold">{scoreSummary.inconclusiveCount}</strong> could not be measured
+                <span aria-hidden="true">? </span><strong className="font-semibold">{scoreSummary.scoredUnmeasuredCount}</strong> could not be measured
               </li>
             </ul>
           )}
@@ -460,6 +464,7 @@ export default function ResultsWorkbenchView({
                 let cell = darkMode ? 'bg-[#111a20] border-[#354955] text-slate-300' : 'bg-[#f4f0e7] border-[#c9c1b2] text-slate-700';
                 if (st === RESULT_STATUS.BLOCKED) cell = 'bg-emerald-700 text-white border-emerald-700';
                 else if (st === RESULT_STATUS.PARTIAL) cell = 'bg-amber-400 text-slate-950 border-amber-500';
+                else if (st === RESULT_STATUS.ALLOWED && t.metricGroup === 'EXPLORATORY_PROBE') cell = 'bg-slate-600 text-white border-slate-600';
                 else if (st === RESULT_STATUS.ALLOWED) cell = 'bg-rose-700 text-white border-rose-700';
                 else if (st === RESULT_STATUS.SIGNAL_ACTIVE) cell = 'bg-teal-700 text-white border-teal-700';
                 else if (st) cell = 'bg-slate-600 text-white border-slate-600';
@@ -468,18 +473,18 @@ export default function ResultsWorkbenchView({
                     key={t.id}
                     type="button"
                     onClick={() => setInspectedTestId(t.id)}
-                    aria-label={`${t.id}: ${plainTestName(t)}. ${statusLabel(st)}`}
+                    aria-label={`${t.id}: ${plainTestName(t)}. ${statusLabel(st, t.metricGroup)}`}
                     aria-pressed={selected}
                     className={`min-h-10 rounded-sm border text-xs font-semibold cursor-pointer ${cell} ${selected ? 'ring-2 ring-[#c65322] ring-offset-1' : ''} ${focusRing}`}
                   >
-                    <span aria-hidden="true" className="mr-1">{gridMark(st, RESULT_STATUS)}</span>
+                    <span aria-hidden="true" className="mr-1">{gridMark(st, RESULT_STATUS, t.metricGroup)}</span>
                     {t.id}
                   </button>
                 );
               })}
             </div>
             <p className={`text-xs ${muted}`}>
-              Key: {'✓'} blocked, {'◐'} partial, {'✕'} allowed, {'●'} privacy setting on, ? other result, {'·'} not run
+              Key: {'✓'} blocked, {'◐'} partial, {'✕'} allowed, {'→'} extra check completed, {'●'} privacy setting on, ? other result, {'·'} not run
             </p>
           </div>
         )}
@@ -558,7 +563,7 @@ export default function ResultsWorkbenchView({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className={`text-sm ${muted}`}>Result</span>
-                  <StatusBadge status={inspectedResult?.status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />
+                  <StatusBadge status={inspectedResult?.status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} metricGroup={inspectedTest.metricGroup} />
                 </div>
                 <p className={`text-sm leading-relaxed ${muted}`}>{GROUP_DESCRIPTIONS[inspectedTest.metricGroup]}</p>
                 <dl className="text-sm space-y-1.5">
