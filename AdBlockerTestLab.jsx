@@ -36,6 +36,7 @@ import OverviewView from './src/components/OverviewView.jsx';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab } from './src/lab/navigation.js';
 import { plainTestName } from './src/lab/plain-language.js';
+import { waitForFrame } from './src/lab/frame-wait.js';
 
 export const APP_VERSION = '4.1.0';
 export const SCHEMA_VERSION = '2026.10.adblockertestlab.v4.1';
@@ -2191,30 +2192,22 @@ export function runVerificationSuite() {
   return results;
 }
 
-function waitAnimationFrameCancellable(abortSignal) {
-  return new Promise((resolve, reject) => {
-    if (abortSignal?.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'));
-      return;
-    }
-    const rafId = requestAnimationFrame(() => resolve());
-    abortSignal?.addEventListener(
-      'abort',
-      () => {
-        cancelAnimationFrame(rafId);
-        reject(new DOMException('Aborted', 'AbortError'));
-      },
-      { once: true }
-    );
-  });
-}
-
 export async function executeAuditedTest(
   testItem,
   { sandboxStageEl, monetagStageEl, timeoutMs = 2500, retryCount = 0, abortSignal, fixtureServerAvailable = false }
 ) {
   const startPerf = performance.now();
   const startTimeIso = new Date().toISOString();
+
+  // Each test gets its own container inside the shared sandbox. Tests run in parallel,
+  // and clearing the whole sandbox on finish used to remove other tests' elements
+  // mid-measurement, which read as 0px and turned cosmetic tests INCONCLUSIVE.
+  const testScopeEl = sandboxStageEl ? document.createElement('div') : null;
+  if (testScopeEl) {
+    testScopeEl.setAttribute('data-test-scope', testItem.id);
+    sandboxStageEl.appendChild(testScopeEl);
+    sandboxStageEl = testScopeEl;
+  }
 
   const createResult = (
     status,
@@ -2336,11 +2329,11 @@ export async function executeAuditedTest(
       try {
         sandboxStageEl.appendChild(controlEl);
         if (testItem.type === 'dynamic_cosmetic_dom') {
-          await waitAnimationFrameCancellable(abortSignal);
+          await waitForFrame(abortSignal);
         }
         sandboxStageEl.appendChild(baitEl);
 
-        await waitAnimationFrameCancellable(abortSignal);
+        await waitForFrame(abortSignal);
 
         controlRect = controlEl.getBoundingClientRect();
         baitRect = baitEl.getBoundingClientRect();
@@ -2547,7 +2540,7 @@ export async function executeAuditedTest(
       if (sandboxStageEl) {
         try {
           sandboxStageEl.appendChild(img);
-          await waitAnimationFrameCancellable(abortSignal);
+          await waitForFrame(abortSignal);
           const computed = window.getComputedStyle(img);
           domHidden = computed.display === 'none' || computed.visibility === 'hidden';
         } finally {
@@ -2706,12 +2699,14 @@ export async function executeAuditedTest(
 
       let ctrlVisible = false;
       let linkHidden = false;
+      // Declared outside the try block: the results below report the control height.
+      let ctrlRect = { height: 0 };
       try {
         sandboxStageEl.appendChild(ctrlLink);
         sandboxStageEl.appendChild(linkEl);
-        await waitAnimationFrameCancellable(abortSignal);
+        await waitForFrame(abortSignal);
 
-        const ctrlRect = ctrlLink.getBoundingClientRect();
+        ctrlRect = ctrlLink.getBoundingClientRect();
         const rect = linkEl.getBoundingClientRect();
         const comp = window.getComputedStyle(linkEl);
         ctrlVisible = ctrlRect.height > 0;
@@ -2826,7 +2821,7 @@ export async function executeAuditedTest(
       if (sandboxStageEl) {
         try {
           sandboxStageEl.appendChild(bait);
-          await waitAnimationFrameCancellable(abortSignal);
+          await waitForFrame(abortSignal);
           hidden = bait.offsetHeight === 0 || window.getComputedStyle(bait).display === 'none';
           hasShim =
             typeof window.google_ad_status !== 'undefined' ||
@@ -3200,7 +3195,7 @@ export async function executeAuditedTest(
       try {
         targetStage.appendChild(ctrlBox);
         targetStage.appendChild(zoneEl);
-        await waitAnimationFrameCancellable(abortSignal);
+        await waitForFrame(abortSignal);
 
         const zoneRect = zoneEl.getBoundingClientRect();
         const zoneComp = window.getComputedStyle(zoneEl);
@@ -3273,13 +3268,8 @@ export async function executeAuditedTest(
       CONFIDENCE.UNKNOWN
     );
   } finally {
-    if (sandboxStageEl && sandboxStageEl.childNodes.length > 0) {
-      while (sandboxStageEl.firstChild) {
-        try {
-          sandboxStageEl.removeChild(sandboxStageEl.firstChild);
-        } catch {}
-      }
-    }
+    // Remove only this test's container; other tests may still be measuring.
+    if (testScopeEl?.parentNode) testScopeEl.parentNode.removeChild(testScopeEl);
   }
 }
 
@@ -3523,7 +3513,8 @@ export default function App() {
       const scheduleFlush = () => {
         if (!rafScheduled) {
           rafScheduled = true;
-          requestAnimationFrame(flushPendingBatch);
+          // Frame-or-timer, so results keep appearing while the tab is in the background.
+          waitForFrame(null).then(flushPendingBatch);
         }
       };
 

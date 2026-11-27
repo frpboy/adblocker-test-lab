@@ -105,7 +105,7 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
   const nextSteps = [];
   if (partial || scope !== 'full') nextSteps.push('Run the full test for a score you can rely on.');
   if (allowed.length) nextSteps.push('Look at the "Got through" list to see which kinds of ads your setup misses.');
-  if (unmeasured.length) nextSteps.push('Keep this tab visible and run again; hidden tabs and slow networks cause most "could not be measured" results.');
+  if (unmeasured.length) nextSteps.push('Open "Could not be measured" in the detailed view for the reason behind each one. Some checks need a browser feature or a server this site does not run, so they stay unmeasured.');
   if (!allowed.length && blocked.length && !partial) nextSteps.push('Share your result, or test again after changing your blocker settings to compare.');
 
   return {
