@@ -1,5 +1,27 @@
 const IRREVERSIBLE_KINDS = new Set(['popunder']);
 
+// Banners render inside /ad-frame.html (public/ad-frame.html), a real page on this site.
+// A srcdoc frame has the address about:srcdoc, and ad loaders read the page address to
+// check the site, so they would not serve. The frame writes this document into itself,
+// keeping its https://lab.frpboy.in address, and reports back when the ad script has run.
+export const AD_FRAME_PATH = '/ad-frame.html';
+export const FRAME_MESSAGES = { render: 'real-ads:render', done: 'real-ads:script-done', failed: 'real-ads:script-failed' };
+
+export function buildBannerDocument(placement, token) {
+  // Escape '<' so a value cannot close the script tag early.
+  const safeOptions = JSON.stringify(placement.options).replace(/</g, '\\u003c');
+  // Escape HTML characters so the URL cannot break out of the src attribute.
+  const safeScriptUrl = placement.scriptUrl
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  const safeToken = String(token).replace(/[^a-z0-9-]/gi, '');
+  const report = (type) => `parent.postMessage({type:'${type}',token:'${safeToken}'},location.origin)`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="robots" content="noindex"><base target="_blank"><style>body{margin:0;padding:0;overflow:hidden;background:transparent;}</style></head><body><script type="text/javascript">var atOptions = ${safeOptions};</script><script type="text/javascript" src="${safeScriptUrl}" onerror="${report(FRAME_MESSAGES.failed)}"></script><script>${report(FRAME_MESSAGES.done)}</script></body></html>`;
+}
+
 export function createRealAdsSession({ document, window, onEvidence = () => {}, timeoutMs = 15000 }) {
   let state = 'IDLE';
   let activePlacement = null;
@@ -59,26 +81,39 @@ export function createRealAdsSession({ document, window, onEvidence = () => {}, 
         iframe.style.overflow = 'hidden';
       }
 
-      // Escape '<' as unicode escape sequence to prevent </script> injection from closing script tag prematurely
-      const safeOptions = JSON.stringify(placement.options).replace(/</g, '\\u003c');
-      // Escape HTML characters to prevent breaking out of src attribute or script tag
-      const safeScriptUrl = placement.scriptUrl
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank"><style>body{margin:0;padding:0;overflow:hidden;background:transparent;}</style></head><body><script type="text/javascript">var atOptions = ${safeOptions};</script><script type="text/javascript" src="${safeScriptUrl}"></script></body></html>`;
-      iframe.srcdoc = html;
+      const token = `${placement.id}-${Date.now().toString(36)}`.replace(/[^a-z0-9-]/gi, '');
+      const html = buildBannerDocument(placement, token);
+      const origin = window?.location?.origin;
+      iframe.src = AD_FRAME_PATH;
 
-      const onLoad = () => { emit('SCRIPT_LOADED'); completeAttempt?.('loaded'); };
+      // Send the banner document once the frame page has loaded (only to this site's origin).
+      let sent = false;
+      const onLoad = () => {
+        if (sent) return;
+        sent = true;
+        iframe.contentWindow?.postMessage({ type: FRAME_MESSAGES.render, html }, origin);
+      };
+      // The frame reports whether the ad script ran or failed to load.
+      const onMessage = (event) => {
+        if (event.source !== iframe.contentWindow || event.origin !== origin) return;
+        if (event.data?.token !== token) return;
+        if (event.data.type === FRAME_MESSAGES.done) {
+          emit('SCRIPT_LOADED');
+          completeAttempt?.('loaded');
+        } else if (event.data.type === FRAME_MESSAGES.failed) {
+          emit('REQUEST_FAILED', { alternatives: ['content blocker', 'CSP', 'DNS', 'connectivity', 'provider'] });
+          completeAttempt?.('error');
+        }
+      };
       const onError = () => { emit('REQUEST_FAILED', { alternatives: ['CSP', 'DNS', 'connectivity', 'provider'] }); completeAttempt?.('error'); };
 
       iframe.addEventListener('load', onLoad);
       iframe.addEventListener('error', onError);
+      window?.addEventListener?.('message', onMessage);
       cleanup.push(
         () => iframe.removeEventListener('load', onLoad),
-        () => iframe.removeEventListener('error', onError)
+        () => iframe.removeEventListener('error', onError),
+        () => window?.removeEventListener?.('message', onMessage)
       );
 
       const mountParent = targetContainer || document.body;

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Live ads lab frame</title>
+  </head>
+  <body>
+    <script>
+      // Frame page for one Live ads lab banner (see src/lab/real-ads/session.js).
+      // It does nothing on its own. It accepts one message, and only from its parent page on
+      // this same site, then writes the banner document into itself. Writing it keeps this
+      // page's https://lab.frpboy.in address, which ad loaders read to check the site, and
+      // lets the ad script run as part of the page as it loads.
+      (function () {
+        if (window.parent === window) return;
+        function onMessage(event) {
+          if (event.source !== window.parent || event.origin !== window.location.origin) return;
+          var data = event.data;
+          if (!data || data.type !== 'real-ads:render' || typeof data.html !== 'string') return;
+          window.removeEventListener('message', onMessage);
+          document.open();
+          document.write(data.html);
+          document.close();
+        }
+        window.addEventListener('message', onMessage);
+      })();
+    </script>
+  </body>
+</html>

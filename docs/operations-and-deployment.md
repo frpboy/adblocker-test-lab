@@ -55,6 +55,8 @@ The production HTML loads no ad or analytics scripts. (A site-wide Google AdSens
 
 The Real Ads Stress Lab reads only `VITE_REAL_ADS_*` configuration supplied by the local or deployment environment. With blank, malformed, non-HTTPS, or absent values, every provider format remains unavailable and no live-ad script is eligible to load. The checked-in `.env.example` lists variable names only; provider tags, zone IDs, publisher identifiers, and Smartlinks must never enter Git. Banner, native, popunder, social-bar, and provider-format script values use JSON descriptors containing a `scriptUrl`; the Smartlink uses its direct HTTPS URL. A future operator must configure values in the host environment, rebuild, then perform the explicit session/browser checks before claiming delivery.
 
+Banner placements render in `public/ad-frame.html`, a real page on the site, rather than a `srcdoc` frame. Ad loaders read the page address to check the site, and a `srcdoc` frame's address is `about:srcdoc`, so banners loaded their script but never served. The frame page accepts one message, only from its same-origin parent, writes the banner document into itself (keeping its address), and reports whether the ad script ran or failed.
+
 ### Manual Real Ads Stress Lab comparison
 
 1. Use a clean Chromium profile and set a reproducible viewport (desktop `1280x720` or mobile `390x844`).
