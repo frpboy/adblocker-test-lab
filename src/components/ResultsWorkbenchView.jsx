@@ -156,7 +156,10 @@ export default function ResultsWorkbenchView({
   RESULT_STATUS,
   notifyError = () => {},
   notify = () => {},
-  lastRun = null
+  lastRun = null,
+  savedAt = null,
+  restoredFromEarlierVisit = false,
+  onClearResults = () => {}
 }) {
 
   const isFiltered = groupFilter !== 'ALL' || statusFilter !== 'ALL' || sectionFilter !== 'ALL' || searchQuery.trim() !== '';
@@ -273,6 +276,9 @@ export default function ResultsWorkbenchView({
           resultsMap={resultsMap}
           registry={testRegistry}
           lastRun={lastRun}
+          savedAt={savedAt}
+          restoredFromEarlierVisit={restoredFromEarlierVisit}
+          onClearResults={onClearResults}
           notify={notify}
           surface={surface}
           subSurface={subSurface}

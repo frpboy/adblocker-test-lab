@@ -79,7 +79,7 @@ The application reads ordinary browser-visible properties such as user agent hin
 
 The application can create a summary, JSON report, and standalone HTML report in the browser and trigger downloads with a temporary Blob URL. Report generation escapes HTML user-controlled/test strings before inserting them into the HTML export; the in-app verification suite includes an escaping assertion.
 
-User-reported extension, VPN, and notes data are deliberately distinguished from automated observations. The current repository contains no server, database, analytics pipeline, or persistent backend; browser session data therefore remains in client memory unless the user exports it.
+User-reported extension, VPN, and notes data are deliberately distinguished from automated observations. The current repository contains no server, database, analytics pipeline, or persistent backend. Finished results are kept only in the visitor's own browser storage (up to 30 days) so they survive a reload; the Results page says so and offers "Clear results". Nothing leaves the device unless the user exports or shares it. This is local convenience storage, not telemetry: the site never reads it back to a server.
 
 ## Local fixture protocol
 

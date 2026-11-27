@@ -34,7 +34,8 @@ import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
 import NavigationRibbon from './src/components/NavigationRibbon.jsx';
 import OverviewView from './src/components/OverviewView.jsx';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
-import { normalizeTab } from './src/lab/navigation.js';
+import { normalizeTab, pathForTab, tabFromPath, titleForTab } from './src/lab/navigation.js';
+import { saveResults, loadResults, clearResults } from './src/lab/result-store.js';
 import { plainTestName } from './src/lab/plain-language.js';
 import { waitForFrame } from './src/lab/frame-wait.js';
 
@@ -3282,13 +3283,18 @@ function StatusBadge({ status, darkMode }) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() =>
+    typeof window === 'undefined' ? 'overview' : tabFromPath(window.location.pathname)
+  );
   const [darkMode, setDarkMode] = useState(false);
   const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
 
-  const [resultsMap, setResultsMap] = useState({});
+  // Results from an earlier visit, kept on this device only (see src/lab/result-store.js).
+  const [restored] = useState(() => loadResults({ knownIds: TEST_REGISTRY.map((t) => t.id) }));
+  const [resultsMap, setResultsMap] = useState(() => restored?.resultsMap || {});
   const [executionState, setExecutionState] = useState(EXECUTION_STATE.IDLE);
-  const [lastRun, setLastRun] = useState(null);
+  const [lastRun, setLastRun] = useState(() => restored?.lastRun || null);
+  const [savedAt, setSavedAt] = useState(() => restored?.savedAt || null);
   const [runProgress, setRunProgress] = useState({
     completed: 0,
     total: 0,
@@ -3721,6 +3727,44 @@ export default function App() {
 
   const normalizedTab = useMemo(() => normalizeTab(activeTab), [activeTab]);
 
+  // Keep the address bar and page title in step with the tab, so tabs can be
+  // bookmarked and Back/Forward move between them.
+  const firstRouteSync = useRef(true);
+  useEffect(() => {
+    document.title = titleForTab(normalizedTab);
+    const path = pathForTab(normalizedTab);
+    if (window.location.pathname !== path) {
+      const url = path + window.location.search;
+      if (firstRouteSync.current) window.history.replaceState({ tab: normalizedTab }, '', url);
+      else window.history.pushState({ tab: normalizedTab }, '', url);
+    }
+    firstRouteSync.current = false;
+  }, [normalizedTab]);
+
+  useEffect(() => {
+    const onPopState = () => setActiveTab(tabFromPath(window.location.pathname));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Save finished results whenever a run is not in progress.
+  useEffect(() => {
+    if (executionState === EXECUTION_STATE.RUNNING || executionState === EXECUTION_STATE.PAUSED) return;
+    // Unchanged results from an earlier visit keep their original save time.
+    if (restored && resultsMap === restored.resultsMap && lastRun === restored.lastRun) return;
+    if (saveResults({ resultsMap, lastRun }) && Object.keys(resultsMap).length) {
+      setSavedAt(Date.now());
+    }
+  }, [resultsMap, lastRun, executionState, restored]);
+
+  const clearSavedResults = useCallback(() => {
+    clearResults();
+    setResultsMap({});
+    setLastRun(null);
+    setSavedAt(null);
+    notify('Results cleared from this device', 'success');
+  }, [notify]);
+
   useEffect(() => {
     if (activeTab === 'monetag') setSettingsSubTab('monetag');
     if (activeTab === 'scoring') setSettingsSubTab('weights');
@@ -3830,6 +3874,9 @@ export default function App() {
             notifyError={(message) => notify(message, 'error')}
             notify={notify}
             lastRun={lastRun}
+            savedAt={savedAt}
+            restoredFromEarlierVisit={Boolean(restored) && lastRun === restored.lastRun}
+            onClearResults={clearSavedResults}
           />
         )}
 

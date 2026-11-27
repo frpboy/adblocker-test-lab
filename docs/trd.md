@@ -14,7 +14,8 @@ This TRD describes both the current browser-only implementation and the target a
 | Browser executor | `executeAuditedTest` | DOM, fetch, XHR, iframe, API-capability, and privacy-signal observations |
 | Scoring | `calculateBenchmarkScore` | Eligible-result selection, partial credit, weighting, renormalization |
 | Reporting | Browser Blob download | JSON, HTML, and copied summary output |
-| Persistence | None | Current state is browser-memory only |
+| Persistence | `src/lab/result-store.js` (browser `localStorage`) | Finished results and the last run are kept on the visitor's device for up to 30 days so they survive a reload. Never sent anywhere; cleared with "Clear results". Unfinished results are not stored, and blocked storage falls back to memory only. |
+| Routing | `src/lab/navigation.js` + `vercel.json` | Each tab has an address (`/`, `/results`, `/live-ads`, `/how-it-works`, `/settings`) using the History API; Back and Forward move between tabs. |
 
 ## Target architecture
 
