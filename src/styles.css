@@ -27,6 +27,29 @@ button:not(:disabled) {
   touch-action: manipulation;
 }
 
+/* Non-text contrast (WCAG 1.4.11): a control's edge needs 3:1 against the surface it sits on.
+   #857d6e is 3.25:1 on the darkest light surface (#ebe5d9); #74909e is 4.84:1 on the lightest
+   dark surface (#172129). :where() keeps specificity at one class, so hover, selected and
+   focus styles still win. Cards keep their lighter hairline: it separates, it does not identify. */
+:where(button, select, input, textarea).border:where(:not([aria-pressed='true'])) {
+  border-color: #857d6e;
+}
+:where(.dark) :where(button, select, input, textarea).border:where(:not([aria-pressed='true'])) {
+  border-color: #74909e;
+}
+
+/* MOTION 1 (docs/design-rationale.md): honour the user's reduced-motion setting everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @media (max-width: 640px) {
   body {
     font-size: 16px;

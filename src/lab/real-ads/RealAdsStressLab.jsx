@@ -15,17 +15,33 @@ function placementsFor(config, level, provider) {
   return provider === 'all' ? Object.values(byProvider).flat() : (byProvider[provider] ?? []);
 }
 
+// Tones meet WCAG AA on both themes; meaning is also carried by the label text.
 const STATUS_BADGES = {
-  REAL_CREATIVE_RENDERED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-  SCRIPT_LOADED: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30',
-  SCRIPT_LOADING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse',
-  EMPTY_OR_NO_FILL: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
-  REQUEST_FAILED: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
-  BLOCKED_OR_FILTERED_POSSIBLE: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
-  PROVIDER_ERROR: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30',
-  INCONCLUSIVE: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/30',
-  NOT_STARTED: 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
+  REAL_CREATIVE_RENDERED: 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700',
+  SCRIPT_LOADED: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600',
+  SCRIPT_LOADING: 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700',
+  EMPTY_OR_NO_FILL: 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700',
+  REQUEST_FAILED: 'bg-rose-50 text-rose-900 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-700',
+  BLOCKED_OR_FILTERED_POSSIBLE: 'bg-rose-50 text-rose-900 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-700',
+  PROVIDER_ERROR: 'bg-rose-50 text-rose-900 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-700',
+  INCONCLUSIVE: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600',
+  NOT_STARTED: 'bg-transparent text-slate-700 border-dashed border-slate-400 dark:text-slate-300 dark:border-slate-500'
 };
+
+const SLOT_LABELS = {
+  REAL_CREATIVE_RENDERED: 'Ad shown',
+  SCRIPT_LOADED: 'Script loaded',
+  SCRIPT_LOADING: 'Loading',
+  EMPTY_OR_NO_FILL: 'No ad returned',
+  REQUEST_FAILED: 'Request failed',
+  BLOCKED_OR_FILTERED_POSSIBLE: 'Possibly blocked',
+  PROVIDER_ERROR: 'Network error',
+  INCONCLUSIVE: 'Inconclusive',
+  NOT_STARTED: 'Not started',
+  MANUAL_ONLY: 'Manual only'
+};
+
+const slotLabel = (status) => SLOT_LABELS[status] || status;
 
 export default function RealAdsStressLab({ surface, subSurface, muted, focusRing }) {
   const config = useMemo(() => getRealAdsConfig(import.meta.env), []);
@@ -215,30 +231,24 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
     <section className={`border rounded-sm p-5 space-y-6 ${surface}`} aria-labelledby="real-ads-title">
       {/* Header and Scope Notice */}
       <div className="border-b pb-4 border-slate-200 dark:border-[#354955]">
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#c65322]/10 text-[#c65322] border border-[#c65322]/30">
-            EXPLORATORY LIVE PROVIDER STRESS LAB
-          </span>
-          <span className="text-xs font-mono text-slate-400">ISOLATED STAGE</span>
-        </div>
-        <h3 id="real-ads-title" className="mt-2 text-xl font-bold tracking-tight">
-          Real Ads Stress Lab
-        </h3>
-        <p className={`mt-1 text-xs leading-relaxed max-w-3xl ${muted}`}>
-          Delivers live third-party placements in dedicated, isolated containers to observe actual ad network delivery, script loading, and creative rendering.
-          All live-ad observations are strictly exploratory and <strong>never affect the core ad &amp; tracker blocking score</strong>.
+        <h1 id="real-ads-title" className="text-2xl sm:text-3xl font-bold tracking-[-0.02em]">
+          Live ads lab
+        </h1>
+        <p className={`mt-2 text-sm leading-relaxed max-w-3xl ${muted}`}>
+          Loads real ads from ad networks into separate boxes on this page, so you can see what your blocker does with live ads.
+          Nothing loads until you press Start, and these results <strong className="text-current">never affect your blocking score</strong>.
         </p>
       </div>
 
       {/* Configuration & Controls */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 text-xs">
-        <label className="font-mono">
-          TEST INTENSITY LEVEL
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 text-sm">
+        <label className="font-semibold">
+          How many ads to load
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
             disabled={sessionActive}
-            className={`mt-1 w-full p-2 border rounded-sm ${subSurface} ${focusRing} disabled:opacity-50`}
+            className={`mt-1 w-full min-h-11 px-2 border rounded-sm ${subSurface} ${focusRing} disabled:opacity-50`}
           >
             {REAL_ADS_LEVELS.map((item) => (
               <option key={item.id} value={item.id}>
@@ -248,8 +258,8 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
           </select>
         </label>
 
-        <label className="font-mono">
-          PROVIDER
+        <label className="font-semibold">
+          Ad network
           <select
             value={provider}
             onChange={(e) => {
@@ -257,7 +267,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
               setFormatId('');
             }}
             disabled={sessionActive}
-            className={`mt-1 w-full p-2 border rounded-sm ${subSurface} ${focusRing} disabled:opacity-50`}
+            className={`mt-1 w-full min-h-11 px-2 border rounded-sm ${subSurface} ${focusRing} disabled:opacity-50`}
           >
             {[
               ['adsterra', 'Adsterra'],
@@ -275,13 +285,13 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
           </select>
         </label>
 
-        <label className="font-mono">
-          INDIVIDUAL FORMAT
+        <label className="font-semibold">
+          Single ad format (level 1 only)
           <select
             value={formatId}
             onChange={(e) => setFormatId(e.target.value)}
             disabled={level !== 'individual' || sessionActive}
-            className={`mt-1 w-full p-2 border rounded-sm disabled:opacity-50 ${subSurface} ${focusRing}`}
+            className={`mt-1 w-full min-h-11 px-2 border rounded-sm disabled:opacity-50 ${subSurface} ${focusRing}`}
           >
             <option value="">First available format</option>
             {providerFormats.map((p) => (
@@ -292,12 +302,12 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
           </select>
         </label>
 
-        <label className="font-mono">
-          COMPARISON VIEWPORT
+        <label className="font-semibold">
+          Layout size
           <select
             value={viewport}
             onChange={(e) => setViewport(e.target.value)}
-            className={`mt-1 w-full p-2 border rounded-sm ${subSurface} ${focusRing}`}
+            className={`mt-1 w-full min-h-11 px-2 border rounded-sm ${subSurface} ${focusRing}`}
           >
             <option value="1280x720">Desktop (1280 × 720)</option>
             <option value="390x844">Mobile (390 × 844)</option>
@@ -311,43 +321,39 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
             type="button"
             onClick={start}
             disabled={sessionActive || level === 'baseline' || planned.length === 0}
-            className={`px-4 py-2 rounded-sm text-xs font-bold bg-[#c65322] hover:bg-[#b0471b] text-white disabled:opacity-40 transition-colors ${focusRing}`}
+            className={`min-h-10 px-4 rounded-sm text-sm font-semibold bg-[#b84a1c] hover:bg-[#9a3d17] text-white disabled:opacity-40 transition-colors ${focusRing}`}
           >
-            {sessionActive ? 'Session Running...' : 'Start Session'}
+            {sessionActive ? 'Loading live ads\u2026' : 'Start loading ads'}
           </button>
           <button
             type="button"
             onClick={stop}
             disabled={!sessionActive}
-            className={`px-4 py-2 rounded-sm text-xs font-bold border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${subSurface} ${focusRing}`}
+            className={`min-h-10 px-4 rounded-sm text-sm font-semibold border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${subSurface} ${focusRing}`}
           >
-            Stop Session
+            Stop
           </button>
           <button
             type="button"
             onClick={() => setEvents([])}
-            className={`px-3 py-2 rounded-sm text-xs border ${subSurface} ${focusRing}`}
+            className={`min-h-10 px-3 rounded-sm text-sm border ${subSurface} ${focusRing}`}
           >
-            Clear Evidence
+            Clear log
           </button>
         </div>
 
-        <div className="flex items-center gap-3 font-mono text-[11px]">
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" aria-live="polite">
           <span>
-            AVAILABLE FORMATS: <strong>{available.length}</strong>
+            Formats set up: <strong>{available.length}</strong>
           </span>
-          <span className="text-slate-300 dark:text-slate-600">|</span>
           <span>
-            ACTIVE PLACEMENTS: <strong>{sessionActive ? planned.filter((p) => !p.manualOnly).length : 0}</strong>
+            Ads on page: <strong>{sessionActive ? planned.filter((p) => !p.manualOnly).length : 0}</strong>
           </span>
-          <span className="text-slate-300 dark:text-slate-600">|</span>
           <span className="flex items-center gap-1.5">
-            <span
-              className={`inline-block w-2 h-2 rounded-full ${sessionActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}
-            />
-            {sessionActive ? 'LIVE ACTIVE' : 'IDLE'}
+            <span aria-hidden="true" className={`inline-block w-2 h-2 rounded-full ${sessionActive ? 'bg-emerald-600' : 'bg-slate-400'}`} />
+            {sessionActive ? 'Running' : 'Stopped'}
           </span>
-        </div>
+        </p>
       </div>
 
       {requiresReloadNotice && (
@@ -378,14 +384,12 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b pb-2 border-slate-200 dark:border-[#354955]">
           <div>
-            <h4 className="font-mono text-sm font-bold uppercase tracking-wider">
-              Ad Placement Stage (Visible Mount Targets)
-            </h4>
-            <p className={`text-[11px] ${muted}`}>
-              Each configured banner renders within an isolated provider iframe to isolate atOptions and preserve layout stability.
+            <h2 className="text-lg font-bold">Ad boxes</h2>
+            <p className={`text-xs ${muted}`}>
+              Each ad loads inside its own frame so it cannot change the rest of the page.
             </p>
           </div>
-          <div className="text-[11px] font-mono text-slate-400">
+          <div className="text-xs font-mono text-slate-600 dark:text-slate-300">
             Viewport Target: {viewport}
           </div>
         </div>
@@ -403,10 +407,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold">{banner.label}</span>
-                    <span className="font-mono text-[10px] text-slate-400">#{banner.id}</span>
+                    <span className="font-mono text-xs text-slate-600 dark:text-slate-300">#{banner.id}</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
-                    {status}
+                  <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
+                    {slotLabel(status)}
                   </span>
                 </div>
                 <div className="overflow-x-auto flex justify-center py-2 bg-slate-50 dark:bg-black/20 rounded border border-dashed border-slate-200 dark:border-slate-800">
@@ -417,8 +421,8 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                     className="flex items-center justify-center relative bg-transparent"
                   >
                     {!sessionActive && (
-                      <span className="text-[11px] font-mono text-slate-400 select-none">
-                        728 × 90 Leaderboard Slot [Awaiting Session Start]
+                      <span className="text-xs font-mono text-slate-600 dark:text-slate-300 select-none">
+                        728 × 90 Leaderboard Slot
                       </span>
                     )}
                   </div>
@@ -438,10 +442,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold">{banner.label}</span>
-                    <span className="font-mono text-[10px] text-slate-400">#{banner.id}</span>
+                    <span className="font-mono text-xs text-slate-600 dark:text-slate-300">#{banner.id}</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
-                    {status}
+                  <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
+                    {slotLabel(status)}
                   </span>
                 </div>
                 <div className="overflow-x-auto flex justify-center py-2 bg-slate-50 dark:bg-black/20 rounded border border-dashed border-slate-200 dark:border-slate-800">
@@ -452,8 +456,8 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                     className="flex items-center justify-center relative bg-transparent"
                   >
                     {!sessionActive && (
-                      <span className="text-[11px] font-mono text-slate-400 select-none">
-                        468 × 60 Standard Banner Slot [Awaiting Session Start]
+                      <span className="text-xs font-mono text-slate-600 dark:text-slate-300 select-none">
+                        468 × 60 Standard Banner Slot
                       </span>
                     )}
                   </div>
@@ -478,10 +482,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-bold">{banner.label}</span>
-                      <span className="font-mono text-[10px] text-slate-400">#{banner.id}</span>
+                      <span className="font-mono text-xs text-slate-600 dark:text-slate-300">#{banner.id}</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
-                      {status}
+                    <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
+                      {slotLabel(status)}
                     </span>
                   </div>
                   <div className="flex justify-center py-2 bg-slate-50 dark:bg-black/20 rounded border border-dashed border-slate-200 dark:border-slate-800">
@@ -492,7 +496,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                       className="flex items-center justify-center relative bg-transparent"
                     >
                       {!sessionActive && (
-                        <span className="text-[11px] font-mono text-slate-400 select-none text-center p-4">
+                        <span className="text-xs font-mono text-slate-600 dark:text-slate-300 select-none text-center p-4">
                           300 × 250 Medium Rectangle Slot
                         </span>
                       )}
@@ -507,10 +511,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold">Native Banner Container</span>
-                  <span className="font-mono text-[10px] text-slate-400">#adsterra-native</span>
+                  <span className="font-mono text-xs text-slate-600 dark:text-slate-300">#adsterra-native</span>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[slotStatuses['adsterra-native'] || (sessionActive && planned.some((p) => p.kind === 'native') ? 'SCRIPT_LOADING' : 'NOT_STARTED')]}`}>
-                  {slotStatuses['adsterra-native'] || (sessionActive && planned.some((p) => p.kind === 'native') ? 'SCRIPT_LOADING' : 'NOT_STARTED')}
+                <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[slotStatuses['adsterra-native'] || (sessionActive && planned.some((p) => p.kind === 'native') ? 'SCRIPT_LOADING' : 'NOT_STARTED')]}`}>
+                  {slotLabel(slotStatuses['adsterra-native'] || (sessionActive && planned.some((p) => p.kind === 'native') ? 'SCRIPT_LOADING' : 'NOT_STARTED'))}
                 </span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-black/20 rounded border border-dashed border-slate-200 dark:border-slate-800">
@@ -520,8 +524,8 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                   className="w-full min-h-[140px] flex items-center justify-center"
                 >
                   {!sessionActive && (
-                    <span className="text-[11px] font-mono text-slate-400 select-none text-center">
-                      Dedicated Native Multi-Card Container [Awaiting Session Start]
+                    <span className="text-xs font-mono text-slate-600 dark:text-slate-300 select-none text-center">
+                      Dedicated Native Multi-Card Container
                     </span>
                   )}
                 </div>
@@ -539,10 +543,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-bold">{banner.label}</span>
-                      <span className="font-mono text-[10px] text-slate-400">#{banner.id}</span>
+                      <span className="font-mono text-xs text-slate-600 dark:text-slate-300">#{banner.id}</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
-                      {status}
+                    <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
+                      {slotLabel(status)}
                     </span>
                   </div>
                   <div className="flex justify-center py-2 bg-slate-50 dark:bg-black/20 rounded border border-dashed border-slate-200 dark:border-slate-800">
@@ -553,7 +557,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                       className="flex items-center justify-center relative bg-transparent"
                     >
                       {!sessionActive && (
-                        <span className="text-[11px] font-mono text-slate-400 select-none">
+                        <span className="text-xs font-mono text-slate-600 dark:text-slate-300 select-none">
                           320 × 50 Mobile Banner Slot
                         </span>
                       )}
@@ -577,10 +581,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-bold">160 × 600</span>
-                      <span className="font-mono text-[10px] text-slate-400">Skyscraper</span>
+                      <span className="font-mono text-xs text-slate-600 dark:text-slate-300">Skyscraper</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
-                      {status}
+                    <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
+                      {slotLabel(status)}
                     </span>
                   </div>
                   <div className="flex justify-center py-2 bg-slate-50 dark:bg-black/20 rounded border border-dashed border-slate-200 dark:border-slate-800">
@@ -591,7 +595,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                       className="flex items-center justify-center relative bg-transparent text-center"
                     >
                       {!sessionActive && (
-                        <span className="text-[11px] font-mono text-slate-400 select-none rotate-90 sm:rotate-0">
+                        <span className="text-xs font-mono text-slate-600 dark:text-slate-300 select-none rotate-90 sm:rotate-0">
                           160 × 600 Skyscraper
                         </span>
                       )}
@@ -612,10 +616,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-bold">160 × 300</span>
-                      <span className="font-mono text-[10px] text-slate-400">Half-Skyscraper</span>
+                      <span className="font-mono text-xs text-slate-600 dark:text-slate-300">Half-Skyscraper</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
-                      {status}
+                    <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[status] || STATUS_BADGES.NOT_STARTED}`}>
+                      {slotLabel(status)}
                     </span>
                   </div>
                   <div className="flex justify-center py-2 bg-slate-50 dark:bg-black/20 rounded border border-dashed border-slate-200 dark:border-slate-800">
@@ -626,7 +630,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                       className="flex items-center justify-center relative bg-transparent text-center"
                     >
                       {!sessionActive && (
-                        <span className="text-[11px] font-mono text-slate-400 select-none">
+                        <span className="text-xs font-mono text-slate-600 dark:text-slate-300 select-none">
                           160 × 300
                         </span>
                       )}
@@ -644,17 +648,17 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
           <div className={`p-3 border rounded-sm ${subSurface}`}>
             <div className="flex items-center justify-between mb-1.5">
               <span className="font-mono text-xs font-bold">Social Bar Overlay</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[slotStatuses['adsterra-social-bar'] || 'NOT_STARTED']}`}>
-                {slotStatuses['adsterra-social-bar'] || 'NOT_STARTED'}
+              <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[slotStatuses['adsterra-social-bar'] || 'NOT_STARTED']}`}>
+                {slotLabel(slotStatuses['adsterra-social-bar'] || 'NOT_STARTED')}
               </span>
             </div>
-            <p className={`text-[11px] leading-relaxed ${muted}`}>
+            <p className={`text-xs leading-relaxed ${muted}`}>
               Sticky/floating overlay notifications injected into the viewport margin.
             </p>
             <div
               ref={(el) => { if (el) slotRefs.current['adsterra-social-bar'] = el; }}
               id="slot-adsterra-social-bar"
-              className="mt-2 text-[10px] font-mono text-slate-400"
+              className="mt-2 text-xs font-mono text-slate-600 dark:text-slate-300"
             >
               Mount target: Document body overlay
             </div>
@@ -664,17 +668,17 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
           <div className={`p-3 border rounded-sm ${subSurface}`}>
             <div className="flex items-center justify-between mb-1.5">
               <span className="font-mono text-xs font-bold">Popunder Flow</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${STATUS_BADGES[slotStatuses['adsterra-popunder'] || 'NOT_STARTED']}`}>
-                {slotStatuses['adsterra-popunder'] || 'NOT_STARTED'}
+              <span className={`px-2 py-0.5 rounded text-xs font-mono border ${STATUS_BADGES[slotStatuses['adsterra-popunder'] || 'NOT_STARTED']}`}>
+                {slotLabel(slotStatuses['adsterra-popunder'] || 'NOT_STARTED')}
               </span>
             </div>
-            <p className={`text-[11px] leading-relaxed ${muted}`}>
+            <p className={`text-xs leading-relaxed ${muted}`}>
               Requires Level 4 (Intrusive) opt-in. Triggers on background tab upon user interaction.
             </p>
             <div
               ref={(el) => { if (el) slotRefs.current['adsterra-popunder'] = el; }}
               id="slot-adsterra-popunder"
-              className="mt-2 text-[10px] font-mono text-slate-400"
+              className="mt-2 text-xs font-mono text-slate-600 dark:text-slate-300"
             >
               Mount target: Window click dispatcher
             </div>
@@ -684,11 +688,11 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
           <div className={`p-3 border rounded-sm ${subSurface}`}>
             <div className="flex items-center justify-between mb-1.5">
               <span className="font-mono text-xs font-bold">Smartlink (Direct Link)</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono border bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700">
-                MANUAL ONLY
+              <span className="px-2 py-0.5 rounded text-xs font-mono border bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700">
+                Manual only
               </span>
             </div>
-            <p className={`text-[11px] leading-relaxed ${muted}`}>
+            <p className={`text-xs leading-relaxed ${muted}`}>
               Direct advertising offer URL. Never automated or clicked programmatically.
             </p>
             <div className="mt-2">
@@ -697,12 +701,12 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                   href={smartlinkPlacement.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-block px-3 py-1.5 rounded text-[11px] font-bold bg-[#c65322] hover:bg-[#b0471b] text-white transition-colors"
+                  className="inline-block px-3 py-1.5 rounded text-xs font-bold bg-[#b84a1c] hover:bg-[#9a3d17] text-white transition-colors"
                 >
                   Open Smartlink in New Tab ↗
                 </a>
               ) : (
-                <span className="text-[10px] font-mono text-slate-400">No destination configured</span>
+                <span className="text-xs font-mono text-slate-600 dark:text-slate-300">No destination configured</span>
               )}
             </div>
           </div>
@@ -711,7 +715,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
 
       {/* PLANNED PLACEMENTS SUMMARY */}
       <div className={`p-3 border rounded-sm ${subSurface}`}>
-        <div className="font-mono text-[11px] font-bold uppercase tracking-wider">
+        <div className="font-mono text-xs font-bold">
           Configured Placements for Active Selection ({planned.length})
         </div>
         {planned.length === 0 ? (
@@ -722,11 +726,11 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
           <ul className="mt-2 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
             {planned.map((placement) => (
               <li key={placement.id} className="border p-2 text-xs rounded-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                <strong className="block font-mono text-[11px]">{placement.id}</strong>
-                <span className={`text-[10px] ${muted}`}>Kind: {placement.kind}</span>
-                {placement.size && <span className={`block text-[10px] font-mono ${muted}`}>Size: {placement.size}</span>}
+                <strong className="block font-mono text-xs">{placement.id}</strong>
+                <span className={`text-xs ${muted}`}>Kind: {placement.kind}</span>
+                {placement.size && <span className={`block text-xs font-mono ${muted}`}>Size: {placement.size}</span>}
                 {placement.manualOnly && (
-                  <span className="inline-block mt-1 text-[10px] text-amber-600 font-bold">Manual Trigger Only</span>
+                  <span className="inline-block mt-1 text-xs text-amber-600 font-bold">Manual Trigger Only</span>
                 )}
               </li>
             ))}
@@ -737,10 +741,10 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
       {/* PLACEMENT EVIDENCE TELEMETRY LOG */}
       <div className={`p-3 border rounded-sm ${subSurface}`}>
         <div className="flex items-center justify-between mb-2">
-          <div className="font-mono text-[11px] font-bold uppercase tracking-wider">
+          <div className="font-mono text-xs font-bold">
             Evidence Observations Log ({events.length})
           </div>
-          <span className={`text-[10px] ${muted}`}>Non-scoring live-ad telemetry</span>
+          <span className={`text-xs ${muted}`}>Non-scoring live-ad telemetry</span>
         </div>
 
         {events.length === 0 ? (
@@ -748,7 +752,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
             No live-provider observation recorded yet. Start a session to observe script requests and creative delivery.
           </p>
         ) : (
-          <div className="max-h-60 overflow-y-auto space-y-1.5 text-[11px] font-mono">
+          <div className="max-h-60 overflow-y-auto space-y-1.5 text-xs font-mono">
             {events.map((event, index) => (
               <div
                 key={`${event.placementId}-${index}`}
@@ -758,18 +762,18 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
                   <span className="font-bold text-slate-700 dark:text-slate-300">
                     {event.provider}
                   </span>
-                  <span className="text-slate-400">/</span>
+                  <span className="text-slate-600 dark:text-slate-300">/</span>
                   <span>{event.placementId}</span>
-                  <span className="text-slate-400">/</span>
-                  <span className="text-slate-500">{event.viewport}</span>
+                  <span className="text-slate-600 dark:text-slate-300">/</span>
+                  <span className="text-slate-600 dark:text-slate-300">{event.viewport}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${STATUS_BADGES[event.status] || STATUS_BADGES.INCONCLUSIVE}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold border ${STATUS_BADGES[event.status] || STATUS_BADGES.INCONCLUSIVE}`}>
                     {event.status}
                   </span>
                   {event.note && (
-                    <span className="text-[10px] text-slate-500 max-w-xs truncate" title={event.note}>
+                    <span className="text-xs text-slate-600 dark:text-slate-300 max-w-xs truncate" title={event.note}>
                       ({event.note})
                     </span>
                   )}

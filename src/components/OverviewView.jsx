@@ -1,5 +1,18 @@
 import React from 'react';
-import { Play, ArrowRight, Shield, ShieldCheck, CheckCircle2, Info, Sparkles } from 'lucide-react';
+import { Play } from 'lucide-react';
+import { plainTestName } from '../lab/plain-language.js';
+
+const CAN_SEE = [
+  'Whether a test ad or tracker reached your browser, using files served from this site.',
+  'Whether ad-shaped page elements were hidden on screen.',
+  'Which privacy signals your browser sends to websites.'
+];
+
+const CANNOT_SEE = [
+  'Which extension, browser feature, DNS service, or VPN did the blocking.',
+  'Why a request to another company’s server failed. It could be a blocker, or that server being down.',
+  'How well your setup handles sites that change their ads after this test was written.'
+];
 
 export default function OverviewView({
   startRun,
@@ -10,43 +23,37 @@ export default function OverviewView({
   setActiveTab,
   envDiagnostics,
   scoreSummary,
-  resultsMap,
   surface,
   subSurface,
   muted,
   focusRing
 }) {
-  const hasCompletedRun = scoreSummary && scoreSummary.eligibleTotalTests > 0;
+  const hasResult = scoreSummary && scoreSummary.eligibleTotalTests > 0;
+  const partial = hasResult && scoreSummary.eligibleTotalTests * 2 < scoreSummary.maxScoredTests;
 
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,.75fr)] lg:items-start" aria-labelledby="overview-title">
-        <div className="py-2 sm:py-6 space-y-6">
+    <div className="space-y-12 sm:space-y-16">
+      <section className="grid gap-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,.7fr)] lg:items-start" aria-labelledby="overview-title">
+        <div className="space-y-7">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-sm text-[11px] font-mono font-semibold bg-[#c65322]/10 text-[#c65322] border border-[#c65322]/30 mb-4">
-              <Shield className="w-3.5 h-3.5 shrink-0" />
-              <span>EVIDENCE-FIRST BROWSER DIAGNOSTICS</span>
-            </div>
-            <h1 id="overview-title" className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-[-0.04em] leading-[1.02]">
-              Inspect browser behavior without inventing the cause.
+            <h1 id="overview-title" className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-[-0.04em] leading-[1.04] max-w-3xl">
+              See what your ad blocker really stops.
             </h1>
             <p className={`mt-5 max-w-2xl text-base sm:text-lg leading-relaxed ${muted}`}>
-              Run controlled fixtures to measure observable ad blocking, tracker interception, cosmetic filtering, and privacy signals.
-              We record direct browser-visible evidence and its limitations — without guessing your extensions, VPN, or DNS resolver.
+              This page loads test ads, trackers, and pop-ups, then checks which ones reached your browser.
+              It reports only what a web page can actually observe, and says so when it cannot tell.
             </p>
           </div>
 
-          {/* Primary Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               type="button"
               onClick={() => startRun(quickScanTests)}
               disabled={isActiveRun}
-              className={`inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-sm font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white disabled:opacity-50 shadow-xs cursor-pointer transition-colors ${focusRing}`}
+              className={`inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-sm font-semibold bg-[#b84a1c] hover:bg-[#9a3d17] text-white disabled:opacity-50 cursor-pointer transition-colors ${focusRing}`}
             >
               <Play aria-hidden="true" className="w-4 h-4 fill-current shrink-0" />
-              <span>Run Quick Scan (6 checks · ~1.5s)</span>
+              <span>Quick check ({quickScanTests.length} tests)</span>
             </button>
             <button
               type="button"
@@ -54,152 +61,120 @@ export default function OverviewView({
               disabled={isActiveRun}
               className={`inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-sm border font-semibold disabled:opacity-50 cursor-pointer ${surface} hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${focusRing}`}
             >
-              <Play aria-hidden="true" className="w-4 h-4 shrink-0" />
-              <span>Run Full Diagnostic ({expectedRegistryCount} cases)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('results')}
-              className={`inline-flex items-center justify-center gap-2 min-h-12 px-4 rounded-sm border text-xs font-semibold cursor-pointer ${subSurface} ${focusRing}`}
-            >
-              <span>View Workbench</span>
-              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+              <span>Full test (all {expectedRegistryCount})</span>
             </button>
           </div>
 
-          {/* First-Run Standby Banner or Last Run Summary */}
-          {!hasCompletedRun ? (
-            <div className={`p-4 rounded-sm border border-dashed border-slate-300 dark:border-slate-700 ${subSurface}`}>
-              <div className="flex items-start gap-3">
-                <Sparkles className="w-4 h-4 text-[#c65322] shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <div className="font-mono text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    No Eligible Tests Run Yet
-                  </div>
-                  <p className={`text-xs leading-relaxed ${muted}`}>
-                    Diagnostic score begins in standby. Launch <strong>Quick Scan</strong> to verify core ad and tracker interception in ~1.5 seconds, or choose <strong>Full Diagnostic</strong> to benchmark all 55 vectors across 14 categories.
-                  </p>
-                </div>
-              </div>
+          {hasResult ? (
+            <div className={`p-4 sm:p-5 rounded-sm border ${surface}`} role="status">
+              <p className="text-sm">
+                {partial && <strong className="font-semibold">Partial result. </strong>}
+                Your last run scored <strong className="font-semibold">{scoreSummary.overallScore}/100</strong>, based on{' '}
+                {scoreSummary.eligibleTotalTests} of {scoreSummary.maxScoredTests} scored tests.
+                {partial && ' Run the full test before relying on this number.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('results')}
+                className={`mt-3 min-h-10 text-sm font-semibold underline underline-offset-4 text-[#a9431c] dark:text-[#f08a5d] cursor-pointer ${focusRing}`}
+              >
+                Open the results
+              </button>
             </div>
           ) : (
-            <div className={`p-4 rounded-sm border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <div>
-                    <span className="font-mono text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                      Previous Benchmark Score: {scoreSummary.overallScore}/100
-                    </span>
-                    <span className={`block text-[11px] ${muted}`}>
-                      {scoreSummary.passedCount} Blocked · {scoreSummary.partialCount} Partial · {scoreSummary.failedCount} Allowed ({scoreSummary.eligibleTotalTests} eligible fixtures)
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('results')}
-                  className={`text-xs font-bold underline underline-offset-4 text-[#c65322] ${focusRing}`}
-                >
-                  Inspect Results &amp; Audit Trace →
-                </button>
-              </div>
-            </div>
+            <p className={`text-sm ${muted}`}>
+              No results yet. The quick check runs {quickScanTests.length} core tests. The full test runs all {expectedRegistryCount}, including
+              privacy settings and checks against real ad servers, which are reported but never added to the score.
+            </p>
           )}
-
-          {/* 3-Step Visitor Explanation */}
-          <div className="pt-2">
-            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
-              What Happens During A Diagnostic Run
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className={`p-3.5 rounded-sm border ${surface} space-y-1`}>
-                <div className="font-mono text-[11px] font-bold text-[#c65322]">1. Controlled Fixtures</div>
-                <p className={`text-[11px] leading-relaxed ${muted}`}>
-                  Standard network requests, tracking pixels, and ad containers are dispatched into an isolated sandbox.
-                </p>
-              </div>
-              <div className={`p-3.5 rounded-sm border ${surface} space-y-1`}>
-                <div className="font-mono text-[11px] font-bold text-[#c65322]">2. Objective Telemetry</div>
-                <p className={`text-[11px] leading-relaxed ${muted}`}>
-                  Observes network arrival, element dimensions, and script execution without guessing installed extensions.
-                </p>
-              </div>
-              <div className={`p-3.5 rounded-sm border ${surface} space-y-1`}>
-                <div className="font-mono text-[11px] font-bold text-[#c65322]">3. Unbiased Audit Score</div>
-                <p className={`text-[11px] leading-relaxed ${muted}`}>
-                  Calculates score strictly from 35 core ad/tracker vectors. Privacy signals and exploratory probes remain separate.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Scope & Context Sidebar Column */}
-        <div className="space-y-4">
-          {/* Quick Scan Scope Card */}
-          <aside className={`border-t-4 border-[#c65322] p-5 sm:p-6 rounded-xs border shadow-xs ${surface}`} aria-label="Quick scan scope">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold uppercase font-mono tracking-wider text-[#c65322]">Quick Scan Scope</p>
-              <span className={`text-xs font-mono ${muted}`}>6 CORE VECTORS</span>
-            </div>
-            <p className={`mt-2 text-xs leading-relaxed ${muted}`}>
-              Six registered controlled checks covering core display, script interception, tracking, and anti-adblock detection:
-            </p>
-            <ol className="mt-4 grid grid-cols-2 gap-2 text-xs font-mono font-medium">
-              {quickScanTests.map((test) => (
-                <li key={test.id} className={`p-2 rounded-xs border flex items-center justify-between ${subSurface}`}>
-                  <span className="font-bold text-[#c65322]">{test.id}</span>
-                  <span className={`text-[10px] truncate max-w-[120px] ${muted}`}>{test.name}</span>
-                </li>
-              ))}
-            </ol>
-            <button
-              type="button"
-              onClick={() => setActiveTab('methodology')}
-              className={`mt-4 text-xs font-semibold underline underline-offset-4 cursor-pointer text-[#c65322] ${focusRing}`}
-            >
-              Read the evidence methodology →
-            </button>
-          </aside>
+        <aside className={`p-5 sm:p-6 rounded-sm border ${surface}`} aria-labelledby="quick-scope-title">
+          <h2 id="quick-scope-title" className="text-base font-bold">What the quick check tests</h2>
+          <ol className="mt-4 space-y-3">
+            {quickScanTests.map((test) => (
+              <li key={test.id} className="flex gap-3 text-sm leading-snug">
+                <span className={`font-mono text-xs pt-0.5 w-14 shrink-0 ${muted}`}>{test.id}</span>
+                <span>{plainTestName(test)}</span>
+              </li>
+            ))}
+          </ol>
+          <button
+            type="button"
+            onClick={() => setActiveTab('results')}
+            className={`mt-5 min-h-10 text-sm font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}
+          >
+            Browse all {expectedRegistryCount} tests
+          </button>
+        </aside>
+      </section>
 
-          {/* Detected Browser Context (Collapsible Disclosure) */}
-          <details className={`p-4 rounded-xs border text-xs group ${surface}`}>
-            <summary className="font-mono text-xs font-bold uppercase tracking-wider cursor-pointer list-none flex items-center justify-between select-none">
-              <span>Detected Browser Context</span>
-              <span className={`text-[11px] font-sans font-normal ${muted} group-open:hidden`}>Expand context ▾</span>
-              <span className={`text-[11px] font-sans font-normal ${muted} hidden group-open:inline`}>Hide context ▴</span>
-            </summary>
-            <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
-                <div className={`p-2 rounded-xs border ${subSurface}`}>
-                  <span className={muted}>Engine Hint:</span>
-                  <div className="font-bold truncate">{envDiagnostics?.engineHint || 'Analyzing...'}</div>
-                </div>
-                <div className={`p-2 rounded-xs border ${subSurface}`}>
-                  <span className={muted}>Viewport:</span>
-                  <div className="font-bold">{envDiagnostics?.viewport || 'Calculating...'}</div>
-                </div>
-                <div className={`p-2 rounded-xs border ${subSurface}`}>
-                  <span className={muted}>Privacy Signal (GPC):</span>
-                  <div className="font-bold text-teal-600 dark:text-teal-400">
-                    {!envDiagnostics ? 'Detecting...' : envDiagnostics.globalPrivacyControl === 'true' ? 'Active (true)' : envDiagnostics.globalPrivacyControl === 'Unsupported' ? 'Not supported' : 'Inactive'}
-                  </div>
-                </div>
-                <div className={`p-2 rounded-xs border ${subSurface}`}>
-                  <span className={muted}>Do Not Track (DNT):</span>
-                  <div className="font-bold">
-                    {!envDiagnostics ? 'Detecting...' : envDiagnostics.doNotTrack === '1' ? 'Active (1)' : 'Inactive'}
-                  </div>
-                </div>
-              </div>
-              <p className={`text-[10px] ${muted} leading-normal`}>
-                Note: Visible browser properties are diagnostic context only and cannot prove installed extensions, VPNs, or local router filter lists.
-              </p>
-            </div>
-          </details>
+      <section aria-labelledby="limits-title" className="grid gap-8 md:grid-cols-[minmax(0,.8fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <div>
+          <h2 id="limits-title" className="text-2xl font-bold tracking-[-0.02em]">What a web page can and cannot know</h2>
+          <p className={`mt-3 text-sm leading-relaxed ${muted}`}>
+            Results are evidence about your browser, not a verdict on any product.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveTab('methodology')}
+            className={`mt-3 min-h-10 text-sm font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}
+          >
+            How results are measured
+          </button>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold">It can see</h3>
+          <ul className="mt-3 space-y-3 text-sm leading-relaxed list-disc pl-5">
+            {CAN_SEE.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold">It cannot see</h3>
+          <ul className={`mt-3 space-y-3 text-sm leading-relaxed list-disc pl-5 ${muted}`}>
+            {CANNOT_SEE.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </div>
       </section>
+
+      <details className={`p-4 sm:p-5 rounded-sm border text-sm group max-w-3xl ${subSurface}`}>
+        <summary className={`min-h-10 flex items-center font-semibold cursor-pointer select-none ${focusRing}`}>
+          What this page can read about your browser
+        </summary>
+        <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <dt className={muted}>Browser engine (best guess)</dt>
+            <dd className="font-semibold">{envDiagnostics ? envDiagnostics.engineHint : 'Checking…'}</dd>
+          </div>
+          <div>
+            <dt className={muted}>Window size</dt>
+            <dd className="font-semibold">{envDiagnostics?.viewport || 'Checking…'}</dd>
+          </div>
+          <div>
+            <dt className={muted}>Global Privacy Control</dt>
+            <dd className="font-semibold">
+              {!envDiagnostics
+                ? 'Checking…'
+                : envDiagnostics.globalPrivacyControl === 'true'
+                ? 'On'
+                : envDiagnostics.globalPrivacyControl === 'Unsupported'
+                ? 'Not supported by this browser'
+                : 'Off'}
+            </dd>
+          </div>
+          <div>
+            <dt className={muted}>Do Not Track</dt>
+            <dd className="font-semibold">{!envDiagnostics ? 'Checking…' : envDiagnostics.doNotTrack === '1' ? 'On' : 'Off'}</dd>
+          </div>
+        </dl>
+        <p className={`mt-4 ${muted}`}>
+          None of this reveals your extensions, VPN, or DNS settings.
+        </p>
+      </details>
     </div>
   );
 }

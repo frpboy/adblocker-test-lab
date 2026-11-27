@@ -1,79 +1,79 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Search, Download, Copy, Check, RotateCcw } from 'lucide-react';
 import {
-  Play,
-  Pause,
-  Square,
-  Search,
-  Download,
-  Copy,
-  Check,
-  FileText,
-  Filter,
-  RotateCcw,
-  Sparkles,
-  ShieldAlert,
-  ShieldCheck,
-  AlertCircle
-} from 'lucide-react';
+  plainTestName,
+  statusLabel,
+  GROUP_LABELS,
+  GROUP_DESCRIPTIONS,
+  STATUS_LEGEND
+} from '../lab/plain-language.js';
 
+const INK_ACTIVE = 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee]';
+
+// Outcome colors carry meaning (stopped / in part / got through). Everything
+// that is not a clear outcome stays neutral so it does not read as a verdict.
 export function StatusBadge({ status, darkMode, RESULT_STATUS }) {
-  const styles = {
-    [RESULT_STATUS.BLOCKED]: darkMode
-      ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700'
-      : 'bg-emerald-50 text-emerald-900 border-emerald-300',
-    [RESULT_STATUS.PARTIAL]: darkMode
-      ? 'bg-amber-950/90 text-amber-300 border-amber-700'
-      : 'bg-amber-50 text-amber-900 border-amber-300',
-    [RESULT_STATUS.ALLOWED]: darkMode
-      ? 'bg-rose-950/90 text-rose-300 border-rose-700'
-      : 'bg-rose-50 text-rose-900 border-rose-300',
-    [RESULT_STATUS.CONSISTENT_WITH_FILTERING]: darkMode
-      ? 'bg-sky-950/90 text-sky-300 border-sky-700'
-      : 'bg-sky-50 text-sky-900 border-sky-300',
-    [RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN]: darkMode
-      ? 'bg-purple-950/80 text-purple-300 border-purple-700'
-      : 'bg-purple-50 text-purple-900 border-purple-300',
-    [RESULT_STATUS.SIGNAL_ACTIVE]: darkMode
-      ? 'bg-teal-950/90 text-teal-300 border-teal-700'
-      : 'bg-teal-50 text-teal-900 border-teal-300',
-    [RESULT_STATUS.SIGNAL_INACTIVE]: darkMode
-      ? 'bg-slate-800 text-slate-300 border-slate-600'
-      : 'bg-slate-100 text-slate-700 border-slate-300',
-    [RESULT_STATUS.INCONCLUSIVE]: darkMode
-      ? 'bg-slate-800 text-slate-300 border-slate-700'
-      : 'bg-slate-100 text-slate-700 border-slate-300',
-    [RESULT_STATUS.RUNNING]: darkMode
-      ? 'bg-sky-950 text-sky-300 border-sky-600'
-      : 'bg-sky-50 text-sky-900 border-sky-400'
-  };
-
-  const shortLabels = {
-    [RESULT_STATUS.BLOCKED]: 'BLOCKED',
-    [RESULT_STATUS.PARTIAL]: 'PARTIAL',
-    [RESULT_STATUS.ALLOWED]: 'ALLOWED',
-    [RESULT_STATUS.CONSISTENT_WITH_FILTERING]: 'FILTER_INF',
-    [RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN]: 'FAIL_CAUSE_UNK',
-    [RESULT_STATUS.SIGNAL_ACTIVE]: 'SIGNAL_ON',
-    [RESULT_STATUS.SIGNAL_INACTIVE]: 'SIGNAL_OFF',
-    [RESULT_STATUS.INCONCLUSIVE]: 'INCONCLUSIVE',
-    [RESULT_STATUS.UNSUPPORTED]: 'UNSUPPORTED',
-    [RESULT_STATUS.CANCELLED]: 'CANCELLED',
-    [RESULT_STATUS.RUNNING]: 'RUNNING',
-    [RESULT_STATUS.QUEUED]: 'QUEUED'
-  };
-
-  const badgeStyle =
-    styles[status] ||
-    (darkMode ? 'bg-slate-900 text-slate-500 border-slate-800' : 'bg-slate-100 text-slate-500 border-slate-200');
+  const tone = {
+    [RESULT_STATUS.BLOCKED]: darkMode ? 'bg-emerald-950 text-emerald-200 border-emerald-700' : 'bg-emerald-50 text-emerald-900 border-emerald-300',
+    [RESULT_STATUS.PARTIAL]: darkMode ? 'bg-amber-950 text-amber-200 border-amber-700' : 'bg-amber-50 text-amber-900 border-amber-300',
+    [RESULT_STATUS.ALLOWED]: darkMode ? 'bg-rose-950 text-rose-200 border-rose-700' : 'bg-rose-50 text-rose-900 border-rose-300',
+    [RESULT_STATUS.SIGNAL_ACTIVE]: darkMode ? 'bg-teal-950 text-teal-200 border-teal-700' : 'bg-teal-50 text-teal-900 border-teal-300'
+  }[status];
+  const neutral = status
+    ? darkMode
+      ? 'bg-slate-800 text-slate-200 border-slate-600'
+      : 'bg-slate-100 text-slate-800 border-slate-300'
+    : darkMode
+    ? 'bg-transparent text-slate-300 border-slate-700 border-dashed'
+    : 'bg-transparent text-slate-600 border-slate-300 border-dashed';
 
   return (
-    <span
-      title={status || 'STANDBY'}
-      className={`inline-flex items-center justify-center px-1.5 py-0.5 min-w-[104px] rounded-xs text-[10px] font-mono font-bold tracking-tight border tabular-nums ${badgeStyle}`}
-    >
-      {shortLabels[status] || status || 'STANDBY'}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-semibold border whitespace-nowrap ${tone || neutral}`}>
+      {status === RESULT_STATUS.RUNNING ? 'Running…' : statusLabel(status)}
     </span>
   );
+}
+
+// Shape for each grid cell, so the result does not depend on seeing colour.
+function gridMark(status, RESULT_STATUS) {
+  if (!status) return '·';
+  if (status === RESULT_STATUS.BLOCKED) return '✓';
+  if (status === RESULT_STATUS.PARTIAL) return '◐';
+  if (status === RESULT_STATUS.ALLOWED) return '✕';
+  if (status === RESULT_STATUS.SIGNAL_ACTIVE) return '●';
+  return '?';
+}
+
+function verdict(scoreSummary) {
+  const { overallScore, eligibleTotalTests, maxScoredTests, passedCount, failedCount } = scoreSummary;
+  if (!eligibleTotalTests) {
+    return {
+      title: 'No results yet',
+      body: 'Run the quick check or the full test. Your score appears once at least one scored test gives a clear answer.'
+    };
+  }
+  if (eligibleTotalTests * 2 < maxScoredTests) {
+    return {
+      title: 'Partial result',
+      body: `Only ${eligibleTotalTests} of ${maxScoredTests} scored tests gave a clear answer, so this number can still move a lot. Run the full test before drawing conclusions.`
+    };
+  }
+  if (overallScore >= 85) {
+    return {
+      title: 'Most ads and trackers were stopped',
+      body: `${passedCount} of ${eligibleTotalTests} scored tests were blocked outright. Filter by "Allowed" below to see what still got through.`
+    };
+  }
+  if (overallScore >= 50) {
+    return {
+      title: 'Some ads and trackers got through',
+      body: `${failedCount} of ${eligibleTotalTests} scored tests reached your browser. Filter by "Allowed" below to see which ones.`
+    };
+  }
+  return {
+    title: 'Most ads and trackers got through',
+    body: 'If you expected an ad blocker to be active, check that it is turned on for this site, then run the test again.'
+  };
 }
 
 export default function ResultsWorkbenchView({
@@ -84,7 +84,6 @@ export default function ResultsWorkbenchView({
   runProgress,
   scoreSummary,
   resultsMap,
-  fixtureServerStatus,
   testRegistry,
   coreBlockingTests,
   privacySignalTests,
@@ -127,17 +126,11 @@ export default function ResultsWorkbenchView({
   focusRing,
   buildProtectionTraceStages,
   CONFIDENCE,
-  RESULT_STATUS
+  RESULT_STATUS,
+  notifyError = () => {}
 }) {
-  const [exportNotice, setExportNotice] = useState('');
-
-  const showExportNotice = (msg) => {
-    setExportNotice(msg);
-    setTimeout(() => setExportNotice(''), 3000);
-  };
 
   const isFiltered = groupFilter !== 'ALL' || statusFilter !== 'ALL' || sectionFilter !== 'ALL' || searchQuery.trim() !== '';
-
   const resetAllFilters = () => {
     setGroupFilter('ALL');
     setStatusFilter('ALL');
@@ -145,611 +138,386 @@ export default function ResultsWorkbenchView({
     setSearchQuery('');
   };
 
-  const hasRuns = scoreSummary && scoreSummary.eligibleTotalTests > 0;
+  const hasScore = scoreSummary.overallScore !== null;
+  const { title: verdictTitle, body: verdictBody } = verdict(scoreSummary);
+  const privacy = scoreSummary.privacySignalsSummary;
+  const activeCategory = sectionFilter.startsWith('cat:')
+    ? scoreSummary.categoryBreakdown.find((c) => `cat:${c.id}` === sectionFilter)
+    : null;
+  const progressPct = Math.round((runProgress.completed / (runProgress.total || 1)) * 100);
 
-  // Derive dynamic plain-English insight
-  let insightText = 'Ready for diagnostics. Launch Quick Scan to evaluate core display and tracking interception.';
-  let insightType = 'neutral';
-  if (hasRuns) {
-    const score = scoreSummary.overallScore ?? 0;
-    if (score >= 85) {
-      insightText = 'Robust ad and tracker suppression detected. Observable network endpoints and cosmetic styles successfully intercept ad delivery without breaking page flow.';
-      insightType = 'positive';
-    } else if (score >= 50) {
-      insightText = 'Moderate ad blocking active. Common standard banners were blocked, but dynamic script injections or affiliate paths passed through to the browser.';
-      insightType = 'warning';
-    } else {
-      insightText = 'Low ad blocking detected. The majority of ad requests, trackers, and dynamic scripts reached the browser uninhibited. Check your extension or filter settings.';
-      insightType = 'alert';
-    }
-  }
+  const pill = (active) =>
+    `min-h-10 sm:min-h-9 px-3 rounded-sm border text-sm cursor-pointer transition-colors ${focusRing} ${
+      active ? `${INK_ACTIVE} font-semibold` : `${subSurface} hover:bg-black/5 dark:hover:bg-white/5`
+    }`;
 
   return (
-    <div className="space-y-6">
-      {/* Active Execution HUD */}
+    <div className="space-y-8">
       {isActiveRun && (
-        <div
-          className={`p-4 rounded-xs border-2 border-[#c65322] space-y-3 shadow-md ${surface}`}
-          role="status"
-          aria-live="polite"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#c65322] animate-ping" />
-              <span className="font-bold uppercase tracking-wider text-[#c65322]">
-                {isPaused ? 'Diagnostic Paused' : 'Diagnostic in Progress'}
-              </span>
+        <div className={`p-4 sm:p-5 rounded-sm border-2 border-[#c65322] space-y-3 ${surface}`} role="status" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm">
+              <strong className="font-semibold">{isPaused ? 'Paused' : 'Testing…'}</strong>{' '}
               <span className={muted}>
-                · Current: <strong>{runProgress.currentTestId || 'Starting'}</strong>
+                {runProgress.completed} of {runProgress.total} done
+                {runProgress.currentTestId ? `, now on ${runProgress.currentTestId}` : ''}
               </span>
-            </div>
+            </p>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleTogglePause}
-                className={`px-3 py-1 rounded-xs border text-xs font-semibold cursor-pointer ${subSurface} ${focusRing}`}
-              >
-                {isPaused ? 'Resume Run' : 'Pause Run'}
+              <button type="button" onClick={handleTogglePause} className={`min-h-10 px-3 rounded-sm border text-sm font-semibold cursor-pointer ${subSurface} ${focusRing}`}>
+                {isPaused ? 'Resume' : 'Pause'}
               </button>
-              <button
-                type="button"
-                onClick={handleCancelRun}
-                className={`px-3 py-1 rounded-xs bg-rose-700 hover:bg-rose-600 text-white text-xs font-semibold cursor-pointer ${focusRing}`}
-              >
-                Abort Now
+              <button type="button" onClick={handleCancelRun} className={`min-h-10 px-3 rounded-sm bg-rose-700 hover:bg-rose-800 text-white text-sm font-semibold cursor-pointer ${focusRing}`}>
+                Stop
               </button>
             </div>
           </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#c65322] transition-all duration-300"
-              style={{ width: `${Math.round((runProgress.completed / (runProgress.total || 1)) * 100)}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-slate-500">
-            <span>Completed {runProgress.completed} of {runProgress.total} test vectors</span>
-            <span>{Math.round((runProgress.completed / (runProgress.total || 1)) * 100)}% complete</span>
+          <div
+            className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-sm overflow-hidden"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPct}
+            aria-label="Test run progress"
+          >
+            <div className="h-full bg-[#c65322] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
       )}
 
-      {/* Coverage & Score Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: Core Blocking Score */}
-        <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className={`font-bold uppercase tracking-wider ${muted}`}>CORE BLOCKING SCORE</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-xs border border-current/20 text-[#c65322]">35 CORE FIXTURES</span>
-          </div>
-          <div className="text-4xl font-bold tracking-tight text-[#c65322]">
-            {scoreSummary.overallScore !== null ? `${scoreSummary.overallScore}/100` : 'STANDBY'}
-          </div>
-          <p className={`text-xs ${muted}`}>
-            {scoreSummary.overallScore !== null
-              ? `Calculated from ${scoreSummary.eligibleTotalTests} eligible controlled ad/tracker blocking fixtures.`
-              : 'Launch Quick Scan or Full Diagnostic to evaluate score.'}
+      {/* Score: the one focal point of this screen. Coverage is stated before the number. */}
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]" aria-labelledby="score-title">
+        <div className={`p-5 sm:p-7 rounded-sm border ${surface}`}>
+          <h1 id="score-title" className={`text-sm font-semibold ${muted}`}>
+            Ad and tracker blocking score
+          </h1>
+          <p className="mt-2 text-sm">
+            {hasScore
+              ? `Based on ${scoreSummary.eligibleTotalTests} of ${scoreSummary.maxScoredTests} scored tests`
+              : `Up to ${scoreSummary.maxScoredTests} tests count toward this score`}
           </p>
-          <div className="pt-2 flex items-center gap-2 text-xs font-mono tabular-nums flex-wrap">
-            <span className="px-2 py-0.5 rounded-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
-              {scoreSummary.passedCount} BLOCKED
-            </span>
-            <span className="px-2 py-0.5 rounded-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-              {scoreSummary.partialCount} PARTIAL
-            </span>
-            <span className="px-2 py-0.5 rounded-xs bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/30">
-              {scoreSummary.failedCount} ALLOWED
-            </span>
+          <div className="mt-3 flex items-baseline gap-2 tabular-nums">
+            {hasScore ? (
+              <>
+                <span className="text-6xl sm:text-7xl font-bold tracking-[-0.04em]">{scoreSummary.overallScore}</span>
+                <span className={`text-xl ${muted}`}>/100</span>
+              </>
+            ) : (
+              <span className="text-3xl font-bold tracking-[-0.02em]">Not run yet</span>
+            )}
           </div>
+          <h2 className="mt-5 text-lg font-bold">{verdictTitle}</h2>
+          <p className={`mt-1 text-sm leading-relaxed max-w-prose ${muted}`}>{verdictBody}</p>
+          {hasScore && (
+            <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm tabular-nums">
+              <li><strong className="font-semibold">{scoreSummary.passedCount}</strong> blocked</li>
+              <li><strong className="font-semibold">{scoreSummary.partialCount}</strong> partial</li>
+              <li><strong className="font-semibold">{scoreSummary.failedCount}</strong> allowed</li>
+              <li className={muted}>
+                <strong className="font-semibold">{scoreSummary.inconclusiveCount}</strong> could not be measured
+              </li>
+            </ul>
+          )}
         </div>
 
-        {/* Card 2: Privacy Signals */}
-        <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className={`font-bold uppercase tracking-wider ${muted}`}>PRIVACY SIGNALS</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-xs border border-teal-500/40 text-teal-600 dark:text-teal-400">9 SIGNALS</span>
-          </div>
-          <div className="text-4xl font-bold tracking-tight text-teal-600 dark:text-teal-400">
-            {scoreSummary.privacySignalsSummary.activeCount} / {scoreSummary.privacySignalsSummary.totalSignals} ACTIVE
-          </div>
-          <p className={`text-xs ${muted}`}>
-            Browser privacy features (GPC, DNT, referrer policy) harden browser defense without inflating the core ad score.
+        <div className={`p-5 sm:p-6 rounded-sm border flex flex-col ${subSurface}`}>
+          <h2 className={`text-sm font-semibold ${muted}`}>Privacy settings</h2>
+          <p className="mt-3 text-3xl font-bold tabular-nums">
+            {privacy.executedSignals ? `${privacy.activeCount} of ${privacy.totalSignals} on` : 'Not checked yet'}
           </p>
-          <div className="pt-2 flex items-center gap-2 text-xs font-mono">
-            <span className={`px-2 py-0.5 rounded-xs border ${subSurface}`}>
-              {scoreSummary.privacySignalsSummary.activeCount > 0 ? 'Signals Protected' : 'Default / Inactive'}
-            </span>
-            <span className={`text-[11px] ${muted}`}>
-              ({scoreSummary.privacySignalsSummary.executedSignals} evaluated)
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Protection Confidence */}
-        <div className={`p-5 rounded-xs border space-y-2 ${surface}`}>
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className={`font-bold uppercase tracking-wider ${muted}`}>AUDIT CONFIDENCE</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-xs border border-current/20">{scoreSummary.coveragePercentage}% COVERAGE</span>
-          </div>
-          <div className="text-2xl font-bold tracking-tight">
-            {scoreSummary.overallConfidence}
-          </div>
-          <p className={`text-xs ${muted}`}>
-            Direct client-side observations from relative-path fixtures; no speculative inference on unseen network layers.
+          <p className={`mt-3 text-sm leading-relaxed ${muted}`}>
+            Signals like Global Privacy Control and fingerprinting guards. They are reported here and never added to the blocking score.
           </p>
-          <div className="pt-2 flex items-center gap-2 text-xs font-mono">
-            <span className={`px-2 py-0.5 rounded-xs border ${subSurface}`}>
-              Mode: {fixtureServerStatus?.mode || 'standalone'}
-            </span>
-            <span className={`text-[11px] ${muted}`}>
-              {scoreSummary.inconclusiveCount} Inconclusive
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Dynamic Actionable Insight Box */}
-      <div className={`p-4 rounded-xs border flex items-start gap-3 ${subSurface}`}>
-        {insightType === 'positive' && <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />}
-        {insightType === 'warning' && <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />}
-        {insightType === 'alert' && <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />}
-        {insightType === 'neutral' && <Sparkles className="w-5 h-5 text-[#c65322] shrink-0 mt-0.5" />}
-        <div className="space-y-0.5">
-          <div className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            Audit Observation &amp; Next Action
-          </div>
-          <p className={`text-xs leading-relaxed ${muted}`}>{insightText}</p>
-        </div>
-      </div>
-
-      {/* 7-Category Score Breakdown Grid */}
-      <div className={`p-5 rounded-xs border space-y-4 ${surface}`}>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 border-current/10">
-          <div>
-            <h2 className="text-sm font-bold uppercase font-mono tracking-wider">7-Category Protection Breakdown</h2>
-            <p className={`text-xs ${muted}`}>
-              Click any category below to filter the test catalog and inspect detailed evidence for that vector group.
-            </p>
-          </div>
           <button
             type="button"
-            onClick={() => {
-              setSectionFilter('ALL');
-              setGroupFilter('ALL');
-              setStatusFilter('ALL');
-            }}
-            className={`text-xs font-semibold underline underline-offset-4 cursor-pointer text-[#c65322] ${focusRing}`}
+            onClick={() => setGroupFilter(metricGroups.PRIVACY_SIGNAL)}
+            className={`mt-auto pt-4 self-start min-h-10 text-sm font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}
           >
-            Reset category filter
+            Show privacy checks
           </button>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <section aria-labelledby="categories-title" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 id="categories-title" className="text-xl font-bold tracking-[-0.01em]">Results by category</h2>
+            <p className={`text-sm ${muted}`}>Select a category to list only its tests below.</p>
+          </div>
+          {activeCategory && (
+            <button type="button" onClick={() => setSectionFilter('ALL')} className={`min-h-10 text-sm font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}>
+              Show all categories
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {scoreSummary.categoryBreakdown.map((cat) => {
             const hasEligible = cat.eligibleCount > 0;
             const pct = hasEligible ? cat.rawScore : 0;
+            const selected = sectionFilter === `cat:${cat.id}`;
             return (
-              <div
+              <button
                 key={cat.id}
-                onClick={() => {
-                  const matchingTest = testRegistry.find((t) => t.scoringCategory === cat.id);
-                  if (matchingTest) setSectionFilter(matchingTest.section);
-                }}
-                className={`p-3 rounded-xs border cursor-pointer hover:border-[#c65322] transition-colors space-y-2 ${subSurface}`}
-                title={`Filter tests by ${cat.name}`}
+                type="button"
+                onClick={() => setSectionFilter(selected ? 'ALL' : `cat:${cat.id}`)}
+                aria-pressed={selected}
+                className={`p-4 rounded-sm border text-left cursor-pointer transition-colors space-y-2 ${focusRing} ${
+                  selected ? 'border-[#c65322] ring-1 ring-[#c65322]' : 'hover:border-[#c65322]'
+                } ${surface}`}
               >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold truncate max-w-[150px]">{cat.name}</span>
-                  <span className="font-mono text-[10px] opacity-75">{cat.configuredWeight}% weight</span>
-                </div>
-                <div className="flex items-end justify-between font-mono">
-                  <span className="text-xl font-bold">
-                    {cat.rawScore !== null ? `${cat.rawScore}%` : 'STANDBY'}
+                <span className="block text-sm font-semibold leading-snug">{cat.name}</span>
+                <span className="flex items-baseline justify-between gap-2 tabular-nums">
+                  <span className="text-2xl font-bold">{hasEligible ? `${cat.rawScore}%` : '–'}</span>
+                  <span className={`text-xs ${muted}`}>
+                    {hasEligible ? `${cat.catBlocked} of ${cat.eligibleCount} blocked` : 'No clear results yet'}
                   </span>
-                  <span className={`text-[10px] ${muted}`}>
-                    {cat.catBlocked}/{cat.eligibleCount} blocked
-                  </span>
-                </div>
-                {/* Mini progress bar */}
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${pct >= 80 ? 'bg-emerald-600' : pct >= 40 ? 'bg-amber-500' : 'bg-rose-600'}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
+                </span>
+                <span className="block w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-sm overflow-hidden" aria-hidden="true">
+                  <span className={`block h-full ${pct >= 80 ? 'bg-emerald-600' : pct >= 40 ? 'bg-amber-500' : 'bg-rose-600'}`} style={{ width: `${pct}%` }} />
+                </span>
+                <span className={`block text-xs ${muted}`}>Weight in score: {cat.configuredWeight}%</span>
+              </button>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Consolidated Report Export Bar */}
-      <div className={`p-4 rounded-xs border flex flex-wrap items-center justify-between gap-3 text-xs ${surface}`}>
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-[#c65322] shrink-0" />
+      <section aria-labelledby="tests-title" className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <span className="font-bold uppercase font-mono tracking-wider">Sanitized Benchmark Exports</span>
-            <div className={`text-[11px] ${muted}`}>
-              Export verified telemetry with HTML escaping, separated privacy indices, and audit boundaries.
-            </div>
+            <h2 id="tests-title" className="text-xl font-bold tracking-[-0.01em]">All tests</h2>
+            <dl className={`mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm ${muted}`}>
+              {STATUS_LEGEND.map(([term, meaning]) => (
+                <div key={term} className="flex gap-1.5">
+                  <dt className="font-semibold text-current">{term}:</dt>
+                  <dd>{meaning}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {exportNotice && (
-            <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/30">
-              {exportNotice}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              triggerDownload(
-                generateExtractedHtmlReport({
-                  brandName,
-                  appVersion,
-                  brandPromise,
-                  registry: testRegistry,
-                  scoreSummary,
-                  resultsMap,
-                  userReported
-                }),
-                'adblocker-test-lab-report.html',
-                'text/html;charset=utf-8;'
-              );
-              showExportNotice('Exported HTML report');
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${focusRing}`}
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export HTML
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              triggerDownload(
-                generateJsonReport({
-                  scoreSummary,
-                  protectionAnalysis,
-                  userReported,
-                  envDiagnostics,
-                  resultsMap
-                }),
-                'adblocker-test-lab-benchmark.json',
-                'application/json'
-              );
-              showExportNotice('Exported JSON benchmark');
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${focusRing}`}
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export JSON
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              triggerDownload(
-                generateCsvReport(resultsMap),
-                'adblocker-test-lab-results.csv',
-                'text/csv;charset=utf-8;'
-              );
-              showExportNotice('Exported CSV data');
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs border font-mono text-xs font-semibold cursor-pointer ${subSurface} hover:bg-black/5 dark:hover:bg-white/5 ${focusRing}`}
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export CSV
-          </button>
-        </div>
-      </div>
 
-      {/* Interactive Test Workbench */}
-      <div className="space-y-3">
-        {/* Filter and Matrix Controls */}
-        <div className={`p-3 rounded-xs border flex flex-wrap items-center justify-between gap-3 text-xs ${surface}`}>
-          <div className="flex items-center gap-1.5 flex-wrap">
+        <div className={`p-3 rounded-sm border space-y-3 ${surface}`}>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Test type">
             {[
-              { id: 'ALL', label: `ALL (${testRegistry.length})` },
-              { id: metricGroups.AD_TRACKER_BLOCKING, label: `CORE BLOCKING (${coreBlockingTests.length})` },
-              { id: metricGroups.PRIVACY_SIGNAL, label: `PRIVACY SIGNALS (${privacySignalTests.length})` },
-              { id: metricGroups.EXPLORATORY_PROBE, label: `EXPLORATORY (${exploratoryTests.length})` }
+              { id: 'ALL', label: `All (${testRegistry.length})` },
+              { id: metricGroups.AD_TRACKER_BLOCKING, label: `Scored (${coreBlockingTests.length})` },
+              { id: metricGroups.PRIVACY_SIGNAL, label: `Privacy (${privacySignalTests.length})` },
+              { id: metricGroups.EXPLORATORY_PROBE, label: `Extra checks (${exploratoryTests.length})` }
             ].map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => setGroupFilter(g.id)}
-                className={`px-2.5 py-1 rounded-xs border text-[11px] font-semibold cursor-pointer transition-colors ${
-                  groupFilter === g.id
-                    ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] font-bold'
-                    : `${subSurface} ${muted}`
-                }`}
-              >
+              <button key={g.id} type="button" onClick={() => setGroupFilter(g.id)} aria-pressed={groupFilter === g.id} className={pill(groupFilter === g.id)}>
                 {g.label}
               </button>
             ))}
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Outcome Filter Pills */}
-            <div className="flex items-center gap-1 text-[11px] font-mono">
-              {['ALL', 'BLOCKED', 'PARTIAL', 'ALLOWED', 'OTHER'].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-2 py-0.5 rounded-xs border cursor-pointer ${
-                    statusFilter === st ? 'bg-sky-700 text-white border-sky-600 font-bold' : `${subSurface} ${muted}`
-                  }`}
-                >
-                  {st}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Result">
+              {[
+                ['ALL', 'Any result'],
+                ['BLOCKED', 'Blocked'],
+                ['PARTIAL', 'Partial'],
+                ['ALLOWED', 'Allowed'],
+                ['OTHER', 'Other']
+              ].map(([id, label]) => (
+                <button key={id} type="button" onClick={() => setStatusFilter(id)} aria-pressed={statusFilter === id} className={pill(statusFilter === id)}>
+                  {label}
                 </button>
               ))}
             </div>
-
-            {/* Section Select */}
             <select
-              aria-label="Filter by domain section"
+              aria-label="Filter by section"
               value={sectionFilter}
               onChange={(e) => setSectionFilter(e.target.value)}
-              className={`px-2 py-1 rounded-xs border text-xs font-mono ${subSurface}`}
+              className={`min-h-10 sm:min-h-9 px-2 rounded-sm border text-sm max-w-full ${subSurface} ${focusRing}`}
             >
-              <option value="ALL">All 14 Sections</option>
+              <option value="ALL">All sections</option>
+              {activeCategory && <option value={sectionFilter}>Category: {activeCategory.name}</option>}
               {allSections.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
-
-            {/* Search Input */}
-            <div className="relative">
-              <Search aria-hidden="true" className="w-3.5 h-3.5 absolute left-2 top-2 opacity-50" />
+            <label className="relative flex-1 min-w-[12rem]">
+              <span className="sr-only">Search tests</span>
+              <Search aria-hidden="true" className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 opacity-60" />
               <input
                 ref={searchInputRef}
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter (/)"
-                className={`pl-7 pr-2 py-1 w-36 sm:w-44 rounded-xs border text-xs font-mono ${subSurface}`}
+                placeholder="Search tests (press /)"
+                className={`w-full min-h-10 sm:min-h-9 pl-8 pr-2 rounded-sm border text-sm ${subSurface} ${focusRing}`}
               />
-            </div>
-
-            {/* Reset Filters Pill (visible when filtered) */}
+            </label>
             {isFiltered && (
-              <button
-                type="button"
-                onClick={resetAllFilters}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xs border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-mono font-bold cursor-pointer hover:bg-amber-500/20"
-                title="Reset active query and filters"
-              >
-                <RotateCcw className="w-3 h-3" />
-                Reset ({filteredTests.length})
+              <button type="button" onClick={resetAllFilters} className={`inline-flex items-center gap-1.5 min-h-10 sm:min-h-9 px-3 rounded-sm border text-sm font-semibold cursor-pointer ${subSurface} ${focusRing}`}>
+                <RotateCcw aria-hidden="true" className="w-3.5 h-3.5" />
+                Clear filters
               </button>
             )}
-
-            {/* Toggle 55-Pin Matrix */}
-            <button
-              type="button"
-              onClick={() => setShowWaferMatrix((prev) => !prev)}
-              className={`px-2.5 py-1 rounded-xs border text-xs font-mono font-semibold cursor-pointer ${subSurface} ${focusRing}`}
-            >
-              {showWaferMatrix ? 'Hide Pin Matrix' : 'Show 55-Pin Matrix'}
+            <button type="button" onClick={() => setShowWaferMatrix((prev) => !prev)} aria-expanded={showWaferMatrix} className={`min-h-10 sm:min-h-9 px-3 rounded-sm border text-sm cursor-pointer ${subSurface} ${focusRing}`}>
+              {showWaferMatrix ? 'Hide result grid' : 'Show result grid'}
             </button>
           </div>
         </div>
 
-        {/* Collapsible 55-Vector Pin Matrix */}
         {showWaferMatrix && (
-          <div className={`p-4 rounded-xs border space-y-2 ${surface}`}>
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="font-bold uppercase tracking-wider text-[#c65322]">
-                55-VECTOR COVERAGE MATRIX (Click chip to inspect)
-              </span>
-              <span className={muted}>
-                Blocked: {scoreSummary.passedCount} · Partial: {scoreSummary.partialCount} · Allowed: {scoreSummary.failedCount}
-              </span>
-            </div>
-            <div className="grid grid-cols-6 sm:grid-cols-11 lg:grid-cols-22 gap-1.5 font-mono tabular-nums text-center">
+          <div className={`p-4 rounded-sm border space-y-3 ${surface}`}>
+            <p className={`text-sm ${muted}`}>Every test at a glance. Select one to see its details.</p>
+            <div className="grid grid-cols-5 sm:grid-cols-11 gap-1.5 font-mono tabular-nums text-center">
               {testRegistry.map((t) => {
                 const st = resultsMap[t.id]?.status;
                 const selected = inspectedTestId === t.id;
-                let cellBg = darkMode ? 'bg-[#090C10] border-[#1F2733] text-slate-500' : 'bg-slate-100 border-slate-300 text-slate-500';
-                if (st === RESULT_STATUS.BLOCKED) cellBg = 'bg-emerald-600 text-white border-emerald-500';
-                else if (st === RESULT_STATUS.PARTIAL) cellBg = 'bg-amber-500 text-slate-950 border-amber-400';
-                else if (st === RESULT_STATUS.ALLOWED) cellBg = 'bg-rose-600 text-white border-rose-500';
-                else if (st === RESULT_STATUS.SIGNAL_ACTIVE) cellBg = 'bg-teal-600 text-white border-teal-500';
-                else if (st === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN) cellBg = 'bg-purple-700 text-white border-purple-500';
-                else if (st === RESULT_STATUS.CONSISTENT_WITH_FILTERING) cellBg = 'bg-sky-700 text-white border-sky-500';
-                else if (st === RESULT_STATUS.INCONCLUSIVE || st === RESULT_STATUS.SIGNAL_INACTIVE) cellBg = 'bg-slate-700 text-slate-200 border-slate-600';
-
+                let cell = darkMode ? 'bg-[#111a20] border-[#354955] text-slate-300' : 'bg-[#f4f0e7] border-[#c9c1b2] text-slate-700';
+                if (st === RESULT_STATUS.BLOCKED) cell = 'bg-emerald-700 text-white border-emerald-700';
+                else if (st === RESULT_STATUS.PARTIAL) cell = 'bg-amber-400 text-slate-950 border-amber-500';
+                else if (st === RESULT_STATUS.ALLOWED) cell = 'bg-rose-700 text-white border-rose-700';
+                else if (st === RESULT_STATUS.SIGNAL_ACTIVE) cell = 'bg-teal-700 text-white border-teal-700';
+                else if (st) cell = 'bg-slate-600 text-white border-slate-600';
                 return (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => setInspectedTestId(t.id)}
-                    title={`${t.id} (${t.metricGroup}): ${t.name}; ${st || 'STANDBY'}`}
-                    className={`h-7 rounded-xs border text-[10px] font-bold flex items-center justify-center cursor-pointer transition ${cellBg} ${
-                      selected ? 'ring-2 ring-[#c65322] z-10 font-black scale-105' : 'hover:opacity-85'
-                    }`}
+                    aria-label={`${t.id}: ${plainTestName(t)}. ${statusLabel(st)}`}
+                    aria-pressed={selected}
+                    className={`min-h-10 rounded-sm border text-xs font-semibold cursor-pointer ${cell} ${selected ? 'ring-2 ring-[#c65322] ring-offset-1' : ''} ${focusRing}`}
                   >
-                    {t.id.replace('-', '')}
+                    <span aria-hidden="true" className="mr-1">{gridMark(st, RESULT_STATUS)}</span>
+                    {t.id}
                   </button>
                 );
               })}
             </div>
+            <p className={`text-xs ${muted}`}>
+              Key: {'✓'} blocked, {'◐'} partial, {'✕'} allowed, {'●'} privacy setting on, ? other result, {'·'} not run
+            </p>
           </div>
         )}
 
-        {/* Workbench Results & Detail Split View */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
-          {/* Main List Column (Desktop Table / Mobile Cards) */}
-          <div className={`lg:col-span-7 border rounded-xs overflow-hidden ${surface}`}>
-            <div className={`p-2.5 border-b flex items-center justify-between text-xs font-mono ${subSurface}`}>
-              <span className="font-bold">Showing {filteredTests.length} Test Vectors</span>
-              <span className={muted}>Navigate with ↑/↓ keys · Press R to probe</span>
+          <div className={`lg:col-span-7 border rounded-sm overflow-hidden ${surface}`}>
+            <div className={`px-3 py-2.5 border-b flex flex-wrap items-center justify-between gap-2 text-sm ${subSurface}`}>
+              <span className="font-semibold" aria-live="polite">
+                {filteredTests.length === testRegistry.length ? `${filteredTests.length} tests` : `${filteredTests.length} of ${testRegistry.length} tests`}
+              </span>
+              <span className={`hidden md:inline text-xs ${muted}`}>Arrow keys move, R runs the selected test</span>
             </div>
 
-            <div className="max-h-[620px] overflow-y-auto overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[540px]">
-                <thead className={`sticky top-0 z-10 border-b text-[10px] font-mono uppercase ${subSurface} ${muted}`}>
-                  <tr>
-                    <th className="py-2 px-2.5">ID</th>
-                    <th className="py-2 px-2">INDEX</th>
-                    <th className="py-2 px-2.5">VECTOR DESCRIPTION</th>
-                    <th className="py-2 px-2">OUTCOME</th>
-                    <th className="py-2 px-2">EVIDENCE</th>
-                    <th className="py-2 px-2.5">WATERFALL</th>
-                    <th className="py-2 px-2 text-right">ACTION</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTests.map((t) => {
-                    const res = resultsMap[t.id];
-                    const status = res?.status;
-                    const duration = res?.durationMs || 0;
-                    const barWidthPct = status ? Math.min(100, Math.max(8, Math.round((duration / 180) * 100))) : 0;
-                    let barColor = 'bg-slate-400 dark:bg-slate-600';
-                    if (status === RESULT_STATUS.BLOCKED) barColor = 'bg-emerald-600 dark:bg-emerald-500';
-                    else if (status === RESULT_STATUS.PARTIAL) barColor = 'bg-amber-500';
-                    else if (status === RESULT_STATUS.ALLOWED) barColor = 'bg-rose-600 dark:bg-rose-500';
-                    else if (status === RESULT_STATUS.SIGNAL_ACTIVE) barColor = 'bg-teal-600 dark:bg-teal-500';
-                    else if (status === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN) barColor = 'bg-purple-600 dark:bg-purple-500';
-
-                    const groupBadge =
-                      t.metricGroup === metricGroups.AD_TRACKER_BLOCKING
-                        ? 'CORE_BLK'
-                        : t.metricGroup === metricGroups.PRIVACY_SIGNAL
-                        ? 'PRIV_SIG'
-                        : 'EXPL_NET';
-
-                    const isSelected = inspectedTestId === t.id;
-
-                    return (
-                      <tr
-                        key={t.id}
-                        onClick={() => setInspectedTestId(t.id)}
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setInspectedTestId(t.id);
-                          }
-                        }}
-                        className={`cursor-pointer border-b transition-colors text-xs tabular-nums ${
-                          darkMode ? 'border-[#1B222C]' : 'border-slate-200'
-                        } ${
-                          isSelected
-                            ? darkMode
-                              ? 'bg-sky-950/60 text-white'
-                              : 'bg-sky-50/90 text-slate-950'
-                            : darkMode
-                            ? 'hover:bg-[#141A23]'
-                            : 'hover:bg-slate-100/70'
-                        }`}
-                      >
-                        <td className="py-1.5 px-2.5 font-mono font-bold whitespace-nowrap text-[11px]">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                t.audit.scoringEligible
-                                  ? 'bg-sky-500'
-                                  : t.metricGroup === metricGroups.PRIVACY_SIGNAL
-                                  ? 'bg-teal-500'
-                                  : 'bg-slate-400'
-                              }`}
-                            />
-                            <span>{t.id}</span>
-                          </div>
-                        </td>
-                        <td className="py-1.5 px-2 font-mono text-[10px] whitespace-nowrap opacity-75">{groupBadge}</td>
-                        <td className="py-1.5 px-2.5 max-w-[270px] truncate font-medium" title={t.name}>
-                          {t.name}
-                        </td>
-                        <td className="py-1.5 px-2 whitespace-nowrap">
-                          <StatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />
-                        </td>
-                        <td className="py-1.5 px-2 font-mono text-[10px] whitespace-nowrap opacity-80">
-                          {res?.confidence?.shortLabel || '-'}
-                        </td>
-                        <td className="py-1.5 px-2.5 w-28">
-                          <div className="flex items-center gap-1.5 font-mono text-[10px]">
-                            <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-xs overflow-hidden">
-                              {status && <div className={`h-full ${barColor}`} style={{ width: `${barWidthPct}%` }} />}
-                            </div>
-                            <span className="w-9 text-right opacity-75">{duration ? `${duration}ms` : '-'}</span>
-                          </div>
-                        </td>
-                        <td className="py-1.5 px-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => runTestsBatch([t])}
-                            disabled={isActiveRun}
-                            title={`Probe ${t.id}`}
-                            className={`px-1.5 py-0.5 rounded-xs border font-mono text-[10px] cursor-pointer disabled:opacity-40 ${
-                              darkMode
-                                ? 'bg-[#0D1117] border-slate-700 hover:border-sky-500 text-slate-300'
-                                : 'bg-white border-slate-300 hover:border-sky-600 text-slate-700'
-                            }`}
-                          >
-                            Probe
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {filteredTests.length === 0 ? (
+              <div className="p-6 text-sm space-y-3">
+                <p>No tests match these filters.</p>
+                <button type="button" onClick={resetAllFilters} className={`min-h-10 font-semibold underline underline-offset-4 cursor-pointer ${focusRing}`}>
+                  Clear filters
+                </button>
+              </div>
+            ) : (
+              <div className="max-h-[640px] overflow-y-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className={`sticky top-0 z-10 border-b text-xs ${subSurface} ${muted}`}>
+                    <tr>
+                      <th scope="col" className="py-2 px-3 font-semibold">Test</th>
+                      <th scope="col" className="py-2 px-2 font-semibold hidden md:table-cell">Type</th>
+                      <th scope="col" className="py-2 px-2 font-semibold">Result</th>
+                      <th scope="col" className="py-2 px-2 font-semibold hidden sm:table-cell text-right">Time</th>
+                      <th scope="col" className="py-2 px-3"><span className="sr-only">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTests.map((t) => {
+                      const res = resultsMap[t.id];
+                      const status = res?.status;
+                      const isSelected = inspectedTestId === t.id;
+                      return (
+                        <tr
+                          key={t.id}
+                          onClick={() => setInspectedTestId(t.id)}
+                          tabIndex={0}
+                          aria-selected={isSelected}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setInspectedTestId(t.id);
+                            }
+                          }}
+                          className={`cursor-pointer border-b text-sm align-top ${focusRing} ${darkMode ? 'border-[#26343d]' : 'border-[#e2dbcd]'} ${
+                            isSelected ? (darkMode ? 'bg-[#22313a]' : 'bg-[#f6e6dc]') : darkMode ? 'hover:bg-[#1b262e]' : 'hover:bg-[#f7f3ea]'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3">
+                            <span className="block font-medium leading-snug">{plainTestName(t)}</span>
+                            <span className={`block font-mono text-xs mt-0.5 ${muted}`}>{t.id}</span>
+                          </td>
+                          <td className={`py-2.5 px-2 whitespace-nowrap hidden md:table-cell text-xs ${muted}`}>{GROUP_LABELS[t.metricGroup]}</td>
+                          <td className="py-2.5 px-2">
+                            <StatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />
+                          </td>
+                          <td className={`py-2.5 px-2 hidden sm:table-cell text-right font-mono text-xs tabular-nums whitespace-nowrap ${muted}`}>
+                            {res?.durationMs ? `${res.durationMs} ms` : '–'}
+                          </td>
+                          <td className="py-1.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => runTestsBatch([t])}
+                              disabled={isActiveRun}
+                              aria-label={`Run ${t.id}`}
+                              className={`min-h-10 min-w-12 px-2.5 rounded-sm border text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${subSurface} hover:border-[#c65322] ${focusRing}`}
+                            >
+                              Run
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
-          {/* Detailed Audit Drawer / Inspection Panel Column */}
           {inspectedTest && (
-            <div className={`lg:col-span-5 border rounded-xs overflow-hidden sticky top-14 space-y-3 p-3.5 ${surface}`}>
-              <div className="flex items-start justify-between gap-2 border-b pb-3 border-slate-200 dark:border-[#1F2733]">
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap font-mono text-[10px]">
-                    <span className="px-1.5 py-0.5 rounded-xs bg-sky-700 text-white font-bold">
-                      {inspectedTest.id}
-                    </span>
-                    <span className={`px-1.5 py-0.5 rounded-xs border ${subSurface}`}>
-                      {inspectedTest.metricGroup}
-                    </span>
-                    <span className={muted}>{inspectedTest.section}</span>
-                  </div>
-                  <h2 className="text-sm font-bold mt-1.5">{inspectedTest.name}</h2>
+            <aside className={`lg:col-span-5 border rounded-sm lg:sticky lg:top-20 p-4 sm:p-5 space-y-5 ${surface}`} aria-labelledby="detail-title">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className={`text-xs ${muted}`}>
+                    <span className="font-mono">{inspectedTest.id}</span> · {GROUP_LABELS[inspectedTest.metricGroup]} · {inspectedTest.section}
+                  </p>
+                  <h2 id="detail-title" className="text-lg font-bold leading-snug mt-1">{plainTestName(inspectedTest)}</h2>
+                  <p className={`text-xs mt-1 ${muted}`}>{inspectedTest.name}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => runTestsBatch([inspectedTest])}
                   disabled={isActiveRun}
-                  className={`px-2.5 py-1 rounded-xs font-mono text-[11px] font-semibold bg-sky-700 hover:bg-sky-600 text-white cursor-pointer disabled:opacity-40 shrink-0 ${focusRing}`}
+                  className={`min-h-10 px-3 rounded-sm text-sm font-semibold border cursor-pointer disabled:opacity-40 shrink-0 ${subSurface} hover:border-[#c65322] ${focusRing}`}
                 >
-                  Re-Probe (R)
+                  Run again
                 </button>
               </div>
 
-              <div className={`p-2.5 rounded-xs border font-mono text-[11px] space-y-1.5 ${subSurface}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${muted}`}>OUTCOME CLASSIFICATION</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${muted}`}>Result</span>
                   <StatusBadge status={inspectedResult?.status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />
                 </div>
-                <div className="truncate">
-                  <span className="text-emerald-500 font-semibold">CTRL: </span>
-                  <span className={muted}>{inspectedTest.controlResource}</span>
-                </div>
-                <div className="truncate">
-                  <span className="text-sky-400 font-semibold">TEST: </span>
-                  <span className={muted}>{inspectedTest.testResource}</span>
-                </div>
+                <p className={`text-sm leading-relaxed ${muted}`}>{GROUP_DESCRIPTIONS[inspectedTest.metricGroup]}</p>
+                <dl className="text-sm space-y-1.5">
+                  <div>
+                    <dt className={`text-xs ${muted}`}>Compared against (reference)</dt>
+                    <dd className="font-mono text-xs break-words">{inspectedTest.controlResource}</dd>
+                  </div>
+                  <div>
+                    <dt className={`text-xs ${muted}`}>What was tested</dt>
+                    <dd className="font-mono text-xs break-words">{inspectedTest.testResource}</dd>
+                  </div>
+                </dl>
               </div>
 
-              {/* 6-Stage Protection Trace */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold">
-                  <span>6-STAGE PROTECTION TRACE</span>
-                  <span className={muted}>{inspectedResult?.confidence?.label || 'Awaiting Execution'}</span>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-bold">How this result was reached</h3>
+                  <span className={`text-xs ${muted}`}>{inspectedResult?.confidence?.label || 'Not run yet'}</span>
                 </div>
-                <div className="grid grid-cols-1 gap-1.5 font-mono text-[11px]">
+                <ol className="space-y-2">
                   {(
                     inspectedResult?.traceStages ||
                     buildProtectionTraceStages({
@@ -760,59 +528,95 @@ export default function ResultsWorkbenchView({
                       durationMs: 0
                     })
                   ).map((st) => (
-                    <div
-                      key={st.step}
-                      className={`p-2 rounded-xs border flex items-start justify-between gap-2 ${subSurface}`}
-                    >
+                    <li key={st.step} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 text-sm">
+                      <span className={`font-mono text-xs pt-0.5 ${muted}`}>{st.step}.</span>
                       <div className="min-w-0">
-                        <span className="font-bold text-sky-500">
-                          0{st.step} {st.code}:
-                        </span>{' '}
-                        <span className="font-semibold">{st.label}</span>
-                        <div className={`text-[10px] mt-0.5 break-words ${muted}`}>{st.detail}</div>
+                        <span className="font-semibold">{st.label}</span>{' '}
+                        <span className={`text-xs ${muted}`}>
+                          ({st.evidenceType === 'OBSERVED' ? 'observed' : st.evidenceType === 'INFERRED' ? 'inferred' : 'not observable'})
+                        </span>
+                        <p className={`text-xs mt-0.5 break-words leading-relaxed ${muted}`}>{st.detail}</p>
                       </div>
-                      <span
-                        className={`px-1.5 py-0.5 rounded-xs text-[9px] border shrink-0 ${
-                          st.evidenceType === 'OBSERVED'
-                            ? 'border-teal-600/40 text-teal-400'
-                            : st.evidenceType === 'INFERRED'
-                            ? 'border-sky-600/40 text-sky-400'
-                            : 'border-slate-600 text-slate-400'
-                        }`}
-                      >
-                        {st.evidenceType}
-                      </span>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ol>
               </div>
 
-              {/* Target Filter Rule */}
-              <div className={`p-3 rounded-xs border font-mono text-xs space-y-1.5 ${subSurface}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-[#c65322]">
-                    TARGET FILTER RULE (SYNTHESIS)
-                  </span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold">Filter rule that targets this</h3>
                   <button
                     type="button"
                     onClick={() => handleCopyRule(inspectedTest.recommendedRule)}
-                    className={`inline-flex items-center gap-1 text-[10px] font-sans font-semibold cursor-pointer underline underline-offset-2 ${focusRing}`}
+                    className={`inline-flex items-center gap-1.5 min-h-10 px-2 text-sm font-semibold cursor-pointer ${focusRing}`}
                   >
-                    {copiedRule ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                    {copiedRule ? 'Copied!' : 'Copy Rule'}
+                    {copiedRule ? <Check aria-hidden="true" className="w-4 h-4" /> : <Copy aria-hidden="true" className="w-4 h-4" />}
+                    {copiedRule ? 'Copied' : 'Copy rule'}
                   </button>
                 </div>
-                <pre className="text-xs overflow-x-auto select-all font-bold text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap p-2 rounded-xs bg-black/5 dark:bg-black/30">
-                  {inspectedTest.recommendedRule}
-                </pre>
-                <p className={`font-sans text-[11px] pt-1 ${muted}`}>
-                  <strong>Audit Boundary:</strong> {inspectedTest.audit.limitations}
+                <pre className={`text-xs font-mono whitespace-pre-wrap break-all p-3 rounded-sm border ${subSurface}`}>{inspectedTest.recommendedRule}</pre>
+                <p className={`text-sm leading-relaxed ${muted}`}>
+                  <strong className="font-semibold text-current">What this cannot prove: </strong>
+                  {inspectedTest.audit.limitations}
                 </p>
               </div>
-            </div>
+            </aside>
           )}
         </div>
-      </div>
+      </section>
+
+      <section className={`p-4 sm:p-5 rounded-sm border flex flex-wrap items-center justify-between gap-4 ${subSurface}`} aria-labelledby="export-title">
+        <div className="max-w-prose">
+          <h2 id="export-title" className="text-base font-bold">Download your results</h2>
+          <p className={`text-sm ${muted}`}>Each file includes every result, its evidence, and what the page could not see.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            {
+              label: 'Report (HTML)',
+              run: () => {
+                triggerDownload(
+                  generateExtractedHtmlReport({ brandName, appVersion, brandPromise, registry: testRegistry, scoreSummary, resultsMap, userReported }),
+                  'adblocker-test-lab-report.html',
+                  'text/html;charset=utf-8;'
+                );
+              }
+            },
+            {
+              label: 'Data (JSON)',
+              run: () => {
+                triggerDownload(
+                  generateJsonReport({ scoreSummary, protectionAnalysis, userReported, envDiagnostics, resultsMap }),
+                  'adblocker-test-lab-benchmark.json',
+                  'application/json'
+                );
+              }
+            },
+            {
+              label: 'Spreadsheet (CSV)',
+              run: () => {
+                triggerDownload(generateCsvReport(resultsMap), 'adblocker-test-lab-results.csv', 'text/csv;charset=utf-8;');
+              }
+            }
+          ].map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => {
+                try {
+                  item.run();
+                } catch {
+                  notifyError(`Couldn't build the ${item.label.toLowerCase()}. Try again.`);
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 min-h-10 px-3 rounded-sm border text-sm font-semibold cursor-pointer ${surface} hover:border-[#c65322] ${focusRing}`}
+            >
+              <Download aria-hidden="true" className="w-4 h-4" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
