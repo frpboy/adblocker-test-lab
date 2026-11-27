@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Download, Copy, Check, RotateCcw } from 'lucide-react';
+import { Search, Download, Copy, Check, RotateCcw, X } from 'lucide-react';
 import RunSummary from './RunSummary.jsx';
 import { scoreVerdict } from '../lab/run-summary.js';
 import {
@@ -35,6 +35,63 @@ export function StatusBadge({ status, darkMode, RESULT_STATUS }) {
     </span>
   );
 }
+
+// Memoized (from main, #25): a status change for one test re-renders only that row,
+// not all 55. Props are primitives or stable callbacks so the memo holds.
+export const TestRow = React.memo(function TestRow({
+  test: t,
+  result: res,
+  isSelected,
+  onSelect,
+  onRun,
+  isActiveRun,
+  darkMode,
+  muted,
+  subSurface,
+  focusRing,
+  RESULT_STATUS
+}) {
+  const status = res?.status;
+  return (
+    <tr
+      onClick={() => onSelect(t.id)}
+      tabIndex={0}
+      aria-selected={isSelected}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(t.id);
+        }
+      }}
+      className={`cursor-pointer border-b text-sm align-top ${focusRing} ${darkMode ? 'border-[#26343d]' : 'border-[#e2dbcd]'} ${
+        isSelected ? (darkMode ? 'bg-[#22313a]' : 'bg-[#f6e6dc]') : darkMode ? 'hover:bg-[#1b262e]' : 'hover:bg-[#f7f3ea]'
+      }`}
+    >
+      <td className="py-2.5 px-3">
+        <span className="block font-medium leading-snug">{plainTestName(t)}</span>
+        <span className={`block font-mono text-xs mt-0.5 ${muted}`}>{t.id}</span>
+      </td>
+      <td className={`py-2.5 px-2 whitespace-nowrap hidden md:table-cell text-xs ${muted}`}>{GROUP_LABELS[t.metricGroup]}</td>
+      <td className="py-2.5 px-2">
+        <StatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />
+      </td>
+      <td className={`py-2.5 px-2 hidden sm:table-cell text-right font-mono text-xs tabular-nums whitespace-nowrap ${muted}`}>
+        {res?.durationMs ? `${res.durationMs} ms` : '\u2013'}
+      </td>
+      <td className="py-1.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={() => onRun([t])}
+          disabled={isActiveRun}
+          aria-label={`Run ${t.id}`}
+          className={`min-h-10 min-w-12 px-2.5 rounded-sm border text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${subSurface} hover:border-[#c65322] ${focusRing}`}
+        >
+          Run
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 // Shape for each grid cell, so the result does not depend on seeing colour.
 function gridMark(status, RESULT_STATUS) {
@@ -330,9 +387,29 @@ export default function ResultsWorkbenchView({
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && searchQuery) {
+                    e.stopPropagation();
+                    setSearchQuery('');
+                  }
+                }}
                 placeholder="Search tests (press /)"
-                className={`w-full min-h-10 sm:min-h-9 pl-8 pr-2 rounded-sm border text-sm ${subSurface} ${focusRing}`}
+                className={`w-full min-h-10 sm:min-h-9 pl-8 ${searchQuery ? 'pr-11' : 'pr-2'} rounded-sm border text-sm [&::-webkit-search-cancel-button]:hidden ${subSurface} ${focusRing}`}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    searchInputRef.current?.focus();
+                  }}
+                  aria-label="Clear search"
+                  title="Clear search (Esc)"
+                  className={`absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 sm:h-9 flex items-center justify-center rounded-sm cursor-pointer ${focusRing}`}
+                >
+                  <X aria-hidden="true" className="w-4 h-4" />
+                </button>
+              )}
             </label>
             {isFiltered && (
               <button type="button" onClick={resetAllFilters} className={`inline-flex items-center gap-1.5 min-h-10 sm:min-h-9 px-3 rounded-sm border text-sm font-semibold cursor-pointer ${subSurface} ${focusRing}`}>
@@ -409,51 +486,22 @@ export default function ResultsWorkbenchView({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTests.map((t) => {
-                      const res = resultsMap[t.id];
-                      const status = res?.status;
-                      const isSelected = inspectedTestId === t.id;
-                      return (
-                        <tr
-                          key={t.id}
-                          onClick={() => setInspectedTestId(t.id)}
-                          tabIndex={0}
-                          aria-selected={isSelected}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setInspectedTestId(t.id);
-                            }
-                          }}
-                          className={`cursor-pointer border-b text-sm align-top ${focusRing} ${darkMode ? 'border-[#26343d]' : 'border-[#e2dbcd]'} ${
-                            isSelected ? (darkMode ? 'bg-[#22313a]' : 'bg-[#f6e6dc]') : darkMode ? 'hover:bg-[#1b262e]' : 'hover:bg-[#f7f3ea]'
-                          }`}
-                        >
-                          <td className="py-2.5 px-3">
-                            <span className="block font-medium leading-snug">{plainTestName(t)}</span>
-                            <span className={`block font-mono text-xs mt-0.5 ${muted}`}>{t.id}</span>
-                          </td>
-                          <td className={`py-2.5 px-2 whitespace-nowrap hidden md:table-cell text-xs ${muted}`}>{GROUP_LABELS[t.metricGroup]}</td>
-                          <td className="py-2.5 px-2">
-                            <StatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />
-                          </td>
-                          <td className={`py-2.5 px-2 hidden sm:table-cell text-right font-mono text-xs tabular-nums whitespace-nowrap ${muted}`}>
-                            {res?.durationMs ? `${res.durationMs} ms` : '–'}
-                          </td>
-                          <td className="py-1.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => runTestsBatch([t])}
-                              disabled={isActiveRun}
-                              aria-label={`Run ${t.id}`}
-                              className={`min-h-10 min-w-12 px-2.5 rounded-sm border text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${subSurface} hover:border-[#c65322] ${focusRing}`}
-                            >
-                              Run
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {filteredTests.map((t) => (
+                      <TestRow
+                        key={t.id}
+                        test={t}
+                        result={resultsMap[t.id]}
+                        isSelected={inspectedTestId === t.id}
+                        onSelect={setInspectedTestId}
+                        onRun={runTestsBatch}
+                        isActiveRun={isActiveRun}
+                        darkMode={darkMode}
+                        muted={muted}
+                        subSurface={subSurface}
+                        focusRing={focusRing}
+                        RESULT_STATUS={RESULT_STATUS}
+                      />
+                    ))}
                   </tbody>
                 </table>
               </div>

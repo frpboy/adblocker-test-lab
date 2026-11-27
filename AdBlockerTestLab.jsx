@@ -29,7 +29,7 @@ import {
   Zap
 } from 'lucide-react';
 import { calculateBenchmarkScore as calculateExtractedBenchmarkScore } from './src/lab/scoring.js';
-import { generateHtmlReport as generateExtractedHtmlReport } from './src/lab/reporting.js';
+import { generateHtmlReport as generateExtractedHtmlReport, formatCsvField as formatExtractedCsvField } from './src/lab/reporting.js';
 import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
 import NavigationRibbon from './src/components/NavigationRibbon.jsx';
 import OverviewView from './src/components/OverviewView.jsx';
@@ -1843,8 +1843,7 @@ export function escapeHtml(unsafeInput) {
 }
 
 export function formatCsvField(val) {
-  const s = String(val ?? '').replace(/"/g, '""');
-  return `"${s}"`;
+  return formatExtractedCsvField(val);
 }
 
 export function generateJsonReport({ scoreSummary, protectionAnalysis, userReported, envDiagnostics, resultsMap }) {
@@ -3281,106 +3280,6 @@ const FOCUS_RING =
 function StatusBadge({ status, darkMode }) {
   return <SharedStatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />;
 }
-
-const WaterfallRow = React.memo(function WaterfallRow({
-  test,
-  result,
-  isSelected,
-  onSelect,
-  onRunSingle,
-  isRunning,
-  darkMode
-}) {
-  const status = result?.status;
-  const duration = result?.durationMs || 0;
-  const barWidthPct = status ? Math.min(100, Math.max(8, Math.round((duration / 180) * 100))) : 0;
-
-  let barColor = 'bg-slate-400 dark:bg-slate-600';
-  if (status === RESULT_STATUS.BLOCKED) barColor = 'bg-emerald-600 dark:bg-emerald-500';
-  else if (status === RESULT_STATUS.PARTIAL) barColor = 'bg-amber-500';
-  else if (status === RESULT_STATUS.ALLOWED) barColor = 'bg-rose-600 dark:bg-rose-500';
-  else if (status === RESULT_STATUS.SIGNAL_ACTIVE) barColor = 'bg-teal-600 dark:bg-teal-500';
-  else if (status === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN) barColor = 'bg-purple-600 dark:bg-purple-500';
-
-  const groupBadge =
-    test.metricGroup === METRIC_GROUP.AD_TRACKER_BLOCKING
-      ? 'CORE_BLK'
-      : test.metricGroup === METRIC_GROUP.PRIVACY_SIGNAL
-      ? 'PRIV_SIG'
-      : 'EXPL_NET';
-
-  return (
-    <tr
-      onClick={() => onSelect(test.id)}
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect(test.id);
-        }
-      }}
-      className={`cursor-pointer border-b transition-colors text-xs tabular-nums ${
-        darkMode ? 'border-[#1B222C]' : 'border-slate-200'
-      } ${
-        isSelected
-          ? darkMode
-            ? 'bg-sky-950/60 text-white'
-            : 'bg-sky-50/90 text-slate-950'
-          : darkMode
-          ? 'hover:bg-[#141A23]'
-          : 'hover:bg-slate-100/70'
-      }`}
-    >
-      <td className="py-1.5 px-2.5 font-mono font-bold whitespace-nowrap text-[11px]">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-              test.audit.scoringEligible
-                ? 'bg-sky-500'
-                : test.metricGroup === METRIC_GROUP.PRIVACY_SIGNAL
-                ? 'bg-teal-500'
-                : 'bg-slate-400'
-            }`}
-          />
-          <span>{test.id}</span>
-        </div>
-      </td>
-      <td className="py-1.5 px-2 font-mono text-[10px] whitespace-nowrap opacity-75">{groupBadge}</td>
-      <td className="py-1.5 px-2.5 max-w-[270px] truncate font-medium" title={test.name}>
-        {test.name}
-      </td>
-      <td className="py-1.5 px-2 whitespace-nowrap">
-        <StatusBadge status={status} darkMode={darkMode} />
-      </td>
-      <td className="py-1.5 px-2 font-mono text-[10px] whitespace-nowrap opacity-80">
-        {result?.confidence?.shortLabel || '-'}
-      </td>
-      <td className="py-1.5 px-2.5 w-28">
-        <div className="flex items-center gap-1.5 font-mono text-[10px]">
-          <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-xs overflow-hidden">
-            {status && <div className={`h-full ${barColor}`} style={{ width: `${barWidthPct}%` }} />}
-          </div>
-          <span className="w-9 text-right opacity-75">{duration ? `${duration}ms` : '-'}</span>
-        </div>
-      </td>
-      <td className="py-1.5 px-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          onClick={() => onRunSingle(test)}
-          disabled={isRunning}
-          title={`Probe ${test.id}`}
-          className={`px-1.5 py-0.5 rounded-xs border font-mono text-[10px] cursor-pointer disabled:opacity-40 ${
-            darkMode
-              ? 'bg-[#0D1117] border-slate-700 hover:border-sky-500 text-slate-300'
-              : 'bg-white border-slate-300 hover:border-sky-600 text-slate-700'
-          }`}
-        >
-          Probe
-        </button>
-      </td>
-    </tr>
-  );
-});
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');

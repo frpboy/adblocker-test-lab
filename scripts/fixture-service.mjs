@@ -5,6 +5,18 @@ import { randomUUID } from 'node:crypto';
 
 const RUN_ID = /^[a-f0-9-]{36}$/i;
 const TEST_ID = /^[A-Z]{2,4}-\d{2}$/;
+const receiptQueues = new Map();
+
+function withReceiptFileLock(receiptFile, operation) {
+  const previous = receiptQueues.get(receiptFile) ?? Promise.resolve();
+  const current = previous.then(operation, operation);
+  const settled = current.catch(() => {});
+  receiptQueues.set(receiptFile, settled);
+  void settled.finally(() => {
+    if (receiptQueues.get(receiptFile) === settled) receiptQueues.delete(receiptFile);
+  });
+  return current;
+}
 
 async function readReceipts(receiptFile, retentionMs, now) {
   try {
@@ -19,7 +31,6 @@ async function readReceipts(receiptFile, retentionMs, now) {
 export function createFixtureService({ receiptFile, retentionMs = 300_000, now = () => Date.now() }) {
   if (!receiptFile) throw new Error('receiptFile is required');
   let server;
-
   const persist = async (receipts) => {
     await mkdir(dirname(receiptFile), { recursive: true });
     await writeFile(receiptFile, JSON.stringify(receipts), 'utf8');
@@ -39,15 +50,20 @@ export function createFixtureService({ receiptFile, retentionMs = 300_000, now =
     const runId = url.searchParams.get('run') || '';
     const testId = url.searchParams.get('test') || '';
     if (!RUN_ID.test(runId) || !TEST_ID.test(testId)) return respond(response, 400, { error: 'invalid_correlation' });
-    const receipts = await readReceipts(receiptFile, retentionMs, now());
     if (url.pathname === '/api/fixture/resource') {
-      receipts.push({ runId, testId, arrivedAt: now() });
-      await persist(receipts);
+      await withReceiptFileLock(receiptFile, async () => {
+        const receipts = await readReceipts(receiptFile, retentionMs, now());
+        receipts.push({ runId, testId, arrivedAt: now() });
+        await persist(receipts);
+      });
       response.writeHead(204, { 'cache-control': 'no-store' });
       return response.end();
     }
-    await persist(receipts);
-    const arrived = receipts.some((receipt) => receipt.runId === runId && receipt.testId === testId);
+    const arrived = await withReceiptFileLock(receiptFile, async () => {
+      const receipts = await readReceipts(receiptFile, retentionMs, now());
+      await persist(receipts);
+      return receipts.some((receipt) => receipt.runId === runId && receipt.testId === testId);
+    });
     return respond(response, 200, { arrived, runId, testId });
   };
 
