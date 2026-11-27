@@ -92,14 +92,16 @@ export const HELP_SECTIONS = [
         q: 'Does this site show me ads or track me?',
         a: [
           'The test pages show no ads and load no analytics or tracking scripts. Real ads appear only in the Live ads lab, and only after you press Start there.'
-        ]
+        ],
+        action: { label: 'Read the Privacy Policy', target: 'privacy' }
       },
       {
         q: 'What does the test connect to?',
         a: [
           'The quick check only contacts this site. The full test also checks whether 10 well-known ad and tracker servers, such as DoubleClick and Google Analytics, can be reached from your browser.',
           'Those requests carry nothing from this site about you or your results. As with any web request, those servers can see your IP address. If you would rather avoid that, use the quick check.'
-        ]
+        ],
+        action: { label: 'See the full list in the Privacy Policy', target: 'privacy' }
       },
       {
         q: 'Where are my results saved?',
