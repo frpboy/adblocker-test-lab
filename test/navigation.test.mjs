@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeTab, PRIMARY_NAV_TABS } from '../src/lab/navigation.js';
 
-test('includes exactly 5 primary ribbon destinations with Real Ads promoted', () => {
-  assert.equal(PRIMARY_NAV_TABS.length, 5);
+test('includes exactly 6 primary ribbon destinations with Real Ads promoted', () => {
+  assert.equal(PRIMARY_NAV_TABS.length, 6);
   const ids = PRIMARY_NAV_TABS.map((t) => t.id);
-  assert.deepEqual(ids, ['overview', 'results', 'real-ads', 'methodology', 'settings']);
+  assert.deepEqual(ids, ['overview', 'results', 'real-ads', 'methodology', 'settings', 'help']);
 });
 
 test('normalizes legacy and alias routes to authoritative parent tabs', () => {

@@ -33,6 +33,7 @@ import { generateHtmlReport as generateExtractedHtmlReport, formatCsvField as fo
 import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
 import NavigationRibbon from './src/components/NavigationRibbon.jsx';
 import OverviewView from './src/components/OverviewView.jsx';
+import HelpView from './src/components/HelpView.jsx';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab, pathForTab, tabFromPath, titleForTab } from './src/lab/navigation.js';
 import { saveResults, loadResults, clearResults } from './src/lab/result-store.js';
@@ -4002,6 +4003,23 @@ export default function App() {
               </div>
             </details>
           </div>
+        )}
+
+        {normalizedTab === 'help' && (
+          <HelpView
+            onAction={(target) => {
+              if (target === 'run-full') startRun(TEST_REGISTRY);
+              else if (target === 'run-quick') startRun(quickScanTests);
+              else {
+                setActiveTab(target);
+                window.scrollTo({ top: 0 });
+              }
+            }}
+            surface={surface}
+            subSurface={subSurface}
+            muted={muted}
+            focusRing={FOCUS_RING}
+          />
         )}
 
         {normalizedTab === 'settings' && (

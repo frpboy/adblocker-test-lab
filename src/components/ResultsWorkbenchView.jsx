@@ -231,22 +231,43 @@ export default function ResultsWorkbenchView({
           <div className="mt-3 flex items-baseline gap-2 tabular-nums">
             {hasScore ? (
               <>
-                <span className="text-6xl sm:text-7xl font-bold tracking-[-0.04em]">{scoreSummary.overallScore}</span>
-                <span className={`text-xl ${muted}`}>/100</span>
+                <span className="text-7xl sm:text-8xl font-bold tracking-[-0.05em] leading-none">{scoreSummary.overallScore}</span>
+                <span className={`text-2xl ${muted}`}>/100</span>
               </>
             ) : (
               <span className="text-3xl font-bold tracking-[-0.02em]">Not run yet</span>
             )}
           </div>
-          <h2 className="mt-5 text-lg font-bold">{verdictTitle}</h2>
-          <p className={`mt-1 text-sm leading-relaxed max-w-prose ${muted}`}>{verdictBody}</p>
+          {hasScore && (
+            // Score bar (DESIGN.md: the score gets real presence). Ink fill, orange end mark.
+            <div
+              role="meter"
+              aria-label="Blocking score"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={scoreSummary.overallScore}
+              className="mt-4 relative h-3 max-w-xl rounded-sm bg-[#e2dbcd] dark:bg-[#2b3b45]"
+            >
+              <div
+                className="absolute inset-y-0 left-0 rounded-sm bg-[#24373f] dark:bg-[#edf2ee]"
+                style={{ width: `${Math.max(0, Math.min(100, scoreSummary.overallScore))}%` }}
+              />
+              <div
+                aria-hidden="true"
+                className="absolute -top-1 -bottom-1 w-1 rounded-sm bg-[#c65322]"
+                style={{ left: `calc(${Math.max(0, Math.min(100, scoreSummary.overallScore))}% - 2px)` }}
+              />
+            </div>
+          )}
+          <h2 className="mt-6 text-2xl font-bold tracking-[-0.02em]">{verdictTitle}</h2>
+          <p className={`mt-2 text-base leading-relaxed max-w-prose ${muted}`}>{verdictBody}</p>
           {hasScore && (
             <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm tabular-nums">
-              <li><strong className="font-semibold">{scoreSummary.passedCount}</strong> blocked</li>
-              <li><strong className="font-semibold">{scoreSummary.partialCount}</strong> partial</li>
-              <li><strong className="font-semibold">{scoreSummary.failedCount}</strong> allowed</li>
+              <li><span aria-hidden="true">{'✓'} </span><strong className="font-semibold">{scoreSummary.passedCount}</strong> blocked</li>
+              <li><span aria-hidden="true">{'◐'} </span><strong className="font-semibold">{scoreSummary.partialCount}</strong> partial</li>
+              <li><span aria-hidden="true">{'✕'} </span><strong className="font-semibold">{scoreSummary.failedCount}</strong> got through</li>
               <li className={muted}>
-                <strong className="font-semibold">{scoreSummary.inconclusiveCount}</strong> could not be measured
+                <span aria-hidden="true">? </span><strong className="font-semibold">{scoreSummary.inconclusiveCount}</strong> could not be measured
               </li>
             </ul>
           )}

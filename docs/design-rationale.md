@@ -2,11 +2,11 @@
 
 ## Status
 
-Draft without direction. The repository has no owner-authored visual brief, so this redesign uses the conservative design read below and remains easy to revise when a product direction is supplied.
+Direction set by the owner on 2026-11-27 and recorded in [`DESIGN.md`](../DESIGN.md): everyone, plain first; calm and trustworthy voice; ink, paper, and safety orange; calm with a bit more personality (ENERGY 2 / RHYTHM 2 / MOTION 1). Earlier entries below were made as a draft without direction and remain where they agree with it.
 
 ## Design read
 
-Reading this as: an evidence-focused browser diagnostic workspace for people deciding what their browser visibly does, in a calm editorial laboratory style, dial ENERGY 1 / RHYTHM 2 / MOTION 1.
+Reading this as: an evidence-focused browser diagnostic for everyone, plain first, in a calm and trustworthy editorial laboratory style, dial ENERGY 2 / RHYTHM 2 / MOTION 1 (per `DESIGN.md`).
 
 ## Audit and fixes
 
@@ -44,6 +44,14 @@ Reading this as: an evidence-focused browser diagnostic workspace for people dec
 | "What happened in this run" panel (`src/components/RunSummary.jsx`, `src/lab/run-summary.js`) | After every run, a Simple view (verdict, three or four plain sentences, next steps) and a Detailed view (every test grouped as blocked, partial, got through, or could not be measured, with the reason). Announced once to screen readers. Lists cover the last run; the score covers all results so far. |
 | Landscape share card (`src/lab/share-card.js`, `src/components/ShareResultsDialog.jsx`) | 1200 x 630 PNG drawn on canvas: logo, score with bar, verdict, coverage, counts with shapes, date, and a QR code plus `lab.frpboy.in`. Partial results always say "Partial result". The card holds no device or user data. Share uses the system share sheet (with the image where the browser supports files), with Download image and Copy text and link as fallbacks. QR generation uses the `qrcode` package, pinned. |
 | Developer material (self-checks, reference server code) moved behind "For developers" | Kept for audit, out of the way for everyone else. The self-check count is computed, not hard-coded. |
+
+## Help page and brand brief (2026-11-27)
+
+| Decision | Reason |
+| --- | --- |
+| Help tab at `/help` (`src/components/HelpView.jsx`, `src/lab/help-content.js`) | Plain answers to the questions this site actually raises: low scores with a blocker, partial results, unmeasured tests, why the blocker cannot be named, what the test contacts, where results are stored, what the share card holds. Native disclosures for keyboard and screen readers; topic links on the left on wide screens. A test keeps every action pointed at a real tab and the copy free of em dashes and exclamation marks. |
+| Score bar on Results, larger score and verdict | DESIGN.md asks for real presence for the score and verdict. Ink fill (9:1 or better against its track), orange end mark as the brand motif, exposed as a `meter` to assistive technology. |
+| Counts carry the same shapes as the share card | One visual language for outcomes across the screen and the card. |
 
 ## Invariants
 

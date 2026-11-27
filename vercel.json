@@ -4,6 +4,7 @@
     { "source": "/results", "destination": "/index.html" },
     { "source": "/live-ads", "destination": "/index.html" },
     { "source": "/how-it-works", "destination": "/index.html" },
-    { "source": "/settings", "destination": "/index.html" }
+    { "source": "/settings", "destination": "/index.html" },
+    { "source": "/help", "destination": "/index.html" }
   ]
 }
