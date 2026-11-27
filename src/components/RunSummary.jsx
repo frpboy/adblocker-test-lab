@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Share2 } from 'lucide-react';
-import { buildRunSummary } from '../lab/run-summary.js';
+import { buildRunSummary, buildShareText, SITE_URL } from '../lab/run-summary.js';
+import { renderShareCard, canvasToPngBlob } from '../lab/share-card.js';
+import { buildSharePayload, openShareSheet, CARD_FILE_NAME } from '../lab/share-actions.js';
 import ShareResultsDialog from './ShareResultsDialog.jsx';
 
 function TestList({ title, mark, items, muted, empty, showReason = false, defaultOpen = false }) {
@@ -30,6 +32,7 @@ function TestList({ title, mark, items, muted, empty, showReason = false, defaul
 export default function RunSummary({ scoreSummary, resultsMap, registry, lastRun, notify, surface, subSurface, muted, focusRing }) {
   const [view, setView] = useState('simple');
   const [shareOpen, setShareOpen] = useState(false);
+  const [card, setCard] = useState({ status: 'loading', url: '', file: null });
   const [announcement, setAnnouncement] = useState('');
   const announcedFor = useRef(null);
 
@@ -37,6 +40,40 @@ export default function RunSummary({ scoreSummary, resultsMap, registry, lastRun
     () => buildRunSummary({ scoreSummary, resultsMap, registry, lastRun }),
     [scoreSummary, resultsMap, registry, lastRun]
   );
+
+  // Prepare the card as soon as there is a result: the share sheet must open inside the
+  // click itself, so the image has to be ready before the user presses Share.
+  useEffect(() => {
+    if (!summary.hasRun) return undefined;
+    let cancelled = false;
+    let objectUrl = '';
+    setCard({ status: 'loading', url: '', file: null });
+    renderShareCard(summary)
+      .then(canvasToPngBlob)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setCard({ status: 'ready', url: objectUrl, file: new File([blob], CARD_FILE_NAME, { type: 'image/png' }) });
+      })
+      .catch(() => {
+        if (!cancelled) setCard({ status: 'error', url: '', file: null });
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [summary]);
+
+  const shareText = buildShareText(summary, SITE_URL);
+  const canShare = typeof navigator !== 'undefined' && Boolean(navigator.share);
+
+  // Called straight from a click handler; no awaits before navigator.share.
+  const shareNow = () => {
+    const payload = buildSharePayload({ file: card.status === 'ready' ? card.file : null, text: shareText, url: SITE_URL });
+    openShareSheet(payload).then((outcome) => {
+      if (outcome === 'failed') notify("Couldn't open the share menu. Download the image or copy the text instead.", 'error');
+    });
+  };
 
   // Announce once per finished run for screen-reader users.
   useEffect(() => {
@@ -82,7 +119,10 @@ export default function RunSummary({ scoreSummary, resultsMap, registry, lastRun
           </div>
           <button
             type="button"
-            onClick={() => setShareOpen(true)}
+            onClick={() => {
+              setShareOpen(true);
+              if (canShare && card.status === 'ready') shareNow();
+            }}
             className={`inline-flex items-center gap-2 min-h-10 px-4 rounded-sm text-sm font-semibold bg-[#b84a1c] hover:bg-[#9a3d17] text-white cursor-pointer ${focusRing}`}
           >
             <Share2 aria-hidden="true" className="w-4 h-4" />
@@ -133,7 +173,10 @@ export default function RunSummary({ scoreSummary, resultsMap, registry, lastRun
       <ShareResultsDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        summary={summary}
+        card={card}
+        shareText={shareText}
+        canShare={canShare}
+        onShare={shareNow}
         notify={notify}
         surface={surface}
         subSurface={subSurface}
