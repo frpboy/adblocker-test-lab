@@ -33,8 +33,10 @@ import { generateHtmlReport as generateExtractedHtmlReport, formatCsvField as fo
 import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
 import NavigationRibbon from './src/components/NavigationRibbon.jsx';
 import OverviewView from './src/components/OverviewView.jsx';
-import ResultsWorkbenchView from './src/components/ResultsWorkbenchView.jsx';
+import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab } from './src/lab/navigation.js';
+import { plainTestName } from './src/lab/plain-language.js';
+import { waitForFrame } from './src/lab/frame-wait.js';
 
 export const APP_VERSION = '4.1.0';
 export const SCHEMA_VERSION = '2026.10.adblockertestlab.v4.1';
@@ -2189,30 +2191,22 @@ export function runVerificationSuite() {
   return results;
 }
 
-function waitAnimationFrameCancellable(abortSignal) {
-  return new Promise((resolve, reject) => {
-    if (abortSignal?.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'));
-      return;
-    }
-    const rafId = requestAnimationFrame(() => resolve());
-    abortSignal?.addEventListener(
-      'abort',
-      () => {
-        cancelAnimationFrame(rafId);
-        reject(new DOMException('Aborted', 'AbortError'));
-      },
-      { once: true }
-    );
-  });
-}
-
 export async function executeAuditedTest(
   testItem,
   { sandboxStageEl, monetagStageEl, timeoutMs = 2500, retryCount = 0, abortSignal, fixtureServerAvailable = false }
 ) {
   const startPerf = performance.now();
   const startTimeIso = new Date().toISOString();
+
+  // Each test gets its own container inside the shared sandbox. Tests run in parallel,
+  // and clearing the whole sandbox on finish used to remove other tests' elements
+  // mid-measurement, which read as 0px and turned cosmetic tests INCONCLUSIVE.
+  const testScopeEl = sandboxStageEl ? document.createElement('div') : null;
+  if (testScopeEl) {
+    testScopeEl.setAttribute('data-test-scope', testItem.id);
+    sandboxStageEl.appendChild(testScopeEl);
+    sandboxStageEl = testScopeEl;
+  }
 
   const createResult = (
     status,
@@ -2334,11 +2328,11 @@ export async function executeAuditedTest(
       try {
         sandboxStageEl.appendChild(controlEl);
         if (testItem.type === 'dynamic_cosmetic_dom') {
-          await waitAnimationFrameCancellable(abortSignal);
+          await waitForFrame(abortSignal);
         }
         sandboxStageEl.appendChild(baitEl);
 
-        await waitAnimationFrameCancellable(abortSignal);
+        await waitForFrame(abortSignal);
 
         controlRect = controlEl.getBoundingClientRect();
         baitRect = baitEl.getBoundingClientRect();
@@ -2545,7 +2539,7 @@ export async function executeAuditedTest(
       if (sandboxStageEl) {
         try {
           sandboxStageEl.appendChild(img);
-          await waitAnimationFrameCancellable(abortSignal);
+          await waitForFrame(abortSignal);
           const computed = window.getComputedStyle(img);
           domHidden = computed.display === 'none' || computed.visibility === 'hidden';
         } finally {
@@ -2704,12 +2698,14 @@ export async function executeAuditedTest(
 
       let ctrlVisible = false;
       let linkHidden = false;
+      // Declared outside the try block: the results below report the control height.
+      let ctrlRect = { height: 0 };
       try {
         sandboxStageEl.appendChild(ctrlLink);
         sandboxStageEl.appendChild(linkEl);
-        await waitAnimationFrameCancellable(abortSignal);
+        await waitForFrame(abortSignal);
 
-        const ctrlRect = ctrlLink.getBoundingClientRect();
+        ctrlRect = ctrlLink.getBoundingClientRect();
         const rect = linkEl.getBoundingClientRect();
         const comp = window.getComputedStyle(linkEl);
         ctrlVisible = ctrlRect.height > 0;
@@ -2824,7 +2820,7 @@ export async function executeAuditedTest(
       if (sandboxStageEl) {
         try {
           sandboxStageEl.appendChild(bait);
-          await waitAnimationFrameCancellable(abortSignal);
+          await waitForFrame(abortSignal);
           hidden = bait.offsetHeight === 0 || window.getComputedStyle(bait).display === 'none';
           hasShim =
             typeof window.google_ad_status !== 'undefined' ||
@@ -3198,7 +3194,7 @@ export async function executeAuditedTest(
       try {
         targetStage.appendChild(ctrlBox);
         targetStage.appendChild(zoneEl);
-        await waitAnimationFrameCancellable(abortSignal);
+        await waitForFrame(abortSignal);
 
         const zoneRect = zoneEl.getBoundingClientRect();
         const zoneComp = window.getComputedStyle(zoneEl);
@@ -3271,77 +3267,18 @@ export async function executeAuditedTest(
       CONFIDENCE.UNKNOWN
     );
   } finally {
-    if (sandboxStageEl && sandboxStageEl.childNodes.length > 0) {
-      while (sandboxStageEl.firstChild) {
-        try {
-          sandboxStageEl.removeChild(sandboxStageEl.firstChild);
-        } catch {}
-      }
-    }
+    // Remove only this test's container; other tests may still be measuring.
+    if (testScopeEl?.parentNode) testScopeEl.parentNode.removeChild(testScopeEl);
   }
 }
+
+const QUICK_SCAN_IDS = ['DSP-01', 'TPA-01', 'TPA-05', 'TRK-01', 'INT-03', 'AAB-01'];
 
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c65322] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f0e7] dark:focus-visible:ring-offset-[#172129]';
 
 function StatusBadge({ status, darkMode }) {
-  const styles = {
-    [RESULT_STATUS.BLOCKED]: darkMode
-      ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700'
-      : 'bg-emerald-50 text-emerald-900 border-emerald-300',
-    [RESULT_STATUS.PARTIAL]: darkMode
-      ? 'bg-amber-950/90 text-amber-300 border-amber-700'
-      : 'bg-amber-50 text-amber-900 border-amber-300',
-    [RESULT_STATUS.ALLOWED]: darkMode
-      ? 'bg-rose-950/90 text-rose-300 border-rose-700'
-      : 'bg-rose-50 text-rose-900 border-rose-300',
-    [RESULT_STATUS.CONSISTENT_WITH_FILTERING]: darkMode
-      ? 'bg-sky-950/90 text-sky-300 border-sky-700'
-      : 'bg-sky-50 text-sky-900 border-sky-300',
-    [RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN]: darkMode
-      ? 'bg-purple-950/80 text-purple-300 border-purple-700'
-      : 'bg-purple-50 text-purple-900 border-purple-300',
-    [RESULT_STATUS.SIGNAL_ACTIVE]: darkMode
-      ? 'bg-teal-950/90 text-teal-300 border-teal-700'
-      : 'bg-teal-50 text-teal-900 border-teal-300',
-    [RESULT_STATUS.SIGNAL_INACTIVE]: darkMode
-      ? 'bg-slate-800 text-slate-300 border-slate-600'
-      : 'bg-slate-100 text-slate-700 border-slate-300',
-    [RESULT_STATUS.INCONCLUSIVE]: darkMode
-      ? 'bg-slate-800 text-slate-300 border-slate-700'
-      : 'bg-slate-100 text-slate-700 border-slate-300',
-    [RESULT_STATUS.RUNNING]: darkMode
-      ? 'bg-sky-950 text-sky-300 border-sky-600'
-      : 'bg-sky-50 text-sky-900 border-sky-400'
-  };
-
-  const shortLabels = {
-    [RESULT_STATUS.BLOCKED]: 'BLOCKED',
-    [RESULT_STATUS.PARTIAL]: 'PARTIAL',
-    [RESULT_STATUS.ALLOWED]: 'ALLOWED',
-    [RESULT_STATUS.CONSISTENT_WITH_FILTERING]: 'FILTER_INF',
-    [RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN]: 'FAIL_CAUSE_UNK',
-    [RESULT_STATUS.SIGNAL_ACTIVE]: 'SIGNAL_ON',
-    [RESULT_STATUS.SIGNAL_INACTIVE]: 'SIGNAL_OFF',
-    [RESULT_STATUS.INCONCLUSIVE]: 'INCONCLUSIVE',
-    [RESULT_STATUS.UNSUPPORTED]: 'UNSUPPORTED',
-    [RESULT_STATUS.CANCELLED]: 'CANCELLED',
-    [RESULT_STATUS.RUNNING]: 'RUNNING',
-    [RESULT_STATUS.QUEUED]: 'QUEUED'
-  };
-
-  const badgeStyle =
-    styles[status] ||
-    (darkMode ? 'bg-slate-900 text-slate-500 border-slate-800' : 'bg-slate-100 text-slate-500 border-slate-200');
-
-  return (
-    <span
-      title={status || 'STANDBY'}
-      className={`inline-flex items-center justify-center px-1.5 py-0.5 min-w-[104px] rounded-xs text-[10px] font-mono font-bold tracking-tight border tabular-nums ${badgeStyle}`}
-    >
-      {shortLabels[status] || status || 'STANDBY'}
-    </span>
-  );
+  return <SharedStatusBadge status={status} darkMode={darkMode} RESULT_STATUS={RESULT_STATUS} />;
 }
 
 export default function App() {
@@ -3351,6 +3288,7 @@ export default function App() {
 
   const [resultsMap, setResultsMap] = useState({});
   const [executionState, setExecutionState] = useState(EXECUTION_STATE.IDLE);
+  const [lastRun, setLastRun] = useState(null);
   const [runProgress, setRunProgress] = useState({
     completed: 0,
     total: 0,
@@ -3474,7 +3412,8 @@ export default function App() {
       const scheduleFlush = () => {
         if (!rafScheduled) {
           rafScheduled = true;
-          requestAnimationFrame(flushPendingBatch);
+          // Frame-or-timer, so results keep appearing while the tab is in the background.
+          waitForFrame(null).then(flushPendingBatch);
         }
       };
 
@@ -3547,6 +3486,18 @@ export default function App() {
       const wasCancelled = abortController.signal.aborted;
       pauseRunRef.current = false;
       setExecutionState(wasCancelled ? EXECUTION_STATE.CANCELLED : EXECUTION_STATE.COMPLETED);
+      const runIds = testsToRun.map((t) => t.id);
+      setLastRun({
+        testIds: runIds,
+        label:
+          runIds.length === QUICK_SCAN_IDS.length && QUICK_SCAN_IDS.every((id) => runIds.includes(id))
+            ? 'quick'
+            : runIds.length === TEST_REGISTRY.length
+            ? 'full'
+            : 'custom',
+        finishedAt: new Date().toISOString(),
+        cancelled: wasCancelled
+      });
       notify(
         wasCancelled ? 'Run aborted immediately via AbortSignal.' : `Completed ${completed} diagnostic cases.`,
         wasCancelled ? 'warning' : 'success'
@@ -3608,7 +3559,12 @@ export default function App() {
 
   const filteredTests = useMemo(() => {
     return TEST_REGISTRY.filter((t) => {
-      const matchSec = sectionFilter === 'ALL' || t.section === sectionFilter;
+      const matchSec =
+        sectionFilter === 'ALL' ||
+        t.section === sectionFilter ||
+        (sectionFilter.startsWith('cat:') &&
+          t.metricGroup === METRIC_GROUP.AD_TRACKER_BLOCKING &&
+          t.scoringCategory === sectionFilter.slice(4));
       const matchGroup = groupFilter === 'ALL' || t.metricGroup === groupFilter;
       const res = resultsMap[t.id];
       const matchStatus =
@@ -3622,6 +3578,7 @@ export default function App() {
         !q ||
         t.id.toLowerCase().includes(q) ||
         t.name.toLowerCase().includes(q) ||
+        plainTestName(t).toLowerCase().includes(q) ||
         t.section.toLowerCase().includes(q) ||
         (t.recommendedRule && t.recommendedRule.toLowerCase().includes(q));
       return matchSec && matchGroup && matchStatus && matchQuery;
@@ -3664,20 +3621,25 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [activeTab, filteredTests, inspectedTestId, inspectedTest, executionState, runTestsBatch]);
 
+  // Returns true when the browser accepted the download, so callers only confirm real success.
   const triggerDownload = (content, filename, mimeType) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
+    let url = '';
     const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
     try {
+      url = URL.createObjectURL(new Blob([content], { type: mimeType }));
+      a.href = url;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
+      notify(`Downloaded ${filename}`, 'success');
+      return true;
+    } catch {
+      notify(`Couldn't create ${filename}. Try again, or use another format.`, 'error');
+      return false;
     } finally {
       if (a.parentNode) a.parentNode.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (url) URL.revokeObjectURL(url);
     }
-    notify(`Exported ${filename}`, 'success');
   };
 
   const handleResetMonetagChamber = useCallback(() => {
@@ -3728,9 +3690,7 @@ export default function App() {
   );
   const quickScanTests = useMemo(
     () =>
-      TEST_REGISTRY.filter((t) =>
-        ['DSP-01', 'TPA-01', 'TPA-05', 'TRK-01', 'INT-03', 'AAB-01'].includes(t.id)
-      ),
+      TEST_REGISTRY.filter((t) => QUICK_SCAN_IDS.includes(t.id)),
     []
   );
   const terminalResults = Object.values(resultsMap).filter((result) =>
@@ -3747,12 +3707,16 @@ export default function App() {
 
   const handleCopyRule = (ruleText) => {
     if (!ruleText) return;
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(ruleText);
+    const failed = () => notify("Couldn't copy automatically. Select the rule text and copy it yourself.", 'error');
+    if (!navigator?.clipboard?.writeText) {
+      failed();
+      return;
     }
-    setCopiedRule(true);
-    notify('Target rule copied to clipboard', 'success');
-    setTimeout(() => setCopiedRule(false), 2000);
+    navigator.clipboard.writeText(ruleText).then(() => {
+      setCopiedRule(true);
+      notify('Rule copied', 'success');
+      setTimeout(() => setCopiedRule(false), 2000);
+    }, failed);
   };
 
   const normalizedTab = useMemo(() => normalizeTab(activeTab), [activeTab]);
@@ -3764,7 +3728,9 @@ export default function App() {
   }, [activeTab]);
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-[#c65322] selection:text-white ${appBg}`}>
+    <div
+      className={`min-h-screen flex flex-col font-sans antialiased selection:bg-[#c65322] selection:text-white ${darkMode ? 'dark [color-scheme:dark]' : ''} ${appBg}`}
+    >
       <NavigationRibbon
         brandName={BRAND_NAME}
         appVersion={APP_VERSION}
@@ -3789,7 +3755,7 @@ export default function App() {
         focusRing={FOCUS_RING}
       />
 
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10">
+      <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10">
         {normalizedTab === 'overview' && (
           <OverviewView
             startRun={startRun}
@@ -3861,6 +3827,9 @@ export default function App() {
             buildProtectionTraceStages={buildProtectionTraceStages}
             CONFIDENCE={CONFIDENCE}
             RESULT_STATUS={RESULT_STATUS}
+            notifyError={(message) => notify(message, 'error')}
+            notify={notify}
+            lastRun={lastRun}
           />
         )}
 
@@ -3869,175 +3838,122 @@ export default function App() {
         )}
 
         {normalizedTab === 'methodology' && (
-          <div className="space-y-6">
-            {/* Principles & Evidence Hierarchy */}
-            <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#354955]">
-                <div>
-                  <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
-                    ARCHITECTURAL FOUNDATION // EVIDENCE INTEGRITY
-                  </div>
-                  <h2 className="text-base font-bold mt-0.5 tracking-tight">
-                    Measurement Methodology, Evidence Hierarchy &amp; Inconclusive Honesty
-                  </h2>
-                  <p className={`text-xs mt-1 max-w-3xl ${muted}`}>
-                    This test lab operates entirely within standard browser security sandboxes. It strictly distinguishes direct client-side observations from speculative claims.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-sm border font-mono text-[11px] font-bold ${subSurface}`}>
-                    RFC 8941 &bull; W3C Resource Timing
-                  </span>
-                </div>
+          <div className="space-y-12 max-w-5xl">
+            <section aria-labelledby="method-title" className="space-y-6">
+              <div className="max-w-3xl">
+                <h1 id="method-title" className="text-3xl sm:text-4xl font-bold tracking-[-0.03em]">How results are measured</h1>
+                <p className={`mt-3 text-base leading-relaxed ${muted}`}>
+                  Everything runs inside your browser, with the same limits as any other web page. Each result says whether it was
+                  directly observed or inferred, and what it cannot prove.
+                </p>
               </div>
+              <dl className="grid gap-x-10 gap-y-6 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+                <dt className="font-bold">A failed request is not proof of blocking</dt>
+                <dd className={`text-sm leading-relaxed ${muted}`}>
+                  A web page cannot tell whether a request failed because of an extension, a DNS filter, a firewall, a security rule, or a
+                  server that is simply down.
+                </dd>
+                <dt className="font-bold">When it cannot tell, it says so</dt>
+                <dd className={`text-sm leading-relaxed ${muted}`}>
+                  Results that cannot be decided are marked Inconclusive and left out of the score, instead of being counted as blocked or allowed.
+                </dd>
+                <dt className="font-bold">Only controlled tests are scored</dt>
+                <dd className={`text-sm leading-relaxed ${muted}`}>
+                  The score uses only the {scoreSummary.maxScoredTests} tests served from this site, where the page can compare a test against a
+                  known-good reference. Checks against real ad and tracker servers are shown but never scored.
+                </dd>
+              </dl>
+            </section>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                <div className={`p-4 rounded-sm border space-y-2 ${subSurface}`}>
-                  <div className="font-bold text-sm flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-[#c65322]" />
-                    <span>Evidence Boundaries</span>
-                  </div>
-                  <p className={muted}>
-                    A failed network request does not prove ad blocking. Web pages cannot observe whether packet loss originated from an extension, DNS sinkhole, firewall rule, CORS preflight, or dead route.
-                  </p>
-                </div>
-                <div className={`p-4 rounded-sm border space-y-2 ${subSurface}`}>
-                  <div className="font-bold text-sm flex items-center gap-2">
-                    <Info className="w-4 h-4 text-sky-500" />
-                    <span>Inconclusive Honesty</span>
-                  </div>
-                  <p className={muted}>
-                    When telemetry cannot authoritatively prove whether a resource was filtered or failed due to network conditions, the vector is marked <code>INCONCLUSIVE</code> and excluded from the blocking score denominator.
-                  </p>
-                </div>
-                <div className={`p-4 rounded-sm border space-y-2 ${subSurface}`}>
-                  <div className="font-bold text-sm flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-500" />
-                    <span>Fixtures vs Probes</span>
-                  </div>
-                  <p className={muted}>
-                    Only the {scoreSummary.maxScoredTests} controlled first-party fixtures enter the core Ad &amp; Tracker Blocking score. Exploratory third-party network probes evaluate live reachability without altering baseline scores.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 6-Stage Execution Lifecycle */}
-            <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
-              <div className="border-b pb-3 border-slate-200 dark:border-[#354955]">
-                <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
-                  EXECUTION PIPELINE // STAGES 1 THROUGH 6
-                </div>
-                <h3 className="text-sm font-bold mt-0.5">
-                  Vector Execution Lifecycle
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
+            <section aria-labelledby="steps-title" className="space-y-4">
+              <h2 id="steps-title" className="text-xl font-bold">What happens in each test</h2>
+              <ol className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
                 {[
-                  { stage: '1. INIT', title: 'Worker Pool', desc: 'Acquires concurrency slot, registers AbortSignal, resets stage timers.' },
-                  { stage: '2. SYNTHESIZE', title: 'Payload Gen', desc: 'Compiles deterministic synthetic probe or CSS selector target.' },
-                  { stage: '3. MOUNT', title: 'DOM Fixture', desc: 'Inserts test node and paired neutral control into isolated DOM sandbox.' },
-                  { stage: '4. MEASURE', title: 'Telemetry', desc: 'Captures fetch/XHR, DOM collapse metrics, and W3C Performance entries.' },
-                  { stage: '5. VERIFY', title: 'Arrival Check', desc: 'Polls first-party beacon correlation endpoint or executes heuristic verification.' },
-                  { stage: '6. CLASSIFY', title: 'Evidence Map', desc: 'Maps outcome to BLOCKED, PARTIAL, ALLOWED, or INCONCLUSIVE status.' }
-                ].map((s) => (
-                  <div key={s.stage} className={`p-3 rounded-sm border space-y-1.5 ${subSurface}`}>
-                    <div className="font-mono text-[10px] font-bold text-[#c65322] uppercase tracking-wider">{s.stage}</div>
-                    <div className="font-bold text-xs">{s.title}</div>
-                    <p className={`text-[11px] leading-relaxed ${muted}`}>{s.desc}</p>
-                  </div>
+                  ['Prepare', 'The test waits for a free slot and can be stopped at any time.'],
+                  ['Build the target', 'It creates the exact ad-like element or request to check.'],
+                  ['Place it next to a reference', 'The target goes on the page beside a neutral element that no blocker should touch.'],
+                  ['Measure', 'It records network results, element sizes, and browser timing data.'],
+                  ['Confirm arrival', 'Where possible, it checks whether the request actually reached the server.'],
+                  ['Decide', 'It records Blocked, Partial, Allowed, or Inconclusive, with the evidence behind it.']
+                ].map(([title, desc], i) => (
+                  <li key={title} className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-1">
+                    <span className="font-mono text-[#a9431c] dark:text-[#f08a5d] font-semibold">{i + 1}</span>
+                    <span>
+                      <strong className="font-semibold">{title}.</strong> <span className={muted}>{desc}</span>
+                    </span>
+                  </li>
                 ))}
-              </div>
-            </div>
+              </ol>
+            </section>
 
-            {/* Protection Layer Analysis */}
-            <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
-              <div className="border-b pb-3 border-slate-200 dark:border-[#354955]">
-                <div className="text-[11px] font-mono uppercase text-sky-500 font-bold tracking-wider">
-                  HEURISTIC LAYER INFERENCE // CLIENT OBSERVABILITY
-                </div>
-                <h3 className="text-sm font-bold mt-0.5">
-                  Observed Protection Layers &amp; Boundaries
-                </h3>
+            <section aria-labelledby="layers-title" className="space-y-4">
+              <div className="max-w-3xl">
+                <h2 id="layers-title" className="text-xl font-bold">What your results suggest about your setup</h2>
+                <p className={`mt-1 text-sm ${muted}`}>Updated after each run. Each card shows how sure the page can be, and where its view ends.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {protectionAnalysis.layers.map((layer) => (
-                  <div key={layer.id} className={`border rounded-sm p-4 space-y-2.5 text-xs ${subSurface}`}>
-                    <div className="flex items-center justify-between font-mono text-[11px]">
-                      <span className="font-bold text-sky-500 dark:text-sky-400">
-                        {layer.code} // {layer.title}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-sm border ${surface} text-[10px]`}>
-                        {layer.confidence.shortLabel}
-                      </span>
+                  <article key={layer.id} className={`border rounded-sm p-5 space-y-3 ${surface}`}>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h3 className="font-bold">{layer.title}</h3>
+                      <span className={`text-xs ${muted}`}>Confidence: {layer.confidence.label}</span>
                     </div>
-                    <div className="font-semibold text-sm">{layer.status}</div>
-                    <ul className={`list-disc list-inside space-y-1 text-[11px] ${muted}`}>
+                    <p className="text-sm font-semibold">{layer.status}</p>
+                    <ul className={`list-disc pl-5 space-y-1 text-sm ${muted}`}>
                       {layer.evidence.map((ev, i) => (
                         <li key={i}>{ev}</li>
                       ))}
                     </ul>
-                    <div className={`p-2.5 rounded-sm border font-mono text-[10px] leading-relaxed ${surface} ${muted}`}>
-                      <strong className="text-[#182024] dark:text-[#edf2ee]">BOUNDARY:</strong> {layer.unobservableBoundary}
-                    </div>
-                  </div>
+                    <p className={`text-sm leading-relaxed border-t pt-3 border-current/10 ${muted}`}>
+                      <strong className="font-semibold text-current">Where the page&apos;s view ends: </strong>
+                      {layer.unobservableBoundary}
+                    </p>
+                  </article>
                 ))}
               </div>
-            </div>
+            </section>
 
-            {/* 15-Assertion Automated Verification Suite */}
-            <div className={`border rounded-sm overflow-hidden ${surface}`}>
-              <div className={`px-5 py-3.5 border-b flex flex-wrap items-center justify-between gap-3 font-mono text-xs ${subSurface}`}>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold uppercase tracking-wider">
-                    AUTOMATED ENGINE &amp; REGRESSION VERIFICATION SUITE
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
-                    15/15 PASSING
-                  </span>
-                </div>
+            <details className={`border rounded-sm ${subSurface}`}>
+              <summary className={`min-h-12 px-5 flex flex-wrap items-center gap-x-3 cursor-pointer font-semibold ${FOCUS_RING}`}>
+                For developers: built-in self-checks
+                <span className={`text-sm font-normal ${muted}`}>
+                  {unitTestResults.filter((u) => u.passed).length} of {unitTestResults.length} passing
+                </span>
+              </summary>
+              <div className="px-5 pb-5 space-y-3">
                 <button
                   type="button"
                   onClick={() => setUnitTestResults(runVerificationSuite())}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border font-mono text-xs font-semibold cursor-pointer ${surface} hover:bg-black/5 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                  className={`inline-flex items-center gap-1.5 min-h-10 px-3 rounded-sm border text-sm font-semibold cursor-pointer ${surface} ${FOCUS_RING}`}
                 >
-                  <RotateCcw className="w-3.5 h-3.5 text-sky-500" />
-                  Re-Run 15 Assertions
+                  <RotateCcw aria-hidden="true" className="w-4 h-4" />
+                  Run self-checks again
                 </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs tabular-nums">
-                  <thead>
-                    <tr className={`border-b font-mono text-[10px] uppercase ${subSurface} ${muted}`}>
-                      <th className="py-2.5 px-4">ID</th>
-                      <th className="py-2.5 px-4">REGRESSION ASSERTION</th>
-                      <th className="py-2.5 px-4">STATUS</th>
-                      <th className="py-2.5 px-4">VERIFIED EVIDENCE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-[#354955]">
-                    {unitTestResults.map((u) => (
-                      <tr key={u.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-                        <td className="py-2.5 px-4 font-mono font-bold whitespace-nowrap">{u.id}</td>
-                        <td className="py-2.5 px-4 font-medium">{u.name}</td>
-                        <td className="py-2.5 px-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 rounded-sm font-mono text-[10px] font-bold ${
-                              u.passed
-                                ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-700/60'
-                                : 'bg-rose-950/60 text-rose-300 border border-rose-700/60'
-                            }`}
-                          >
-                            {u.passed ? 'PASSED' : 'FAILED'}
-                          </span>
-                        </td>
-                        <td className={`py-2.5 px-4 font-mono text-[11px] ${muted}`}>{u.details}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className={`border-b text-xs ${muted}`}>
+                        <th scope="col" className="py-2 pr-4 font-semibold">Check</th>
+                        <th scope="col" className="py-2 pr-4 font-semibold">Result</th>
+                        <th scope="col" className="py-2 font-semibold">Evidence</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-300/60 dark:divide-[#354955]">
+                      {unitTestResults.map((u) => (
+                        <tr key={u.id} className="align-top">
+                          <td className="py-2 pr-4">
+                            <span className="block font-medium">{u.name}</span>
+                            <span className={`font-mono text-xs ${muted}`}>{u.id}</span>
+                          </td>
+                          <td className="py-2 pr-4 whitespace-nowrap font-semibold">{u.passed ? 'Passed' : 'Failed'}</td>
+                          <td className={`py-2 text-xs ${muted}`}>{u.details}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            </details>
           </div>
         )}
 
@@ -4046,25 +3962,22 @@ export default function App() {
             {/* Settings Sub-Tab Navigation Header */}
             <div className={`border rounded-sm p-4 flex flex-wrap items-center justify-between gap-3 ${surface}`}>
               <div>
-                <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
-                  LAB CONTROLS // CONFIGURATION &amp; TOOLS
-                </div>
-                <h2 className="text-base font-bold mt-0.5 tracking-tight">
-                  Scoring Weights, User Context &amp; Dedicated Chambers
-                </h2>
+                <h1 className="text-2xl font-bold tracking-[-0.02em]">Settings</h1>
+                <p className={`text-sm ${muted}`}>Adjust how the score is weighted and add notes about your setup to your reports.</p>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {[
-                  { id: 'weights', label: 'Scoring Weights' },
-                  { id: 'context', label: 'User Context' },
-                  { id: 'monetag', label: 'Monetag Chamber' },
-                  { id: 'backend', label: 'Backend APIs' }
+                  { id: 'weights', label: 'Score weights' },
+                  { id: 'context', label: 'Your setup' },
+                  { id: 'monetag', label: 'Monetag test' },
+                  { id: 'backend', label: 'For developers' }
                 ].map((st) => (
                   <button
                     key={st.id}
                     type="button"
                     onClick={() => setSettingsSubTab(st.id)}
-                    className={`px-3 py-1.5 rounded-sm border font-mono text-xs font-semibold cursor-pointer transition-all ${FOCUS_RING} ${
+                    aria-pressed={settingsSubTab === st.id}
+                    className={`min-h-10 px-3 rounded-sm border text-sm font-semibold cursor-pointer transition-colors ${FOCUS_RING} ${
                       settingsSubTab === st.id
                         ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee]'
                         : `border-transparent ${muted} hover:bg-black/5 dark:hover:bg-white/5`
@@ -4082,32 +3995,32 @@ export default function App() {
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#354955]">
                   <div>
                     <h3 className="text-sm font-bold">
-                      7-Category Ad &amp; Tracker Blocking Weights (Denominator Audit)
+                      How much each category counts
                     </h3>
                     <p className={`text-xs mt-0.5 ${muted}`}>
-                      Only controlled fixtures with <code>BLOCKED</code> (1.0), <code>PARTIAL</code> (0.5), or <code>ALLOWED</code> (0.0) enter the score denominator. Weights renormalize automatically when categories have zero eligible tests.
+                      Blocked counts as 1, Partial as 0.5, and Allowed as 0. Categories with no clear results are skipped, and the remaining weights are scaled up to 100%.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setCategoryWeights(DEFAULT_SCORING_CATEGORIES)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border font-mono text-xs cursor-pointer ${subSurface} ${FOCUS_RING}`}
+                    className={`inline-flex items-center gap-1.5 min-h-10 px-3 rounded-sm border text-sm font-semibold cursor-pointer ${subSurface} ${FOCUS_RING}`}
                   >
                     <RotateCcw aria-hidden="true" className="w-3.5 h-3.5" />
-                    Reset Default Weights (100%)
+                    Restore default weights
                   </button>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs font-mono tabular-nums">
                     <thead>
-                      <tr className={`border-b text-[10px] uppercase ${subSurface} ${muted}`}>
-                        <th className="py-2.5 px-3">CATEGORY</th>
-                        <th className="py-2.5 px-3">CONFIG WEIGHT</th>
-                        <th className="py-2.5 px-3">ACTIVE RENORM WEIGHT</th>
-                        <th className="py-2.5 px-3">ELIGIBLE / TOTAL</th>
-                        <th className="py-2.5 px-3">BLK / PRT / ALW</th>
-                        <th className="py-2.5 px-3">CATEGORY SCORE</th>
+                      <tr className={`border-b text-xs font-sans ${subSurface} ${muted}`}>
+                        <th scope="col" className="py-2.5 px-3 font-semibold">Category</th>
+                        <th scope="col" className="py-2.5 px-3 font-semibold">Weight you set</th>
+                        <th scope="col" className="py-2.5 px-3 font-semibold">Weight used now</th>
+                        <th scope="col" className="py-2.5 px-3 font-semibold">Clear results / tests</th>
+                        <th scope="col" className="py-2.5 px-3 font-semibold">Blocked / partial / allowed</th>
+                        <th scope="col" className="py-2.5 px-3 font-semibold">Category score</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-[#354955]">
@@ -4115,7 +4028,7 @@ export default function App() {
                         <tr key={cat.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
                           <td className="py-2.5 px-3 font-sans font-semibold">
                             <div>{cat.name}</div>
-                            <div className={`text-[11px] font-normal ${muted}`}>{cat.description}</div>
+                            <div className={`text-xs font-normal ${muted}`}>{cat.description}</div>
                           </td>
                           <td className="py-2.5 px-3">
                             <input
@@ -4125,11 +4038,11 @@ export default function App() {
                               aria-label={`${cat.name} weight`}
                               value={cat.configuredWeight}
                               onChange={(e) => handleWeightChange(cat.id, e.target.value)}
-                              className={`w-16 px-2 py-1 rounded-sm border font-mono text-xs ${subSurface}`}
+                              className={`w-20 min-h-10 px-2 rounded-sm border font-mono text-sm ${subSurface}`}
                             />
                             <span className="ml-1">%</span>
                           </td>
-                          <td className="py-2.5 px-3 font-bold text-sky-500 dark:text-sky-400">{cat.renormalizedWeight}%</td>
+                          <td className="py-2.5 px-3 font-bold text-[#a9431c] dark:text-[#f08a5d] dark:text-sky-400">{cat.renormalizedWeight}%</td>
                           <td className="py-2.5 px-3">
                             {cat.eligibleCount} / {cat.totalTests}
                           </td>
@@ -4154,8 +4067,8 @@ export default function App() {
               <div className="space-y-4">
                 <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
                   <div className="border-b pb-3 border-slate-200 dark:border-[#354955]">
-                    <div className="text-[11px] font-mono uppercase text-[#c65322] font-bold tracking-wider">
-                      SELF-REPORTED METADATA // NOT AUTOMATED EVIDENCE
+                    <div className="text-xs font-mono text-[#c65322] font-bold">
+                      Your own notes, not measured
                     </div>
                     <h3 className="text-sm font-bold mt-0.5">
                       User-Reported Configuration (Strictly Separated)
@@ -4167,7 +4080,7 @@ export default function App() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
                     <div>
-                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>Installed Blocker / Extension</label>
+                      <label className={`block text-xs font-sans font-medium mb-1 ${muted}`}>Ad blocker or extension you use</label>
                       <input
                         type="text"
                         value={userReported.installedExtension === 'unspecified' ? '' : userReported.installedExtension}
@@ -4177,7 +4090,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>Private DNS / DoH</label>
+                      <label className={`block text-xs font-sans font-medium mb-1 ${muted}`}>Private DNS or DNS-over-HTTPS service</label>
                       <input
                         type="text"
                         value={userReported.privateDns === 'unspecified' ? '' : userReported.privateDns}
@@ -4187,7 +4100,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>VPN Status</label>
+                      <label className={`block text-xs font-sans font-medium mb-1 ${muted}`}>VPN</label>
                       <select
                         aria-label="VPN status"
                         value={userReported.vpnEnabled}
@@ -4200,7 +4113,7 @@ export default function App() {
                       </select>
                     </div>
                     <div>
-                      <label className={`block text-[11px] font-sans font-medium mb-1 ${muted}`}>Test Run Notes</label>
+                      <label className={`block text-xs font-sans font-medium mb-1 ${muted}`}>Notes for this run</label>
                       <input
                         type="text"
                         value={userReported.notes}
@@ -4217,19 +4130,19 @@ export default function App() {
                   <h3 className="text-sm font-bold">Detected Environment Diagnostics</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
                     <div className={`p-3 rounded-sm border ${subSurface}`}>
-                      <div className={`text-[10px] uppercase ${muted}`}>USER AGENT ENGINE</div>
+                      <div className={`text-xs ${muted}`}>Browser engine</div>
                       <div className="font-bold truncate mt-0.5">{envDiagnostics ? envDiagnostics.engineHint : 'Detecting...'}</div>
                     </div>
                     <div className={`p-3 rounded-sm border ${subSurface}`}>
-                      <div className={`text-[10px] uppercase ${muted}`}>PLATFORM</div>
+                      <div className={`text-xs ${muted}`}>Platform</div>
                       <div className="font-bold truncate mt-0.5">{envDiagnostics?.platformHint || 'Unavailable'}</div>
                     </div>
                     <div className={`p-3 rounded-sm border ${subSurface}`}>
-                      <div className={`text-[10px] uppercase ${muted}`}>VIEWPORT</div>
+                      <div className={`text-xs ${muted}`}>Window size</div>
                       <div className="font-bold mt-0.5">{envDiagnostics?.viewport || '1920x1080'}</div>
                     </div>
                     <div className={`p-3 rounded-sm border ${subSurface}`}>
-                      <div className={`text-[10px] uppercase ${muted}`}>FIXTURE SERVER</div>
+                      <div className={`text-xs ${muted}`}>Test server mode</div>
                       <div className="font-bold mt-0.5">{fixtureServerStatus.mode}</div>
                     </div>
                   </div>
@@ -4242,8 +4155,8 @@ export default function App() {
               <div className={`border rounded-sm p-5 space-y-4 ${surface}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-[#354955]">
                   <div>
-                    <div className="text-[11px] font-mono uppercase text-sky-500 font-bold">
-                      DOMAIN 5.14 // DEDICATED MONETAG SANDBOXED TEST CHAMBER
+                    <div className="text-xs font-mono text-[#a9431c] dark:text-[#f08a5d] font-bold">
+                      Section 5.14: Monetag test
                     </div>
                     <h3 className="text-base font-bold mt-0.5">
                       Isolated Monetag Fixture and Delivery-Domain Probe (MTG-01 &amp; MTG-02)
@@ -4276,9 +4189,9 @@ export default function App() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
                   <div className={`lg:col-span-6 p-4 rounded-sm border space-y-3 ${subSurface}`}>
-                    <div className="flex items-center justify-between font-mono text-[11px]">
-                      <span className="font-bold uppercase">1. CONTROLLED MONETAG DOM &amp; PATH FIXTURE (MTG-01)</span>
-                      <span className="px-1.5 py-0.5 rounded-sm bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 text-[10px]">
+                    <div className="flex items-center justify-between font-mono text-xs">
+                      <span className="font-bold">1. CONTROLLED MONETAG DOM &amp; PATH FIXTURE (MTG-01)</span>
+                      <span className="px-1.5 py-0.5 rounded-sm bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 text-xs">
                         ISOLATED MOUNT
                       </span>
                     </div>
@@ -4286,20 +4199,20 @@ export default function App() {
                     <div
                       ref={monetagStageRef}
                       id="monetag-dedicated-test-chamber"
-                      className="min-h-[64px] border border-dashed border-slate-500 rounded-sm p-3 flex flex-col items-center justify-center text-center font-mono text-[11px]"
+                      className="min-h-[64px] border border-dashed border-slate-500 rounded-sm p-3 flex flex-col items-center justify-center text-center font-mono text-xs"
                     >
                       <span className={muted}>
                         #monetag-dedicated-test-chamber // Injects .monetag-ad-zone + neutral control during MTG-01
                       </span>
                     </div>
 
-                    <p className={`pt-3 border-t border-slate-200 dark:border-[#354955] font-mono text-[11px] ${muted}`}>
+                    <p className={`pt-3 border-t border-slate-200 dark:border-[#354955] font-mono text-xs ${muted}`}>
                       MTG-02 is an exploratory reachability probe. A provider tag is intentionally not mounted until the provider approves this specific use case.
                     </p>
                   </div>
 
                   <div className={`lg:col-span-6 p-4 rounded-sm border space-y-3 font-mono text-xs ${subSurface}`}>
-                    <div className="font-bold uppercase text-[11px]">MONETAG VECTOR TELEMETRY</div>
+                    <div className="font-bold text-xs">Monetag test results</div>
                     {['MTG-01', 'MTG-02'].map((id) => {
                       const t = TEST_REGISTRY.find((x) => x.id === id);
                       const r = resultsMap[id];
@@ -4311,7 +4224,7 @@ export default function App() {
                             </span>
                             <StatusBadge status={r?.status} darkMode={darkMode} />
                           </div>
-                          <p className={`text-[11px] font-sans ${muted}`}>
+                          <p className={`text-xs font-sans ${muted}`}>
                             {r?.actualOutcome || 'Click "Probe Dedicated Monetag Chamber" to execute.'}
                           </p>
                         </div>
@@ -4319,7 +4232,7 @@ export default function App() {
                     })}
 
                     {monetagChamberLog.length > 0 && (
-                      <div className="pt-2 space-y-1 text-[11px]">
+                      <div className="pt-2 space-y-1 text-xs">
                         <div className={muted}>CHAMBER EXECUTION LOG:</div>
                         {monetagChamberLog.map((entry, i) => (
                           <div key={i} className="truncate">
@@ -4335,15 +4248,21 @@ export default function App() {
 
             {/* Sub-tab 4: Backend APIs */}
             {settingsSubTab === 'backend' && (
+              <div className="space-y-4">
+              <p className={`text-sm max-w-3xl ${muted}`}>
+                Reference code for an optional server that confirms when test requests arrive. This site currently runs{' '}
+                {fixtureServerStatus?.mode === 'CLIENT_ONLY_STATIC' || !fixtureServerStatus?.mode ? 'without it, in browser-only mode' : `in ${fixtureServerStatus.mode} mode`},
+                so treat this as documentation, not a live service.
+              </p>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
                 <div className={`border rounded-sm p-5 space-y-3 ${surface}`}>
-                  <div className="font-mono text-[11px] font-bold uppercase text-sky-500">
+                  <div className="font-mono text-xs font-bold text-[#a9431c] dark:text-[#f08a5d]">
                     1. FIRST-PARTY ARRIVAL CORRELATION ENDPOINT (app/api/fixture/[...slug]/route.ts)
                   </div>
                   <p className={muted}>
                     Authoritative server-side request-arrival correlation for TRK-03 (sendBeacon) and controlled URL probes:
                   </p>
-                  <pre className={`p-3 rounded-sm border font-mono text-[11px] overflow-x-auto ${subSurface}`}>
+                  <pre className={`p-3 rounded-sm border font-mono text-xs overflow-x-auto ${subSurface}`}>
                     {[
                       "import { NextResponse } from 'next/server';",
                       'const beaconReceipts = new Map<string, number>();',
@@ -4371,13 +4290,13 @@ export default function App() {
                 </div>
 
                 <div className={`border rounded-sm p-5 space-y-3 ${surface}`}>
-                  <div className="font-mono text-[11px] font-bold uppercase text-sky-500">
+                  <div className="font-mono text-xs font-bold text-[#a9431c] dark:text-[#f08a5d]">
                     2. SERVER-SIDE AUTHENTICATED AI FORENSICS PROXY (app/api/forensics/route.ts)
                   </div>
                   <p className={muted}>
                     Keeps GEMINI_API_KEY strictly on the server with input validation and never exposes credentials to browser clients:
                   </p>
-                  <pre className={`p-3 rounded-sm border font-mono text-[11px] overflow-x-auto ${subSurface}`}>
+                  <pre className={`p-3 rounded-sm border font-mono text-xs overflow-x-auto ${subSurface}`}>
                     {[
                       "import { NextResponse } from 'next/server';",
                       '',
@@ -4399,6 +4318,7 @@ export default function App() {
                     ].join('\n')}
                   </pre>
                 </div>
+              </div>
               </div>
             )}
           </div>
@@ -4428,9 +4348,11 @@ export default function App() {
 
       {toast && (
         <div
-          role="status"
-          aria-live="polite"
-          className={`fixed bottom-3 right-3 z-50 px-3.5 py-2 rounded-xs border shadow-lg text-xs font-mono ${surface}`}
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+          className={`fixed bottom-3 right-3 left-3 sm:left-auto sm:max-w-sm z-50 px-4 py-3 rounded-sm border text-sm ${
+            toast.type === 'error' ? 'border-rose-700 border-l-4' : ''
+          } ${surface}`}
         >
           {toast.message}
         </div>

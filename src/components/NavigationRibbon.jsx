@@ -1,16 +1,7 @@
 import React from 'react';
-import {
-  Play,
-  Pause,
-  Square,
-  Sun,
-  Moon,
-  ShieldCheck,
-  CheckCircle2,
-  Zap,
-  Layers,
-  Sliders
-} from 'lucide-react';
+import { Play, Pause, Square, Sun, Moon } from 'lucide-react';
+import LogoMark from './LogoMark.jsx';
+import { PRIMARY_NAV_TABS } from '../lab/navigation.js';
 
 export default function NavigationRibbon({
   brandName,
@@ -22,160 +13,126 @@ export default function NavigationRibbon({
   handleCancelRun,
   runProgress,
   runTestsBatch,
-  coreBlockingTests,
   testRegistry,
   expectedRegistryCount,
   darkMode,
   setDarkMode,
   normalizedTab,
   setActiveTab,
-  fixtureServerStatus,
   surface,
   subSurface,
   muted,
   focusRing
 }) {
-  const tabs = [
-    { id: 'overview', label: 'Overview & Scanner', icon: ShieldCheck },
-    { id: 'results', label: 'Results & Workbench', icon: CheckCircle2 },
-    { id: 'real-ads', label: 'Real Ads Stress Lab', icon: Zap },
-    { id: 'methodology', label: 'Methodology & Audit', icon: Layers },
-    { id: 'settings', label: 'Settings & Lab', icon: Sliders }
-  ];
+  const hasScore = scoreSummary.overallScore !== null;
+  const partial = hasScore && scoreSummary.eligibleTotalTests * 2 < scoreSummary.maxScoredTests;
 
   return (
     <>
-      {/* Top Header */}
-      <header className={`sticky top-0 z-30 border-b px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-4 ${surface}`}>
-        <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-full border-2 border-[#c65322] text-[#c65322] flex items-center justify-center font-bold text-sm select-none"
-            aria-hidden="true"
-          >
-            AB
-          </div>
-          <div>
-            <div className="font-bold text-base tracking-[-0.02em]">{brandName}</div>
-            <div className={`text-[11px] ${muted}`}>Evidence-led browser diagnostics · v{appVersion}</div>
-          </div>
-        </div>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-3 focus:rounded-sm focus:bg-[#24373f] focus:text-white focus:font-semibold focus:outline-none focus:ring-2 focus:ring-[#c65322] focus:ring-offset-2"
+      >
+        Skip to main content
+      </a>
+      <header className={`md:sticky md:top-0 z-30 border-b px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 ${surface}`}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          className={`flex items-center gap-3 min-h-11 text-left cursor-pointer rounded-sm ${focusRing}`}
+          aria-label={`${brandName}, go to overview`}
+        >
+          <LogoMark className="w-9 h-9 shrink-0 text-[#24373f] dark:text-[#edf2ee]" />
+          <span>
+            <span className="block font-bold text-base tracking-[-0.02em] leading-tight">{brandName}</span>
+            <span className={`block text-xs ${muted}`}>Version {appVersion}</span>
+          </span>
+        </button>
 
-        <div className="flex items-center gap-2 flex-wrap font-mono text-xs tabular-nums">
-          {/* Core Score Badge */}
+        <div className="flex items-center gap-2 flex-wrap text-sm">
           <div
-            title={`Ad & Tracker Blocking Score (0-100): Evaluated strictly from ${scoreSummary.maxScoredTests} controlled ad/tracker blocking fixtures.`}
-            className={`px-3 py-1.5 rounded-sm border flex items-center gap-2 ${subSurface}`}
+            className={`px-3 min-h-10 rounded-sm border flex items-center gap-2 tabular-nums ${subSurface}`}
+            title={`Ad and tracker blocking score, from up to ${scoreSummary.maxScoredTests} scored tests.`}
           >
-            <span className={`text-[10px] ${muted}`}>CORE SCORE</span>
-            <span className="font-bold text-[#c65322]">
-              {scoreSummary.overallScore !== null ? `${scoreSummary.overallScore}/100` : 'STANDBY'}
-            </span>
-            <span className={`text-[10px] ${muted}`}>
-              ({scoreSummary.eligibleTotalTests}/{scoreSummary.maxScoredTests} core)
-            </span>
+            <span className={muted}>Score</span>
+            {hasScore ? (
+              <span>
+                <strong className="font-bold">{scoreSummary.overallScore}</strong>
+                <span className={muted}>/100</span>
+                <span className={`ml-1.5 text-xs ${muted}`}>
+                  {partial ? 'partial, ' : ''}
+                  {scoreSummary.eligibleTotalTests} of {scoreSummary.maxScoredTests} tests
+                </span>
+              </span>
+            ) : (
+              <span className="font-semibold">Not run yet</span>
+            )}
           </div>
 
-          {/* Privacy Signals Badge */}
-          <div
-            title="Browser Privacy & Hardening Signals: Evaluated separately so GPC/DNT or WebGL masking never inflate the Ad-Blocking Score."
-            className={`hidden md:flex px-3 py-1.5 rounded-sm border items-center gap-2 ${subSurface}`}
-          >
-            <span className={`text-[10px] ${muted}`}>PRIVACY SIGNALS</span>
-            <span className="font-bold text-teal-600 dark:text-teal-400">
-              {scoreSummary.privacySignalsSummary.activeCount}/{scoreSummary.privacySignalsSummary.totalSignals} ACTIVE
-            </span>
-          </div>
-
-          {/* Run / Abort Action Controls */}
           {!isActiveRun ? (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => runTestsBatch(coreBlockingTests)}
-                className={`hidden lg:inline-flex items-center gap-1 px-3 min-h-10 rounded-sm text-[11px] font-semibold border border-[#355f50] text-[#216447] dark:text-[#52b788] hover:bg-[#e5f1e8] dark:hover:bg-[#1a3028] cursor-pointer transition-colors ${focusRing}`}
-                title={`Run only the ${coreBlockingTests.length} Core Controlled Ad & Tracker Blocking Fixtures`}
-              >
-                <Play aria-hidden="true" className="w-3 h-3 fill-current" />
-                Run core ({coreBlockingTests.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => runTestsBatch(testRegistry)}
-                className={`inline-flex items-center gap-1 px-3.5 min-h-10 rounded-sm text-[11px] font-semibold bg-[#c65322] hover:bg-[#a9431c] text-white cursor-pointer shadow-xs transition-colors ${focusRing}`}
-                title={`Run all ${expectedRegistryCount} tests across all 14 domains`}
-              >
-                <Play aria-hidden="true" className="w-3 h-3 fill-current" />
-                Run full diagnostic
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => runTestsBatch(testRegistry)}
+              className={`inline-flex items-center gap-1.5 px-4 min-h-10 rounded-sm font-semibold bg-[#b84a1c] hover:bg-[#9a3d17] text-white cursor-pointer transition-colors ${focusRing}`}
+            >
+              <Play aria-hidden="true" className="w-3.5 h-3.5 fill-current" />
+              Full test ({expectedRegistryCount})
+            </button>
           ) : (
-            <div className="flex items-center gap-1.5" role="group" aria-label="Run controls">
+            <div className="flex items-center gap-2" role="group" aria-label="Run controls">
               <button
                 type="button"
                 onClick={handleTogglePause}
-                className={`inline-flex items-center gap-1 px-2.5 min-h-10 rounded-xs text-[11px] font-semibold border cursor-pointer ${subSurface} ${focusRing}`}
+                className={`inline-flex items-center gap-1.5 px-3 min-h-10 rounded-sm font-semibold border cursor-pointer ${subSurface} ${focusRing}`}
               >
-                {isPaused ? <Play aria-hidden="true" className="w-3 h-3 fill-current" /> : <Pause aria-hidden="true" className="w-3 h-3" />}
+                {isPaused ? <Play aria-hidden="true" className="w-3.5 h-3.5 fill-current" /> : <Pause aria-hidden="true" className="w-3.5 h-3.5" />}
                 {isPaused ? 'Resume' : 'Pause'}
               </button>
               <button
                 type="button"
                 onClick={handleCancelRun}
-                className={`inline-flex items-center gap-1 px-3 min-h-10 rounded-xs text-[11px] font-semibold bg-rose-700 hover:bg-rose-600 text-white cursor-pointer ${focusRing}`}
-                title="Immediately aborts in-flight fetch/XHR requests via AbortController"
+                className={`inline-flex items-center gap-1.5 px-3 min-h-10 rounded-sm font-semibold bg-rose-700 hover:bg-rose-800 text-white cursor-pointer tabular-nums ${focusRing}`}
               >
                 <Square aria-hidden="true" className="w-3 h-3 fill-current" />
-                Abort Now ({runProgress.completed}/{runProgress.total})
+                Stop ({runProgress.completed}/{runProgress.total})
               </button>
             </div>
           )}
 
-          {/* Theme Toggle */}
           <button
             type="button"
             onClick={() => setDarkMode((d) => !d)}
-            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            className={`min-w-10 min-h-10 p-2 rounded-sm border cursor-pointer flex items-center justify-center transition-colors ${subSurface} ${focusRing}`}
+            aria-label={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+            className={`w-10 h-10 rounded-sm border cursor-pointer flex items-center justify-center transition-colors ${subSurface} ${focusRing}`}
           >
-            {darkMode ? <Sun aria-hidden="true" className="w-4 h-4 text-amber-400" /> : <Moon aria-hidden="true" className="w-4 h-4" />}
+            {darkMode ? <Sun aria-hidden="true" className="w-4 h-4" /> : <Moon aria-hidden="true" className="w-4 h-4" />}
           </button>
         </div>
       </header>
 
-      {/* Primary 5-Tab Navigation Ribbon */}
-      <div className={`border-b px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs ${subSurface}`}>
-        <nav className="flex items-center gap-1.5 flex-wrap overflow-x-auto max-w-full py-0.5" aria-label="Primary navigation">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
+      <nav className={`border-b px-2 sm:px-6 ${subSurface}`} aria-label="Primary">
+        <ul className="flex flex-wrap md:flex-nowrap gap-x-1 max-w-[1440px] mx-auto">
+          {PRIMARY_NAV_TABS.map((tab) => {
             const active = normalizedTab === tab.id;
             return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 min-h-10 sm:min-h-9 px-3.5 py-1.5 rounded-sm border text-xs cursor-pointer transition-all ${focusRing} ${
-                  active
-                    ? 'bg-[#24373f] text-white border-[#24373f] dark:bg-[#edf2ee] dark:text-[#182024] dark:border-[#edf2ee] font-bold shadow-xs'
-                    : `border-transparent ${muted} hover:text-[#182024] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5`
-                }`}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon aria-hidden="true" className="w-4 h-4 shrink-0" />
-                <span className="whitespace-nowrap">{tab.label}</span>
-              </button>
+              <li key={tab.id} className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`min-h-12 px-3 sm:px-4 text-sm whitespace-nowrap border-b-[3px] cursor-pointer transition-colors ${focusRing} ${
+                    active
+                      ? 'border-[#c65322] font-bold text-current'
+                      : `border-transparent ${muted} hover:text-current`
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              </li>
             );
           })}
-        </nav>
-
-        <div className="hidden sm:flex items-center gap-3 text-[11px] font-mono">
-          <span className={muted}>
-            Mode: <strong className="text-current">{fixtureServerStatus?.mode || 'standalone'}</strong>
-          </span>
-          <span className="px-2 py-0.5 rounded-sm border border-slate-300 dark:border-slate-700 bg-black/5 dark:bg-white/5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
-            SANDBOX ISOLATED
-          </span>
-        </div>
-      </div>
+        </ul>
+      </nav>
     </>
   );
 }

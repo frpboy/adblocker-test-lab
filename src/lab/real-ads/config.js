@@ -1,12 +1,12 @@
 const ADSTERRA_BANNER_SIZES = ['728x90', '300x250', '160x600', '160x300', '320x50', '468x60'];
 
 export const REAL_ADS_LEVELS = [
-  { id: 'baseline', label: 'Level 0 — Baseline' },
-  { id: 'individual', label: 'Level 1 — Individual placement' },
-  { id: 'banner-grid', label: 'Level 2 — Banner grid' },
-  { id: 'native-social', label: 'Level 3 — Native and social' },
-  { id: 'intrusive', label: 'Level 4 — Intrusive opt-in' },
-  { id: 'maximum', label: 'Level 5 — Compatible maximum' }
+  { id: 'baseline', label: 'Level 0: no ads (baseline)' },
+  { id: 'individual', label: 'Level 1: one ad' },
+  { id: 'banner-grid', label: 'Level 2: grid of banners' },
+  { id: 'native-social', label: 'Level 3: native and social ads' },
+  { id: 'intrusive', label: 'Level 4: adds pop-unders (opt-in)' },
+  { id: 'maximum', label: 'Level 5: every compatible format' }
 ];
 
 function parseJson(value) {

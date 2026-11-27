@@ -25,6 +25,26 @@ Reading this as: an evidence-focused browser diagnostic workspace for people dec
 - **Asymmetric Overview:** the action and the selected test scope answer different user questions, so they use different compositions rather than identical cards.
 - **Minimal motion:** transitions only clarify hover and focus; no looping movement is used because diagnostics should read as stable evidence.
 
+## Plain-language pass (2026-11-27)
+
+| Decision | Reason |
+| --- | --- |
+| Shield, flask and blocked-ad logo (`src/components/LogoMark.jsx`, `public/favicon.svg`) | Owner-supplied artwork redrawn in the site palette: shield for protection, flask for testing, and a crossed-out ad box as the sample. Ink outlines; safety orange only on the blocked ad (3.6:1 or better against both backgrounds). |
+| Plain test names (`src/lab/plain-language.js`) | Registry names stay for reports and search; visitors read what each test checks in everyday words. A unit test keeps the map in sync with all 55 IDs. |
+| Result words kept (Blocked, Partial, Allowed, Inconclusive) in title case, with a one-line legend | The UI/UX spec requires one consistent vocabulary; the legend gives each word a single meaning. |
+| Coverage before score, and a "Partial result" verdict under 50% coverage | A score from 4 of 35 tests must not read as a final verdict. |
+| No uppercase monospace labels, no text under 12px | Mono stays for test IDs and timings only, per the existing type decision. |
+| Removed eyebrow pill, three-step cards, sparkle icons, and the decorative "Sandbox isolated" badge | None carried information; the Overview now states what a page can and cannot see instead. |
+| Neutral grey for non-outcome statuses; sky and purple removed | Colour means stopped / partial / got through. Everything else is neutral so it never reads as a verdict. |
+| `dark` class applied on the app root, plus a global reduced-motion rule | Tailwind uses class-based dark mode, but the class was never set, so every `dark:` style was dead. |
+| Control edges #857d6e (light) / #74909e (dark), set in `src/styles.css` | WCAG 1.4.11: inputs, selects, and outlined buttons need 3:1 against their surface. The old #c9c1b2 edge measured 1.76:1. Card hairlines stay light because they separate, not identify. |
+| Primary button fill #b84a1c instead of #c65322 | White text on #c65322 measured exactly 4.50:1; #b84a1c gives 5.21:1. The original orange stays for strokes, focus, and the logo. |
+| Result grid cells carry a shape (✓ ◐ ✕ ● ? ·) and a key | Status no longer depends on seeing colour. |
+| Skip link, `role="alert"` error toasts, honest copy and download feedback | Keyboard users can bypass the header; failures are announced and never reported as success. |
+| "What happened in this run" panel (`src/components/RunSummary.jsx`, `src/lab/run-summary.js`) | After every run, a Simple view (verdict, three or four plain sentences, next steps) and a Detailed view (every test grouped as blocked, partial, got through, or could not be measured, with the reason). Announced once to screen readers. Lists cover the last run; the score covers all results so far. |
+| Landscape share card (`src/lab/share-card.js`, `src/components/ShareResultsDialog.jsx`) | 1200 x 630 PNG drawn on canvas: logo, score with bar, verdict, coverage, counts with shapes, date, and a QR code plus `lab.frpboy.in`. Partial results always say "Partial result". The card holds no device or user data. Share uses the system share sheet (with the image where the browser supports files), with Download image and Copy text and link as fallbacks. QR generation uses the `qrcode` package, pinned. |
+| Developer material (self-checks, reference server code) moved behind "For developers" | Kept for audit, out of the way for everyone else. The self-check count is computed, not hard-coded. |
+
 ## Invariants
 
 This redesign does not change the test registry, executor, score eligibility, result-state meanings, reports, provider boundary, or the distinction between direct observation and inference.

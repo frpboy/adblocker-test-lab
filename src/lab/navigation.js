@@ -1,9 +1,9 @@
 export const PRIMARY_NAV_TABS = [
-  { id: 'overview', label: 'Overview & Scanner' },
-  { id: 'results', label: 'Results & Workbench' },
-  { id: 'real-ads', label: 'Real Ads Stress Lab' },
-  { id: 'methodology', label: 'Methodology & Audit' },
-  { id: 'settings', label: 'Settings & Lab' }
+  { id: 'overview', label: 'Overview' },
+  { id: 'results', label: 'Results' },
+  { id: 'real-ads', label: 'Live ads lab' },
+  { id: 'methodology', label: "How it's measured" },
+  { id: 'settings', label: 'Settings' }
 ];
 
 export function normalizeTab(activeTab) {
