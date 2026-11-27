@@ -5,15 +5,20 @@ import { createRealAdsSession } from '../src/lab/real-ads/session.js';
 function createDocument() {
   const createContainer = () => ({ children: [], append(node) { this.children.push(node); node.parentNode = this; } });
   const document = { body: createContainer(), head: createContainer() };
-  document.createElement = (tagName) => ({
-    tagName,
-    dataset: {},
-    listeners: new Map(),
-    setAttribute(name, value) { this[name] = value; },
-    addEventListener(name, listener) { this.listeners.set(name, listener); },
-    removeEventListener(name) { this.listeners.delete(name); },
-    remove() { this.parentNode.children = this.parentNode.children.filter((node) => node !== this); }
-  });
+  document.createElement = (tagName) => {
+    const element = {
+      tagName,
+      listeners: new Map(),
+      setAttribute(name, value) { this[name] = value; },
+      addEventListener(name, listener) { this.listeners.set(name, listener); },
+      removeEventListener(name) { this.listeners.delete(name); },
+      remove() { this.parentNode.children = this.parentNode.children.filter((node) => node !== this); }
+    };
+    // Browsers expose dataset as a getter only; assigning to it throws in module (strict) code.
+    const dataset = {};
+    Object.defineProperty(element, 'dataset', { get: () => dataset, enumerable: true });
+    return element;
+  };
   return document;
 }
 

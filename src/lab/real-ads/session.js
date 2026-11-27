@@ -41,7 +41,6 @@ export function createRealAdsSession({ document, window, onEvidence = () => {}, 
     if (placement.options) {
       const iframe = document.createElement('iframe');
       if (placement.containerId) iframe.id = placement.containerId;
-      iframe.dataset = iframe.dataset || {};
       iframe.dataset.realAdsOwned = placement.id;
       iframe.setAttribute('data-real-ads-owned', placement.id);
       iframe.title = `Adsterra ${placement.id}`;
@@ -93,7 +92,6 @@ export function createRealAdsSession({ document, window, onEvidence = () => {}, 
     // Case 2: Standard/Direct placement (native banner, social bar, popunder, or basic scripts)
     const mount = document.createElement('div');
     if (placement.containerId) mount.id = placement.containerId;
-    mount.dataset = mount.dataset || {};
     mount.dataset.realAdsOwned = placement.id;
     mount.setAttribute('data-real-ads-owned', placement.id);
 
