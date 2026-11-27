@@ -1257,7 +1257,7 @@ export const TEST_REGISTRY = [
     measuredBehavior: 'Isolated Monetag zone container cosmetic suppression and controlled Monetag tag path interception.',
     technicalValidity: VALIDITY_CLASS.DEDICATED_AD_CHAMBER,
     browserObservation: 'Isolated Monetag chamber DOM dimensions + controlled tag fetch outcome.',
-    limitations: 'Strictly confined to the Dedicated Monetag Test Block; the rest of AdBlocker Test Lab remains 100% ad-free.'
+    limitations: 'Strictly confined to the Dedicated Monetag Test Block; the diagnostic scanner never mounts live ad tags. Live provider placements exist only in the separate, opt-in Real Ads Stress Lab.'
   }),
   createTestSpec({
     id: 'MTG-02',
@@ -1414,25 +1414,41 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
   const hasRunTests = resultsList.length > 0;
   const getStatus = (id) => resultsMap?.[id]?.status;
 
+  // Only conclusive outcomes count as evidence; QUEUED/RUNNING/INCONCLUSIVE/ERROR do not.
+  const CONCLUSIVE = new Set([RESULT_STATUS.BLOCKED, RESULT_STATUS.PARTIAL, RESULT_STATUS.ALLOWED]);
+  const TERMINAL_EXCLUDED = new Set([RESULT_STATUS.QUEUED, RESULT_STATUS.RUNNING, RESULT_STATUS.CANCELLED]);
+  const isConclusive = (id) => CONCLUSIVE.has(getStatus(id));
+
   const cosmeticTests = TEST_REGISTRY.filter((t) => t.type === 'cosmetic_dom' || t.type === 'dynamic_cosmetic_dom');
-  const cosmeticRun = cosmeticTests.filter((t) => getStatus(t.id));
+  const cosmeticRun = cosmeticTests.filter((t) => isConclusive(t.id));
   const cosmeticBlocked = cosmeticTests.filter((t) => getStatus(t.id) === RESULT_STATUS.BLOCKED);
 
   const controlledPathProbes = TEST_REGISTRY.filter(
     (t) => t.type === 'url_pattern_probe' || t.type === 'script_tag_probe' || t.type === 'xhr_pattern_probe'
   );
-  const controlledPathRun = controlledPathProbes.filter((t) => getStatus(t.id));
+  const controlledPathRun = controlledPathProbes.filter((t) => isConclusive(t.id));
   const controlledPathBlocked = controlledPathProbes.filter((t) => getStatus(t.id) === RESULT_STATUS.BLOCKED);
 
+  const browserLayerEvaluated = cosmeticRun.length + controlledPathRun.length;
+  const browserLayerTotal = cosmeticTests.length + controlledPathProbes.length;
+
   const exploratoryExternalProbes = TEST_REGISTRY.filter((t) => t.type === 'external_domain_probe');
-  const exploratoryRun = exploratoryExternalProbes.filter((t) => getStatus(t.id));
+  const exploratoryRun = exploratoryExternalProbes.filter((t) => {
+    const status = getStatus(t.id);
+    return status && !TERMINAL_EXCLUDED.has(status);
+  });
   const exploratoryFailed = exploratoryExternalProbes.filter(
     (t) =>
       getStatus(t.id) === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN ||
       getStatus(t.id) === RESULT_STATUS.BLOCKED
   );
 
-  const gpcActive = getStatus('FPR-01') === RESULT_STATUS.SIGNAL_ACTIVE;
+  const privacySignalStatus = getStatus('FPR-01');
+  const privacySignalEvaluated =
+    privacySignalStatus === RESULT_STATUS.SIGNAL_ACTIVE || privacySignalStatus === RESULT_STATUS.SIGNAL_INACTIVE;
+  const gpcActive = privacySignalStatus === RESULT_STATUS.SIGNAL_ACTIVE;
+
+  const annoyanceEvaluated = isConclusive('CNS-01') || isConclusive('AAB-02');
   const annoyanceHidden =
     getStatus('CNS-01') === RESULT_STATUS.BLOCKED || getStatus('AAB-02') === RESULT_STATUS.BLOCKED;
 
@@ -1446,20 +1462,28 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
         title: 'In-Browser Content & Cosmetic Filtering',
         status: !hasRunTests
           ? 'Awaiting Telemetry'
+          : browserLayerEvaluated === 0
+          ? 'Not Tested Yet (No Conclusive Browser-Layer Results)'
           : cosmeticBlocked.length >= 3 || controlledPathBlocked.length >= 2
           ? 'Strong Evidence of In-Browser Content Filtering'
           : cosmeticBlocked.length > 0 || controlledPathBlocked.length > 0
           ? 'Partial In-Browser Filtering Observed'
+          : browserLayerEvaluated * 2 < browserLayerTotal
+          ? `No Filtering Observed in ${browserLayerEvaluated} of ${browserLayerTotal} Tests (Partial Coverage)`
           : 'No In-Browser Cosmetic or Path Filtering Observed',
-        confidence: !hasRunTests
+        confidence: !hasRunTests || browserLayerEvaluated === 0
           ? CONFIDENCE.UNKNOWN
           : cosmeticBlocked.length >= 3 || controlledPathBlocked.length >= 2
           ? CONFIDENCE.STRONG
+          : browserLayerEvaluated * 2 < browserLayerTotal
+          ? CONFIDENCE.WEAK
           : CONFIDENCE.CONFIRMED,
         evidence: [
-          `${cosmeticBlocked.length}/${cosmeticRun.length} synthetic DOM ad elements were hidden via CSS rules.`,
-          `${controlledPathBlocked.length}/${controlledPathRun.length} relative first-party ad paths were aborted before reaching the origin server.`,
-          annoyanceHidden
+          `${cosmeticBlocked.length}/${cosmeticRun.length} conclusively tested synthetic DOM ad elements were hidden via CSS rules (${cosmeticTests.length} available).`,
+          `${controlledPathBlocked.length}/${controlledPathRun.length} conclusively tested relative first-party ad paths were aborted before reaching the origin server (${controlledPathProbes.length} available).`,
+          !annoyanceEvaluated
+            ? 'Cookie notice and anti-adblock modal tests (CNS-01, AAB-02) have not produced a conclusive result yet.'
+            : annoyanceHidden
             ? 'Cookie notice and anti-adblock modal selectors were hidden (consistent with active Annoyance filter lists).'
             : 'Cookie notice and anti-adblock modal selectors remained visible.'
         ],
@@ -1472,16 +1496,20 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
         title: 'Browser Privacy Signals & Baseline Restrictions (Separate Index)',
         status: !hasRunTests
           ? 'Awaiting Telemetry'
+          : !privacySignalEvaluated
+          ? 'Not Tested Yet (Run FPR-01 or Full Diagnostic)'
           : gpcActive
           ? 'Active Privacy Signals Observed (GPC / DNT)'
           : 'Standard Browser Defaults Observed',
-        confidence: !hasRunTests
+        confidence: !hasRunTests || !privacySignalEvaluated
           ? CONFIDENCE.UNKNOWN
           : gpcActive
           ? CONFIDENCE.CONFIRMED
           : CONFIDENCE.WEAK,
         evidence: [
-          gpcActive
+          !privacySignalEvaluated
+            ? 'The Global Privacy Control / Do Not Track check (FPR-01) has not run yet.'
+            : gpcActive
             ? 'Confirmed Observation: navigator.globalPrivacyControl === true or Do Not Track === "1" is actively exposed (Tracked in Privacy Signals Index; 0 impact on Ad-Blocking Score).'
             : 'Neither Global Privacy Control (GPC) nor Do Not Track is currently enabled.',
           envData?.uaBrandHint
@@ -1497,18 +1525,22 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
         title: 'DNS-Based & Upstream Network Filtering',
         status: !hasRunTests
           ? 'Awaiting Telemetry'
+          : exploratoryRun.length === 0
+          ? 'Not Tested Yet (No Exploratory Domain Probes Run)'
           : exploratoryFailed.length > 0 && cosmeticBlocked.length === 0 && controlledPathBlocked.length === 0
           ? 'External Domain Failures Without DOM Hiding (Weak Inference)'
           : exploratoryFailed.length > 0
           ? 'External Domain Failures Overlapped with Browser Layer'
           : 'No Upstream Domain Blocking Evidence Observed',
-        confidence: !hasRunTests
+        confidence: !hasRunTests || exploratoryRun.length === 0
           ? CONFIDENCE.UNKNOWN
           : exploratoryFailed.length > 0
           ? CONFIDENCE.WEAK
           : CONFIDENCE.CONFIRMED,
         evidence: [
-          `${exploratoryFailed.length}/${exploratoryRun.length} exploratory third-party ad/tracker domains returned REQUEST_FAILED_CAUSE_UNKNOWN.`,
+          exploratoryRun.length === 0
+            ? `None of the ${exploratoryExternalProbes.length} exploratory third-party domain probes have run yet.`
+            : `${exploratoryFailed.length}/${exploratoryRun.length} exploratory third-party ad/tracker domains returned REQUEST_FAILED_CAUSE_UNKNOWN.`,
           'Technical Constraint: Comparing DOM element visibility or request failure latency against external domains cannot deterministically prove DNS filtering versus browser filtering, firewall policy, CSP, or server outage.'
         ],
         unobservableBoundary:
@@ -3961,7 +3993,7 @@ export default function App() {
                     <span>Fixtures vs Probes</span>
                   </div>
                   <p className={muted}>
-                    Only 26 controlled first-party fixtures enter the core Ad &amp; Tracker Blocking score. Exploratory third-party network probes evaluate live reachability without altering baseline scores.
+                    Only the {scoreSummary.maxScoredTests} controlled first-party fixtures enter the core Ad &amp; Tracker Blocking score. Exploratory third-party network probes evaluate live reachability without altering baseline scores.
                   </p>
                 </div>
               </div>
@@ -4263,11 +4295,11 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
                     <div className={`p-3 rounded-sm border ${subSurface}`}>
                       <div className={`text-[10px] uppercase ${muted}`}>USER AGENT ENGINE</div>
-                      <div className="font-bold truncate mt-0.5">{envDiagnostics?.engine || 'Detecting...'}</div>
+                      <div className="font-bold truncate mt-0.5">{envDiagnostics ? envDiagnostics.engineHint : 'Detecting...'}</div>
                     </div>
                     <div className={`p-3 rounded-sm border ${subSurface}`}>
                       <div className={`text-[10px] uppercase ${muted}`}>PLATFORM</div>
-                      <div className="font-bold truncate mt-0.5">{envDiagnostics?.platform || 'Standard Browser'}</div>
+                      <div className="font-bold truncate mt-0.5">{envDiagnostics?.platformHint || 'Unavailable'}</div>
                     </div>
                     <div className={`p-3 rounded-sm border ${subSurface}`}>
                       <div className={`text-[10px] uppercase ${muted}`}>VIEWPORT</div>
@@ -4294,7 +4326,7 @@ export default function App() {
                       Isolated Monetag Fixture and Delivery-Domain Probe (MTG-01 &amp; MTG-02)
                     </h3>
                     <p className={`text-xs mt-0.5 ${muted}`}>
-                      Per product policy, the rest of {BRAND_NAME} is 100% ad-free. This chamber runs a controlled zone fixture and an exploratory delivery-domain probe; it never mounts a live provider tag.
+                      The {BRAND_NAME} diagnostic scanner never mounts live ad tags; live provider placements appear only in the separate, opt-in Real Ads Stress Lab. This chamber runs a controlled zone fixture and an exploratory delivery-domain probe; it never mounts a live provider tag.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

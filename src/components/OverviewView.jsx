@@ -183,13 +183,13 @@ export default function OverviewView({
                 <div className={`p-2 rounded-xs border ${subSurface}`}>
                   <span className={muted}>Privacy Signal (GPC):</span>
                   <div className="font-bold text-teal-600 dark:text-teal-400">
-                    {envDiagnostics?.globalPrivacyControlReported ? 'Active (true)' : 'Inactive'}
+                    {!envDiagnostics ? 'Detecting...' : envDiagnostics.globalPrivacyControl === 'true' ? 'Active (true)' : envDiagnostics.globalPrivacyControl === 'Unsupported' ? 'Not supported' : 'Inactive'}
                   </div>
                 </div>
                 <div className={`p-2 rounded-xs border ${subSurface}`}>
                   <span className={muted}>Do Not Track (DNT):</span>
                   <div className="font-bold">
-                    {envDiagnostics?.doNotTrackReported ? 'Active (1)' : 'Inactive'}
+                    {!envDiagnostics ? 'Detecting...' : envDiagnostics.doNotTrack === '1' ? 'Active (1)' : 'Inactive'}
                   </div>
                 </div>
               </div>
