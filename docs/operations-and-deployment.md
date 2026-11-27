@@ -49,7 +49,9 @@ After deployment, submit `https://lab.frpboy.in/sitemap.xml` to the verified pro
 
 ## Environment configuration
 
-The production HTML includes an operator-approved asynchronous Google AdSense loader. It is not a benchmark fixture, does not contribute to any score, and must not be used to infer protection status. Any future provider script must receive equivalent explicit approval, remain labelled as third-party/exploratory, and stay outside authoritative score evidence.
+The production HTML loads no ad or analytics scripts. (A site-wide Google AdSense loader was removed on 2026-11-27 because it contradicted the scanner’s no-live-ads boundary and could affect TPA-01.)
+
+`COUNTER_DATABASE_URL` (Vercel, Production and Preview) is the connection string for the `counter_app` role on the Neon project `adblocker-test-lab` (`damp-pine-73503511`, AWS us-east-1). That role can only `SELECT` from `site_counters` and `UPDATE` its `value` and `updated_at` columns. Never commit it; rotate it from the Neon console if it leaks.Any future provider script must receive equivalent explicit approval, remain labelled as third-party/exploratory, and stay outside authoritative score evidence.
 
 The Real Ads Stress Lab reads only `VITE_REAL_ADS_*` configuration supplied by the local or deployment environment. With blank, malformed, non-HTTPS, or absent values, every provider format remains unavailable and no live-ad script is eligible to load. The checked-in `.env.example` lists variable names only; provider tags, zone IDs, publisher identifiers, and Smartlinks must never enter Git. Banner, native, popunder, social-bar, and provider-format script values use JSON descriptors containing a `scriptUrl`; the Smartlink uses its direct HTTPS URL. A future operator must configure values in the host environment, rebuild, then perform the explicit session/browser checks before claiming delivery.
 

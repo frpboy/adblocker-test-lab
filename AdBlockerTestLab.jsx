@@ -40,6 +40,7 @@ import { LEGAL_PAGES } from './src/lab/legal-content.js';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab, pathForTab, tabFromPath, titleForTab } from './src/lab/navigation.js';
 import { saveResults, loadResults, clearResults } from './src/lab/result-store.js';
+import { recordVisitAndLoad, recordTestRun } from './src/lab/site-counter.js';
 import { plainTestName } from './src/lab/plain-language.js';
 import { waitForFrame } from './src/lab/frame-wait.js';
 
@@ -3299,6 +3300,27 @@ export default function App() {
   const [executionState, setExecutionState] = useState(EXECUTION_STATE.IDLE);
   const [lastRun, setLastRun] = useState(() => restored?.lastRun || null);
   const [savedAt, setSavedAt] = useState(() => restored?.savedAt || null);
+
+  // Public running totals (visits, finished runs). Hidden if the counter is unavailable.
+  const [siteTotals, setSiteTotals] = useState(null);
+  useEffect(() => {
+    let active = true;
+    recordVisitAndLoad().then((totals) => {
+      if (active && totals) setSiteTotals(totals);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const countedRun = useRef(restored?.lastRun?.finishedAt || null);
+  useEffect(() => {
+    // Count each finished (not stopped) run once; restored runs from earlier visits are not recounted.
+    if (!lastRun?.finishedAt || lastRun.cancelled || countedRun.current === lastRun.finishedAt) return;
+    countedRun.current = lastRun.finishedAt;
+    recordTestRun().then((totals) => {
+      if (totals) setSiteTotals(totals);
+    });
+  }, [lastRun]);
   const [runProgress, setRunProgress] = useState({
     completed: 0,
     total: 0,
@@ -3801,6 +3823,7 @@ export default function App() {
         subSurface={subSurface}
         muted={muted}
         focusRing={FOCUS_RING}
+        siteTotals={siteTotals}
       />
 
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none max-w-[1440px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-10">
