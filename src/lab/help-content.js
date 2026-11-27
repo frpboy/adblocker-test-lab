@@ -10,8 +10,8 @@ export const HELP_SECTIONS = [
       {
         q: 'What does the score mean?',
         a: [
-          'It shows how many of the 35 scored tests your setup stopped, out of 100. Each test is a small, fake ad or tracker served from this site.',
-          'A blocked test counts fully, a partly blocked one counts half, and one that got through counts zero. Tests that could not be measured are left out, so they never count against you. Categories are weighted; you can see the weights in Settings.'
+          'It shows how many of the 35 scored test probes your setup stopped, out of 100. Each probe is a small, fake ad or tracker served from this site, so the number describes this one setup on this one run, not how well a blocker works on the real web. About 20 of the 35 probes check whether fake ad boxes get hidden, so element hiding drives much of the score.',
+          'A blocked test counts fully, a partly blocked one counts half, and one that got through counts zero. Tests that could not be measured are left out, so they never count against you. Categories are weighted, so the score is not simply blocked tests divided by 35; you can see the weights in Settings.'
         ],
         action: { label: 'See the weights in Settings', target: 'settings' }
       },

@@ -70,7 +70,7 @@ export const GROUP_LABELS = {
 };
 
 export const GROUP_DESCRIPTIONS = {
-  AD_TRACKER_BLOCKING: 'Counts toward the blocking score.',
+  AD_TRACKER_BLOCKING: 'Counts toward the test-probe score.',
   PRIVACY_SIGNAL: 'A browser privacy setting. Reported separately, never added to the score.',
   EXPLORATORY_PROBE: 'Tries to reach a real third-party server. Never added to the score, because a failure can have many causes.'
 };

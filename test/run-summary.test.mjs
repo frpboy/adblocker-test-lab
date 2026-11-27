@@ -56,13 +56,13 @@ test('a partial result is labelled partial everywhere, including the share text'
   assert.equal(s.partial, true);
   assert.equal(
     buildShareText(s, 'https://lab.frpboy.in'),
-    'My ad blocker scored 13/100 on AdBlocker Test Lab (partial result, 4 of 35 scored tests). Test yours: https://lab.frpboy.in'
+    'My browser setup scored 13/100 on the AdBlocker Test Lab test probes (partial result, 4 of 35 scored tests). One setup, one moment. Test yours: https://lab.frpboy.in'
   );
 });
 
 test('no score means no score claim in the share text', () => {
   const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: null, eligibleTotalTests: 0 }), resultsMap: {}, registry, lastRun: null });
-  assert.equal(buildShareText(s), 'Check what your ad blocker really stops: https://lab.frpboy.in');
+  assert.equal(buildShareText(s), 'Try the AdBlocker Test Lab probes in your browser: https://lab.frpboy.in');
 });
 
 test('summary copy never uses em dashes', () => {

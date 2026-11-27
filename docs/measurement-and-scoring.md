@@ -66,3 +66,11 @@ Before adding a test, document all of the following in its registry record:
 Prefer controlled first-party fixtures with independently verifiable request arrival. The current static Vite application has no fixture backend or request-arrival recorder, so relative-path probes alone cannot establish that a valid controlled resource was served. A resolved fetch can still represent an unexpected response, and a failure can still have many causes.
 
 The repository includes a local-only fixture-protocol service for development testing. It can verify a correlated run/test arrival within one local process, but it is not mounted in the Vite app or deployed with a shared durable store. Until that production boundary exists, browser-only network outcomes retain their current non-authoritative limitations.
+
+## Score presentation and single-signal credit (change on branch fix/honest-score-labels-and-popup-credit)
+
+- The headline is labelled "Test-probe score". The 35 scored tests are fake probes served from this site; the number describes one browser setup on one run, not blocker quality on the real web.
+- The results page shows what the score is made of: element hiding (cosmetic and bait tests, 20 of 35), request blocking (same-origin path, script, XHR and pixel probes) and popup behaviour. Each group lists blocked, partial and got-through counts and an unweighted share. The headline stays category-weighted, so it is not blocked divided by 35.
+- Popup test (INT-03): a changed `window.open` alone now returns INCONCLUSIVE and is left out of the score, because browsers, in-app browsers and privacy features also change it. A hidden popunder trigger (control still visible) is BLOCKED, as before.
+- A DNS or network-level blocker cannot hide page elements or match these same-origin paths, so the scored tests do not fairly measure it. A failed external request remains REQUEST_FAILED_CAUSE_UNKNOWN and is never scored as DNS blocking.
+- Still open: pixel and bait tests give PARTIAL from a single hiding or abort signal; there is no fixture backend; only Chromium has smoke evidence.

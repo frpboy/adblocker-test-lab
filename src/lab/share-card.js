@@ -117,13 +117,13 @@ export async function renderShareCard(summary, { url = SITE_URL, label = SITE_LA
   ctx.fillText('AdBlocker Test Lab', 142, 96);
   ctx.fillStyle = C.muted;
   ctx.font = `400 21px ${FONT}`;
-  ctx.fillText('What your ad blocker really stops', 142, 124);
+  ctx.fillText('What these test probes show about your browser', 142, 124);
 
   // Score
   const hasScore = summary.score !== null && summary.score !== undefined;
   ctx.fillStyle = C.muted;
   ctx.font = `500 22px ${FONT}`;
-  ctx.fillText('Ad and tracker blocking score', 72, 200);
+  ctx.fillText('Test-probe score', 72, 200);
   ctx.fillStyle = C.ink;
   if (hasScore) {
     ctx.font = `700 150px ${FONT}`;

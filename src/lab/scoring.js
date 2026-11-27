@@ -1,3 +1,18 @@
+// What each scored test actually observes. Shown next to the score so one number
+// cannot hide that most of it comes from element hiding.
+export const EVIDENCE_GROUPS = [
+  { id: 'element_hiding', label: 'Element hiding', hint: 'Fake ad boxes hidden on the page.', types: ['cosmetic_dom', 'dynamic_cosmetic_dom', 'anti_adblock_bait_check'] },
+  { id: 'request_blocking', label: 'Request blocking', hint: 'Fake ad and tracker requests to this site stopped before a response.', types: ['url_pattern_probe', 'script_tag_probe', 'xhr_pattern_probe', 'pixel_probe'] },
+  { id: 'popup_behaviour', label: 'Popup behaviour', hint: 'A fake popup trigger hidden.', types: ['popup_filter_check'] },
+  { id: 'ad_placement', label: 'Ad placement check', hint: 'A fake ad slot that must not render.', types: ['monetag_isolated_block'] },
+  { id: 'other', label: 'Other scored checks', hint: 'Remaining scored checks.', types: [] }
+];
+
+export function evidenceGroupOf(test) {
+  const found = EVIDENCE_GROUPS.find((g) => g.types.includes(test?.type));
+  return found ? found.id : 'other';
+}
+
 const SCORABLE_STATUSES = new Map([
   ['BLOCKED', 1],
   ['PARTIAL', 0.5],
@@ -65,6 +80,8 @@ export function calculateBenchmarkScore(resultsMap = {}, categoryWeights = [], r
   let scoredUnmeasuredCount = 0;
   const exploratorySummary = { executed: 0, completed: 0, failed: 0, unmeasured: 0 };
 
+  const groupData = new Map(EVIDENCE_GROUPS.map((g) => [g.id, { ...g, scored: 0, eligible: 0, blocked: 0, partial: 0, allowed: 0, credits: 0 }]));
+
   // Single linear pass over the registry
   for (let i = 0; i < registry.length; i++) {
     const test = registry[i];
@@ -106,6 +123,19 @@ export function calculateBenchmarkScore(resultsMap = {}, categoryWeights = [], r
       else exploratorySummary.unmeasured++;
     } else if (isScored && !SCORABLE_STATUSES.has(status)) {
       scoredUnmeasuredCount++;
+    }
+
+    if (isScored) {
+      const g = groupData.get(evidenceGroupOf(test));
+      g.scored++;
+      const credit = SCORABLE_STATUSES.get(status);
+      if (credit !== undefined) {
+        g.eligible++;
+        g.credits += credit;
+        if (status === 'BLOCKED') g.blocked++;
+        else if (status === 'PARTIAL') g.partial++;
+        else g.allowed++;
+      }
     }
 
     if (isScored && status === 'BLOCKED') passedCount++;
@@ -199,6 +229,9 @@ export function calculateBenchmarkScore(resultsMap = {}, categoryWeights = [], r
     totalConfiguredWeightAll: categories.reduce((total, category) => total + category.validatedWeight, 0),
     totalConfiguredWeightOfEligibleCategories: activeWeight,
     categoryBreakdown,
+    evidenceGroups: [...groupData.values()]
+      .filter((g) => g.scored > 0)
+      .map(({ types, ...g }) => ({ ...g, share: g.eligible ? Math.round((g.credits / g.eligible) * 100) : null })),
     privacySignalsSummary
   };
 }
