@@ -1429,14 +1429,31 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
   const controlledPathRun = controlledPathProbes.filter((t) => isConclusive(t.id));
   const controlledPathBlocked = controlledPathProbes.filter((t) => getStatus(t.id) === RESULT_STATUS.BLOCKED);
 
-  const browserLayerEvaluated = cosmeticRun.length + controlledPathRun.length;
-  const browserLayerTotal = cosmeticTests.length + controlledPathProbes.length;
+  // Composite fixtures check a DOM element and a first-party path together (TRK-01, MTG-01).
+  const compositeFixtures = TEST_REGISTRY.filter((t) => t.type === 'pixel_probe' || t.type === 'monetag_isolated_block');
+  const compositeRun = compositeFixtures.filter((t) => isConclusive(t.id));
+  const compositeFiltered = compositeFixtures.filter((t) => {
+    const status = getStatus(t.id);
+    return status === RESULT_STATUS.BLOCKED || status === RESULT_STATUS.PARTIAL;
+  });
 
+  const browserLayerEvaluated = cosmeticRun.length + controlledPathRun.length + compositeRun.length;
+  const browserLayerTotal = cosmeticTests.length + controlledPathProbes.length + compositeFixtures.length;
+  const anyBrowserFiltering = cosmeticBlocked.length > 0 || controlledPathBlocked.length > 0 || compositeFiltered.length > 0;
+
+  // Only outcomes that say something about reachability count; INCONCLUSIVE/ERROR/UNSUPPORTED do not.
+  const USABLE_REACHABILITY = new Set([
+    RESULT_STATUS.ALLOWED,
+    RESULT_STATUS.BLOCKED,
+    RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN,
+    RESULT_STATUS.CONSISTENT_WITH_FILTERING
+  ]);
   const exploratoryExternalProbes = TEST_REGISTRY.filter((t) => t.type === 'external_domain_probe');
-  const exploratoryRun = exploratoryExternalProbes.filter((t) => {
+  const exploratoryAttempted = exploratoryExternalProbes.filter((t) => {
     const status = getStatus(t.id);
     return status && !TERMINAL_EXCLUDED.has(status);
   });
+  const exploratoryRun = exploratoryExternalProbes.filter((t) => USABLE_REACHABILITY.has(getStatus(t.id)));
   const exploratoryFailed = exploratoryExternalProbes.filter(
     (t) =>
       getStatus(t.id) === RESULT_STATUS.REQUEST_FAILED_CAUSE_UNKNOWN ||
@@ -1448,9 +1465,14 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
     privacySignalStatus === RESULT_STATUS.SIGNAL_ACTIVE || privacySignalStatus === RESULT_STATUS.SIGNAL_INACTIVE;
   const gpcActive = privacySignalStatus === RESULT_STATUS.SIGNAL_ACTIVE;
 
-  const annoyanceEvaluated = isConclusive('CNS-01') || isConclusive('AAB-02');
-  const annoyanceHidden =
-    getStatus('CNS-01') === RESULT_STATUS.BLOCKED || getStatus('AAB-02') === RESULT_STATUS.BLOCKED;
+  // Report each annoyance check from its own result; an unrun check never supports a claim.
+  const describeAnnoyance = (id, label) => {
+    const status = getStatus(id);
+    if (!isConclusive(id)) return `${label} (${id}): no conclusive result yet.`;
+    if (status === RESULT_STATUS.BLOCKED) return `${label} (${id}): hidden, consistent with an annoyance filter list.`;
+    if (status === RESULT_STATUS.PARTIAL) return `${label} (${id}): partially hidden.`;
+    return `${label} (${id}): remained visible.`;
+  };
 
   return {
     hasRunTests,
@@ -1466,7 +1488,7 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
           ? 'Not Tested Yet (No Conclusive Browser-Layer Results)'
           : cosmeticBlocked.length >= 3 || controlledPathBlocked.length >= 2
           ? 'Strong Evidence of In-Browser Content Filtering'
-          : cosmeticBlocked.length > 0 || controlledPathBlocked.length > 0
+          : anyBrowserFiltering
           ? 'Partial In-Browser Filtering Observed'
           : browserLayerEvaluated * 2 < browserLayerTotal
           ? `No Filtering Observed in ${browserLayerEvaluated} of ${browserLayerTotal} Tests (Partial Coverage)`
@@ -1481,11 +1503,9 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
         evidence: [
           `${cosmeticBlocked.length}/${cosmeticRun.length} conclusively tested synthetic DOM ad elements were hidden via CSS rules (${cosmeticTests.length} available).`,
           `${controlledPathBlocked.length}/${controlledPathRun.length} conclusively tested relative first-party ad paths were aborted before reaching the origin server (${controlledPathProbes.length} available).`,
-          !annoyanceEvaluated
-            ? 'Cookie notice and anti-adblock modal tests (CNS-01, AAB-02) have not produced a conclusive result yet.'
-            : annoyanceHidden
-            ? 'Cookie notice and anti-adblock modal selectors were hidden (consistent with active Annoyance filter lists).'
-            : 'Cookie notice and anti-adblock modal selectors remained visible.'
+          `${compositeFiltered.length}/${compositeRun.length} conclusively tested combined element-and-path fixtures (TRK-01, MTG-01) were fully or partially filtered (${compositeFixtures.length} available).`,
+          describeAnnoyance('CNS-01', 'Cookie notice'),
+          describeAnnoyance('AAB-02', 'Anti-adblock modal')
         ],
         unobservableBoundary:
           'Standard web pages cannot enumerate installed browser extensions or identify whether uBlock Origin, AdGuard, Brave Shields, or another content blocker applied the rules.'
@@ -1525,9 +1545,11 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
         title: 'DNS-Based & Upstream Network Filtering',
         status: !hasRunTests
           ? 'Awaiting Telemetry'
-          : exploratoryRun.length === 0
+          : exploratoryAttempted.length === 0
           ? 'Not Tested Yet (No Exploratory Domain Probes Run)'
-          : exploratoryFailed.length > 0 && cosmeticBlocked.length === 0 && controlledPathBlocked.length === 0
+          : exploratoryRun.length === 0
+          ? 'Reachability Not Established (Probes Inconclusive)'
+          : exploratoryFailed.length > 0 && !anyBrowserFiltering
           ? 'External Domain Failures Without DOM Hiding (Weak Inference)'
           : exploratoryFailed.length > 0
           ? 'External Domain Failures Overlapped with Browser Layer'
@@ -1538,9 +1560,11 @@ export function analyzeProtectionLayers(resultsMap, userReportedConfig = {}, env
           ? CONFIDENCE.WEAK
           : CONFIDENCE.CONFIRMED,
         evidence: [
-          exploratoryRun.length === 0
+          exploratoryAttempted.length === 0
             ? `None of the ${exploratoryExternalProbes.length} exploratory third-party domain probes have run yet.`
-            : `${exploratoryFailed.length}/${exploratoryRun.length} exploratory third-party ad/tracker domains returned REQUEST_FAILED_CAUSE_UNKNOWN.`,
+            : exploratoryRun.length === 0
+            ? `${exploratoryAttempted.length} exploratory domain probes ran, but none produced a usable reachability result (for example, the device was offline), so no conclusion is drawn.`
+            : `${exploratoryFailed.length}/${exploratoryRun.length} exploratory third-party ad/tracker domains with a usable result returned REQUEST_FAILED_CAUSE_UNKNOWN (${exploratoryAttempted.length - exploratoryRun.length} inconclusive, not counted).`,
           'Technical Constraint: Comparing DOM element visibility or request failure latency against external domains cannot deterministically prove DNS filtering versus browser filtering, firewall policy, CSP, or server outage.'
         ],
         unobservableBoundary:
