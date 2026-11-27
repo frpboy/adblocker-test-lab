@@ -17,12 +17,12 @@ function fakeSql(start = { visits: 5, tests_run: 2 }) {
 
 const SITE = 'https://lab.frpboy.in';
 
-test('GET returns the public totals with a short shared cache', async () => {
+test('GET returns the public totals, never from a cache', async () => {
   const { sql } = fakeSql();
   const r = await handleCounterRequest({ method: 'GET', sql });
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { visits: 5, testsRun: 2 });
-  assert.match(r.headers['Cache-Control'], /s-maxage=30/);
+  assert.equal(r.headers['Cache-Control'], 'no-store', 'a cached total can be lower than one the visitor already saw');
 });
 
 test('POST visit and test each add exactly one', async () => {
