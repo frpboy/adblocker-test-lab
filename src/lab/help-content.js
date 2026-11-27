@@ -91,7 +91,8 @@ export const HELP_SECTIONS = [
       {
         q: 'Does this site show me ads or track me?',
         a: [
-          'The test pages show no ads and load no analytics or tracking scripts. Real ads appear only in the Live ads lab, and only after you press Start there.'
+          'The test pages show no ads and load no analytics or tracking scripts. Real ads appear only in the Live ads lab, and only after you press Start there.',
+          'The site does keep two anonymous totals, visits and tests run, shown next to the version at the top. Opening the site and finishing a test each add one; nothing about you or your results is stored with them.'
         ],
         action: { label: 'Read the Privacy Policy', target: 'privacy' }
       },

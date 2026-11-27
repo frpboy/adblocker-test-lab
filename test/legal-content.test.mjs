@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import {
   OPERATOR,
   CONTACT_EMAIL,
@@ -63,4 +63,13 @@ test('no em dashes, no exclamation marks, and no unsupported compliance claims',
 
 test('legal pages have addresses', () => {
   for (const id of Object.keys(LEGAL_PAGES)) assert.ok(TAB_PATHS[id], id);
+});
+
+test('the Privacy Policy describes the visit and test counters while they exist', () => {
+  const counter = PRIVACY_POLICY.sections.find((sec) => sec.id === 'counter');
+  assert.ok(counter, 'counter section missing');
+  const text = counter.paragraphs.join(' ');
+  assert.match(text, /Neon/);
+  assert.match(text, /does not store your IP address/);
+  assert.ok(existsSync(new URL('../api/counter.js', import.meta.url)), 'policy describes a counter that no longer exists');
 });

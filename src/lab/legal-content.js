@@ -34,6 +34,7 @@ export const PRIVACY_POLICY = {
   title: 'Privacy Policy',
   summary: [
     'This site has no accounts, no analytics, no tracking scripts, and sets no cookies.',
+    'It keeps two anonymous running totals, visits and tests run, shown at the top of every page. They store nothing about who you are.',
     'Your test results stay in your own browser. They are never sent to me or to any server.',
     'Like any website, the hosting provider keeps basic server logs, which include your IP address.',
     'The full test and the optional Live ads lab contact other companies’ servers. This page lists them.'
@@ -60,7 +61,7 @@ export const PRIVACY_POLICY = {
       id: 'cookies',
       heading: 'Cookies, analytics, and tracking',
       paragraphs: [
-        'This site sets no cookies and runs no analytics or tracking scripts. The test pages show no ads.',
+        'This site sets no cookies and runs no analytics or tracking scripts. The test pages show no ads. It does keep two anonymous totals, described under Visit and test counters.',
         'Fonts are served from this site, so loading a page does not contact a font provider. The page contains ownership-verification tags, which services use to confirm that I run the site; these are text only and load nothing.'
       ]
     },
@@ -70,8 +71,19 @@ export const PRIVACY_POLICY = {
       paragraphs: [
         'After a test, your results are saved in your browser’s local storage so they are still there after a reload. They are kept for up to 30 days, never leave your device, and you can remove them at any time with "Clear results" on the Results page.',
         'One privacy test writes a temporary value to local storage and deletes it immediately, to check whether your browser allows storage.',
+        'A small flag in your browser’s session storage (not a cookie) remembers that this visit has already been counted, so reloading does not count it again. Your browser removes it when you close the tab or browser.',
         'Anything you type under Settings, Your setup, stays in the page and is only included in reports you choose to download.'
       ]
+    },
+    {
+      id: 'counter',
+      heading: 'Visit and test counters',
+      paragraphs: [
+        'The numbers next to the version at the top of each page are running totals of visits and of test runs. When you open the site (once per browser session) and each time a test run finishes, your browser sends a single word, "visit" or "test", to this site’s own server, which adds one to the matching total.',
+        'Only the two totals are stored, in a database run by Neon in the United States. The counter does not store your IP address, browser details, cookies, test results, or any identifier, so the totals cannot be linked to you. The request itself passes through Vercel, whose standard request logs are described above.',
+        'The legal basis, where the GDPR applies, is legitimate interest in showing how much the site is used. Because the totals contain no personal data, there is nothing in them to access or erase.'
+      ],
+      links: [{ label: 'Neon privacy policy', href: 'https://neon.com/privacy-policy' }]
     },
     {
       id: 'tests',

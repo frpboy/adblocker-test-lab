@@ -35,7 +35,7 @@ Installed versions are verified from the current lockfile/npm dependency tree; p
 
 ## Hosting assumptions
 
-The current output is static Vite content and can be hosted by Vercel or another static host. `vercel.json` rewrites only the four tab addresses (`/results`, `/live-ads`, `/how-it-works`, `/settings`) to `index.html`; a catch-all rewrite must not be added, because it would answer the diagnostic fixture paths (for example `/ads/...`) with the app page. Another host needs the same four rewrites. A future controlled-fixture architecture requires a separate server/runtime capable of persisting and verifying request arrival across instances. Do not rely on Vite development-server behavior as a production fixture service.
+The current output is static Vite content plus one Vercel function, `api/counter.js` (Neon serverless driver, pinned), which reads `COUNTER_DATABASE_URL`. Without that variable the function answers 503 and the header simply hides the totals; the rest of the site is unaffected. `vercel.json` rewrites only the four tab addresses (`/results`, `/live-ads`, `/how-it-works`, `/settings`) to `index.html`; a catch-all rewrite must not be added, because it would answer the diagnostic fixture paths (for example `/ads/...`) with the app page. Another host needs the same four rewrites. A future controlled-fixture architecture requires a separate server/runtime capable of persisting and verifying request arrival across instances. Do not rely on Vite development-server behavior as a production fixture service.
 
 ## Dependency adoption rules
 

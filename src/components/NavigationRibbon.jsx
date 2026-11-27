@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Pause, Square, Sun, Moon } from 'lucide-react';
 import LogoMark from './LogoMark.jsx';
 import { PRIMARY_NAV_TABS } from '../lab/navigation.js';
+import { formatCount } from '../lab/site-counter.js';
 
 export default function NavigationRibbon({
   brandName,
@@ -22,7 +23,8 @@ export default function NavigationRibbon({
   surface,
   subSurface,
   muted,
-  focusRing
+  focusRing,
+  siteTotals = null
 }) {
   const hasScore = scoreSummary.overallScore !== null;
   const partial = hasScore && scoreSummary.eligibleTotalTests * 2 < scoreSummary.maxScoredTests;
@@ -36,18 +38,35 @@ export default function NavigationRibbon({
         Skip to main content
       </a>
       <header className={`md:sticky md:top-0 z-30 border-b px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 ${surface}`}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-3 min-h-11 text-left cursor-pointer rounded-sm ${focusRing}`}
-          aria-label={`${brandName}, go to overview`}
-        >
+        {/* The brand name is the "go to overview" control; its hit area stretches over the
+            logo and text. The version and site totals are plain text, so screen readers
+            announce them instead of hiding them behind the button's label. */}
+        <div className="relative flex items-center gap-3 min-h-11">
           <LogoMark className="w-9 h-9 shrink-0 text-[#24373f] dark:text-[#edf2ee]" />
-          <span>
-            <span className="block font-bold text-base tracking-[-0.02em] leading-tight">{brandName}</span>
-            <span className={`block text-xs ${muted}`}>Version {appVersion}</span>
-          </span>
-        </button>
+          <div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              aria-label={`${brandName}, go to overview`}
+              className={`block font-bold text-base tracking-[-0.02em] leading-tight text-left cursor-pointer rounded-sm after:absolute after:inset-0 after:content-[''] ${focusRing}`}
+            >
+              {brandName}
+            </button>
+            <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs ${muted}`}>
+              <span>Version {appVersion}</span>
+              {siteTotals && (
+                <span
+                  className="inline-flex items-center gap-1.5 px-1.5 rounded-sm border border-current/25 tabular-nums"
+                  title="Running totals across all visitors. No personal data is stored."
+                >
+                  <span>{formatCount(siteTotals.visits, 'visit', 'visits')}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{formatCount(siteTotals.testsRun, 'test run', 'tests run')}</span>
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
 
         <div className="flex items-center gap-2 flex-wrap text-sm">
           <div

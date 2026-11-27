@@ -177,7 +177,7 @@ export default function RunSummary({
           {restoredFromEarlierVisit && savedAt
             ? `These are your results from ${new Date(savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}, saved on this device. `
             : 'Saved on this device, so they stay after a reload. '}
-          Nothing is sent to a server.
+          Your results are not sent to any server.
         </p>
         <button
           type="button"
