@@ -565,7 +565,7 @@ export const TEST_REGISTRY = [
     metricGroup: METRIC_GROUP.AD_TRACKER_BLOCKING,
     name: 'Popup Scriptlet Wrapper & Popunder Trigger Suppression',
     description: 'P0-2 Fix: Does NOT award credit for a self-imposed iframe sandbox restriction. Separately checks whether window.open is wrapped by a blocker scriptlet and whether a .popunder-ad-trigger anchor is hidden in the DOM.',
-    expectedBehavior: 'Popup trigger element is hidden and/or window.open is shimmed by an active popup-defuser scriptlet while neutral control anchor remains visible.',
+    expectedBehavior: 'Popup trigger element is hidden while the neutral control anchor remains visible. A changed window.open alone is reported as inconclusive, because browsers also change it.',
     controlResource: 'Neutral anchor <a class="adshield-control-link"> + native function baseline',
     testResource: 'DOM <a id="popunder-trigger-03" class="popunder-ad-trigger ad-pop-link adsbox"> + window.open descriptor check',
     recommendedRule: '##.popunder-ad-trigger, .ad-pop-link\n+*##+js(nowoif)',
@@ -1357,7 +1357,7 @@ export function buildProtectionTraceStages({
       state: status,
       detail: `Classified as ${status} in ${durationMs} ms (${
         testItem.audit.scoringEligible
-          ? 'Core Ad/Tracker Blocking Score'
+          ? 'Scored test-probe score'
           : testItem.metricGroup === METRIC_GROUP.PRIVACY_SIGNAL
           ? 'Privacy Signals Index'
           : 'Exploratory / Non-Scored'
@@ -1959,7 +1959,7 @@ export function generateHtmlReport({ scoreSummary, resultsMap, userReported }) {
 <h1>${escapeHtml(BRAND_NAME)} v${escapeHtml(APP_VERSION)}: Diagnostic Benchmark Report</h1>
   <p><strong>${escapeHtml(BRAND_PROMISE)}</strong></p>
   <div class="panel">
-    <h2>Ad &amp; Tracker Blocking Score: ${
+    <h2>Test-probe score: ${
       scoreSummary.overallScore !== null ? `${escapeHtml(scoreSummary.overallScore)} / 100` : 'No Scored Blocking Tests Executed'
     }</h2>
     <p>Core Blocking Coverage: ${escapeHtml(scoreSummary.coveragePercentage)}% (${escapeHtml(scoreSummary.eligibleTotalTests)}/${escapeHtml(scoreSummary.maxScoredTests)} core blocking fixtures)</p>
@@ -2733,14 +2733,25 @@ export async function executeAuditedTest(
         );
       }
 
-      if (linkHidden || hasScriptletWrapper) {
+      if (hasScriptletWrapper && !linkHidden) {
+        // A changed window.open is not evidence that anything was blocked: browsers,
+        // in-app browsers and privacy features also wrap it. Keep it out of the score.
+        return createResult(
+          RESULT_STATUS.INCONCLUSIVE,
+          'window.open is not the native function, but the popunder trigger element stayed visible. This can come from the browser itself, so it is not counted as blocking.',
+          'DOM Popunder Trigger + window.open Inspection',
+          CONFIDENCE.UNKNOWN,
+          { hasScriptletWrapper, linkHidden },
+          0,
+          { controlDetail: `Neutral control link visible (${Math.round(ctrlRect.height)}px).` }
+        );
+      }
+      if (linkHidden) {
         return createResult(
           RESULT_STATUS.BLOCKED,
-          linkHidden && hasScriptletWrapper
+          hasScriptletWrapper
             ? 'Both .popunder-ad-trigger DOM element was collapsed AND window.open shows active scriptlet wrapping.'
-            : linkHidden
-            ? 'Cosmetic filter hid the #popunder-trigger-03 (.popunder-ad-trigger) element while neutral control anchor remained visible.'
-            : 'window.open exhibits popup-defuser scriptlet wrapping.',
+            : 'Cosmetic filter hid the #popunder-trigger-03 (.popunder-ad-trigger) element while neutral control anchor remained visible.',
           'DOM Popunder Trigger + window.open Inspection',
           CONFIDENCE.CONFIRMED,
           { hasScriptletWrapper, linkHidden },

@@ -37,7 +37,7 @@ export default function OverviewView({
         <div className="space-y-7">
           <div>
             <h1 id="overview-title" className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-[-0.04em] leading-[1.04] max-w-3xl">
-              See what your ad blocker really stops.
+              See how your browser handles test ads and trackers.
             </h1>
             <p className={`mt-5 max-w-2xl text-base sm:text-lg leading-relaxed ${muted}`}>
               This page loads test ads, trackers, and pop-ups, then checks which ones reached your browser.

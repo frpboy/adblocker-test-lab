@@ -30,21 +30,21 @@ export function scoreVerdict(scoreSummary) {
   if (overallScore >= 85) {
     return {
       tone: 'strong',
-      title: 'Most ads and trackers were stopped',
-      body: `${passedCount} of ${eligibleTotalTests} scored tests were blocked outright.`
+      title: 'Most test probes were blocked',
+      body: `${passedCount} of ${eligibleTotalTests} scored test probes were blocked outright.`
     };
   }
   if (overallScore >= 50) {
     return {
       tone: 'mixed',
-      title: 'Some ads and trackers got through',
-      body: `${failedCount} of ${eligibleTotalTests} scored tests reached your browser.`
+      title: 'Some test probes were not blocked',
+      body: `${failedCount} of ${eligibleTotalTests} scored test probes were not blocked.`
     };
   }
   return {
     tone: 'weak',
-    title: 'Most ads and trackers got through',
-    body: 'Check that your ad blocker is on for this site and that element hiding is turned on, then run the test again. The steps below say what was missed.'
+    title: "Most test probes weren't blocked",
+    body: 'The scored tests use made-up ad-like paths and page elements on this site (no real ads are loaded), so the score describes how this browser setup handled them, not how well it blocks ads on the web. If you use a blocker, check that it is on for this site and that element hiding is on, then run the test again. DNS or network-level blockers are not measured by the scored tests.'
   };
 }
 
@@ -101,7 +101,7 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
   }
   if (scored.length) {
     simple.push(
-      `Of the ad and tracker tests: ${blocked.length} blocked, ${partly.length} partly blocked, ${allowed.length} got through.`
+      `Of the scored test probes: ${blocked.length} blocked, ${partly.length} partly blocked, ${allowed.length} got through.`
     );
   }
   if (scoredUnmeasured.length) {
@@ -167,10 +167,10 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
 // Text that travels with the shared image (and is the whole message where images cannot be shared).
 export function buildShareText(summary, url = SITE_URL) {
   if (summary.score === null || summary.score === undefined) {
-    return `Check what your ad blocker really stops: ${url}`;
+    return `Try the AdBlocker Test Lab probes in your browser: ${url}`;
   }
   const coverage = summary.partial
     ? ` (partial result, ${summary.eligible} of ${summary.maxScored} scored tests)`
     : ` (${summary.eligible} of ${summary.maxScored} scored tests)`;
-  return `My ad blocker scored ${summary.score}/100 on AdBlocker Test Lab${coverage}. Test yours: ${url}`;
+  return `My browser setup scored ${summary.score}/100 on the AdBlocker Test Lab test probes${coverage}. One setup, one moment. Test yours: ${url}`;
 }

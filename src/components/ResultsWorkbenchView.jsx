@@ -225,7 +225,7 @@ export default function ResultsWorkbenchView({
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]" aria-labelledby="score-title">
         <div className={`p-5 sm:p-7 rounded-sm border ${surface}`}>
           <h1 id="score-title" className={`text-sm font-semibold ${muted}`}>
-            Ad and tracker blocking score
+            Test-probe score
           </h1>
           <p className="mt-2 text-sm">
             {hasScore
@@ -246,7 +246,7 @@ export default function ResultsWorkbenchView({
             // Score bar (DESIGN.md: the score gets real presence). Ink fill, orange end mark.
             <div
               role="meter"
-              aria-label="Blocking score"
+              aria-label="Test-probe score"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={scoreSummary.overallScore}
@@ -271,9 +271,28 @@ export default function ResultsWorkbenchView({
               <li><span aria-hidden="true">{'◐'} </span><strong className="font-semibold">{scoreSummary.partialCount}</strong> partial</li>
               <li><span aria-hidden="true">{'✕'} </span><strong className="font-semibold">{scoreSummary.failedCount}</strong> got through</li>
               <li className={muted}>
-                <span aria-hidden="true">? </span><strong className="font-semibold">{scoreSummary.scoredUnmeasuredCount}</strong> could not be measured
+                <span aria-hidden="true">? </span><strong className="font-semibold">{scoreSummary.scoredUnmeasuredCount}</strong> scored {scoreSummary.scoredUnmeasuredCount === 1 ? 'test' : 'tests'} could not be measured
               </li>
             </ul>
+          )}
+          {hasScore && Array.isArray(scoreSummary.evidenceGroups) && scoreSummary.evidenceGroups.length > 0 && (
+            <div className="mt-6" data-testid="evidence-groups">
+              <h3 className={`text-sm font-semibold ${muted}`}>What the score is made of</h3>
+              <ul className="mt-2 space-y-2 text-sm">
+                {scoreSummary.evidenceGroups.map((g) => (
+                  <li key={g.id} className="flex flex-wrap items-baseline justify-between gap-x-4">
+                    <span><strong className="font-semibold">{g.label}</strong> <span className={muted}>({g.scored} {g.scored === 1 ? 'test' : 'tests'})</span></span>
+                    <span className="tabular-nums">
+                      {g.blocked} blocked, {g.partial} partial, {g.allowed} got through{g.unmeasured > 0 ? `, ${g.unmeasured} not measured` : ''}
+                      {g.share !== null ? <span className={muted}>{` · ${g.share}%`}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className={`mt-3 text-xs leading-relaxed max-w-prose ${muted}`}>
+                The headline number is a weighted average of {scoreSummary.categoryBreakdown.filter((c) => c.eligibleCount > 0).length} categories (weights in Settings), so it is not simply blocked tests divided by all tests. The probes are made-up ad-like paths and page elements on this site; no real ads are loaded. A "partial" means one of two signals was seen (for example an element hidden but its request not stopped). A DNS or network-level blocker cannot hide page elements or match these paths, so it is not fairly measured here.
+              </p>
+            </div>
           )}
         </div>
 
@@ -283,7 +302,7 @@ export default function ResultsWorkbenchView({
             {privacy.executedSignals ? `${privacy.activeCount} of ${privacy.totalSignals} on` : 'Not checked yet'}
           </p>
           <p className={`mt-3 text-sm leading-relaxed ${muted}`}>
-            Signals like Global Privacy Control and fingerprinting guards. They are reported here and never added to the blocking score.
+            Signals like Global Privacy Control and fingerprinting guards. They are reported here and never added to the test-probe score.
           </p>
           <button
             type="button"

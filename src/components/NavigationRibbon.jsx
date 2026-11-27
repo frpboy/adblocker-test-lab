@@ -71,7 +71,7 @@ export default function NavigationRibbon({
         <div className="flex items-center gap-2 flex-wrap text-sm">
           <div
             className={`px-3 min-h-10 rounded-sm border flex items-center gap-2 tabular-nums ${subSurface}`}
-            title={`Ad and tracker blocking score, from up to ${scoreSummary.maxScoredTests} scored tests.`}
+            title={`Test-probe score, from up to ${scoreSummary.maxScoredTests} scored test probes.`}
           >
             <span className={muted}>Score</span>
             {hasScore ? (

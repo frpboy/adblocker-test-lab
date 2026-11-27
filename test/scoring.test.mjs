@@ -49,3 +49,35 @@ test('outcome counts cover scored tests only, with extra checks summarised separ
   assert.deepEqual(s.exploratorySummary, { executed: 3, completed: 1, failed: 1, unmeasured: 1 });
   assert.equal(s.causeUnknownCount, 1);
 });
+
+test('splits the scored tests by what they observe and counts only measured ones', () => {
+  const reg = [
+    { id: 'H1', type: 'cosmetic_dom', metricGroup: 'AD_TRACKER_BLOCKING', scoringCategory: 'core', audit: { scoringEligible: true } },
+    { id: 'H2', type: 'anti_adblock_bait_check', metricGroup: 'AD_TRACKER_BLOCKING', scoringCategory: 'core', audit: { scoringEligible: true } },
+    { id: 'R1', type: 'url_pattern_probe', metricGroup: 'AD_TRACKER_BLOCKING', scoringCategory: 'core', audit: { scoringEligible: true } },
+    { id: 'R2', type: 'xhr_pattern_probe', metricGroup: 'AD_TRACKER_BLOCKING', scoringCategory: 'core', audit: { scoringEligible: true } },
+    { id: 'P1', type: 'popup_filter_check', metricGroup: 'AD_TRACKER_BLOCKING', scoringCategory: 'core', audit: { scoringEligible: true } },
+    { id: 'X1', type: 'external_domain_probe', metricGroup: 'EXPLORATORY_PROBE', scoringCategory: 'core', audit: { scoringEligible: false } }
+  ];
+  const s = calculateBenchmarkScore(
+    {
+      H1: { status: 'BLOCKED' },
+      H2: { status: 'PARTIAL' },
+      R1: { status: 'ALLOWED' },
+      R2: { status: 'INCONCLUSIVE' },
+      P1: { status: 'INCONCLUSIVE' },
+      X1: { status: 'BLOCKED' }
+    },
+    [{ id: 'core', defaultWeight: 100 }],
+    reg
+  );
+  const byId = Object.fromEntries(s.evidenceGroups.map((g) => [g.id, g]));
+  assert.deepEqual([byId.element_hiding.blocked, byId.element_hiding.partial, byId.element_hiding.share], [1, 1, 75]);
+  assert.deepEqual([byId.request_blocking.allowed, byId.request_blocking.eligible, byId.request_blocking.share], [1, 1, 0]);
+  assert.equal(byId.popup_behaviour.eligible, 0);
+  assert.equal(byId.popup_behaviour.unmeasured, 1, 'an unmeasured scored test is reported on its group');
+  assert.equal(byId.request_blocking.unmeasured, 1);
+  assert.equal(byId.element_hiding.unmeasured, 0);
+  assert.equal(byId.popup_behaviour.share, null, 'an unmeasured group has no percentage');
+  assert.equal(byId.other, undefined, 'exploratory probes never appear in the scored groups');
+});
