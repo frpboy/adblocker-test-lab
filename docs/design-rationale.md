@@ -53,6 +53,14 @@ Reading this as: an evidence-focused browser diagnostic for everyone, plain firs
 | Score bar on Results, larger score and verdict | DESIGN.md asks for real presence for the score and verdict. Ink fill (9:1 or better against its track), orange end mark as the brand motif, exposed as a `meter` to assistive technology. |
 | Counts carry the same shapes as the share card | One visual language for outcomes across the screen and the card. |
 
+## Legal pages and self-hosted fonts (2026-11-27)
+
+| Decision | Reason |
+| --- | --- |
+| Privacy Policy at `/privacy` and Terms of Use at `/terms` (`src/components/LegalView.jsx`, `src/lab/legal-content.js`) | Owner-supplied operator name, contact, and governing law (India). Written in the DESIGN.md voice: an "In short" summary first, then a contents list and numbered sections. Every data flow stated was checked against the code; a test keeps the external-server list equal to the registry. |
+| Single-row footer (`src/components/SiteFooter.jsx`) | Help, Privacy Policy, Terms of Use, and the Apache-2.0 source link are real destinations; no template columns. |
+| Fonts bundled from `@fontsource` | Removes a request to Google on every page load and keeps the Privacy Policy simpler. DM Mono is now actually used for `font-mono`, as DESIGN.md intended. |
+
 ## Invariants
 
 This redesign does not change the test registry, executor, score eligibility, result-state meanings, reports, provider boundary, or the distinction between direct observation and inference.

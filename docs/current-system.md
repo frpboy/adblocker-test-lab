@@ -81,6 +81,8 @@ The application can create a summary, JSON report, and standalone HTML report in
 
 User-reported extension, VPN, and notes data are deliberately distinguished from automated observations. The current repository contains no server, database, analytics pipeline, or persistent backend. Finished results are kept only in the visitor's own browser storage (up to 30 days) so they survive a reload; the Results page says so and offers "Clear results". Nothing leaves the device unless the user exports or shares it. This is local convenience storage, not telemetry: the site never reads it back to a server.
 
+The Privacy Policy (`/privacy`) and Terms of Use (`/terms`) are rendered from `src/lab/legal-content.js`, linked from the site footer, and must be updated whenever the data flows above change. Fonts (DM Sans, DM Mono) are bundled from `@fontsource` packages, so page loads make no request to Google Fonts.
+
 ## Local fixture protocol
 
 `scripts/fixture-service.mjs` provides a development-only HTTP fixture service. It creates opaque run IDs, records a fixture arrival against an exact run/test pair in a local JSON receipt file, and exposes a verification response for that pair. Its test proves correlation in one local process. It is not configured for Vercel or production and its file receipt store is not a shared durable store; do not treat it as multi-instance or deployed fixture evidence.

@@ -5,6 +5,8 @@
     { "source": "/live-ads", "destination": "/index.html" },
     { "source": "/how-it-works", "destination": "/index.html" },
     { "source": "/settings", "destination": "/index.html" },
-    { "source": "/help", "destination": "/index.html" }
+    { "source": "/help", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" }
   ]
 }

@@ -23,7 +23,10 @@ export const TAB_PATHS = {
   'real-ads': '/live-ads',
   methodology: '/how-it-works',
   settings: '/settings',
-  help: '/help'
+  help: '/help',
+  // Footer pages: they have addresses but are not in the primary navigation.
+  privacy: '/privacy',
+  terms: '/terms'
 };
 
 const PAGE_TITLES = {
@@ -32,7 +35,9 @@ const PAGE_TITLES = {
   'real-ads': 'Live ads lab | AdBlocker Test Lab',
   methodology: "How it's measured | AdBlocker Test Lab",
   settings: 'Settings | AdBlocker Test Lab',
-  help: 'Help | AdBlocker Test Lab'
+  help: 'Help | AdBlocker Test Lab',
+  privacy: 'Privacy Policy | AdBlocker Test Lab',
+  terms: 'Terms of Use | AdBlocker Test Lab'
 };
 
 export function pathForTab(tab) {

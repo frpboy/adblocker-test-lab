@@ -34,6 +34,9 @@ import RealAdsStressLab from './src/lab/real-ads/RealAdsStressLab.jsx';
 import NavigationRibbon from './src/components/NavigationRibbon.jsx';
 import OverviewView from './src/components/OverviewView.jsx';
 import HelpView from './src/components/HelpView.jsx';
+import LegalView from './src/components/LegalView.jsx';
+import SiteFooter from './src/components/SiteFooter.jsx';
+import { LEGAL_PAGES } from './src/lab/legal-content.js';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab, pathForTab, tabFromPath, titleForTab } from './src/lab/navigation.js';
 import { saveResults, loadResults, clearResults } from './src/lab/result-store.js';
@@ -4022,6 +4025,20 @@ export default function App() {
           />
         )}
 
+        {LEGAL_PAGES[normalizedTab] && (
+          <LegalView
+            page={LEGAL_PAGES[normalizedTab]}
+            onOpenPage={(target) => {
+              setActiveTab(target);
+              window.scrollTo({ top: 0 });
+            }}
+            surface={surface}
+            subSurface={subSurface}
+            muted={muted}
+            focusRing={FOCUS_RING}
+          />
+        )}
+
         {normalizedTab === 'settings' && (
           <div className="space-y-6">
             {/* Settings Sub-Tab Navigation Header */}
@@ -4389,6 +4406,16 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <SiteFooter
+        onOpenPage={(target) => {
+          setActiveTab(target);
+          window.scrollTo({ top: 0 });
+        }}
+        subSurface={subSurface}
+        muted={muted}
+        focusRing={FOCUS_RING}
+      />
 
       {/* Authoritative Isolated DOM Fixture Sandbox Stage:
           Strictly isolated off-screen to prevent test scripts, bait elements, and generated nodes
