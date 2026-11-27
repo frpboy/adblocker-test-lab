@@ -44,7 +44,7 @@ export function scoreVerdict(scoreSummary) {
   return {
     tone: 'weak',
     title: 'Most ads and trackers got through',
-    body: 'If you expected an ad blocker to be active, check that it is turned on for this site, then run the test again.'
+    body: 'Check that your ad blocker is on for this site and that element hiding is turned on, then run the test again. The steps below say what was missed.'
   };
 }
 
@@ -78,6 +78,15 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
     .map(item);
   const extraReached = extra.filter((t) => statusOf(t) === 'ALLOWED').map(item);
 
+  const scoredIds = new Set(scored.map((t) => t.id));
+  const scoredUnmeasured = unmeasured.filter((t) => scoredIds.has(t.id));
+  const otherUnmeasured = unmeasured.length - scoredUnmeasured.length;
+
+  // Did the blocker do anything at all, and how well did it hide ad elements?
+  const blockerActive = blocked.length + partly.length + extraFailed.length > 0;
+  const cosmetic = (scoreSummary.categoryBreakdown || []).find((c) => c.id === 'cosmetic_filtering');
+  const cosmeticWeak = Boolean(cosmetic && cosmetic.eligibleCount >= 3 && cosmetic.rawScore !== null && cosmetic.rawScore < 50);
+
   const verdict = scoreVerdict(scoreSummary);
   const partial = verdict.tone === 'partial';
   const total = registry.length;
@@ -95,14 +104,26 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
       `Of the ad and tracker tests: ${blocked.length} blocked, ${partly.length} partly blocked, ${allowed.length} got through.`
     );
   }
-  if (unmeasured.length) {
-    simple.push(`${plural(unmeasured.length, 'test')} could not be measured, so ${unmeasured.length === 1 ? 'it is' : 'they are'} left out of the score.`);
+  if (scoredUnmeasured.length) {
+    simple.push(
+      `${plural(scoredUnmeasured.length, 'scored test')} could not be measured, so ${scoredUnmeasured.length === 1 ? 'it is' : 'they are'} left out of the score.`
+    );
+  }
+  if (otherUnmeasured) {
+    simple.push(`${plural(otherUnmeasured, 'privacy or extra check')} could not be measured. These never count toward the score.`);
   }
   if (privacy.length) {
     simple.push(`Privacy settings: ${privacyOn.length} of ${privacy.length} checked ${privacyOn.length === 1 ? 'is' : 'are'} on.`);
   }
 
   const nextSteps = [];
+  if (scored.length && !blockerActive) {
+    nextSteps.push('Nothing was blocked. If you expected an ad blocker to be active, check that it is installed, switched on, and not paused for this site.');
+  } else if (blockerActive && cosmeticWeak) {
+    nextSteps.push(
+      `Your blocker is active (it stopped some requests) but hid only ${cosmetic.catBlocked} of ${cosmetic.eligibleCount} ad elements on the page. Turn on element hiding, sometimes called cosmetic filtering. Some blockers only hide common ad elements in their strongest mode; in uBlock Origin Lite that mode is called "Complete".`
+    );
+  }
   if (partial || scope !== 'full') nextSteps.push('Run the full test for a score you can rely on.');
   if (allowed.length) nextSteps.push('Look at the "Got through" list to see which kinds of ads your setup misses.');
   if (unmeasured.length) nextSteps.push('Open "Could not be measured" in the detailed view for the reason behind each one. Some checks need a browser feature or a server this site does not run, so they stay unmeasured.');
@@ -125,6 +146,9 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
     partly,
     allowed,
     unmeasured,
+    scoredUnmeasured,
+    otherUnmeasured,
+    blockerActive,
     privacyOn,
     privacyOff,
     extraFailed,

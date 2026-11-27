@@ -62,6 +62,8 @@ export function calculateBenchmarkScore(resultsMap = {}, categoryWeights = [], r
   let unsupportedCount = 0;
   let errorCount = 0;
   let cancelledCount = 0;
+  let scoredUnmeasuredCount = 0;
+  const exploratorySummary = { executed: 0, completed: 0, failed: 0, unmeasured: 0 };
 
   // Single linear pass over the registry
   for (let i = 0; i < registry.length; i++) {
@@ -94,12 +96,24 @@ export function calculateBenchmarkScore(resultsMap = {}, categoryWeights = [], r
       continue;
     }
 
-    if (status === 'BLOCKED') passedCount++;
-    else if (status === 'PARTIAL') partialCount++;
-    else if (status === 'ALLOWED') failedCount++;
+    // Outcome counts describe the scored tests only, so they always add up with the score.
+    // Extra checks (exploratory probes) are summarised separately below.
+    const isScored = isCore && test.audit?.scoringEligible;
+    if (!isCore) {
+      exploratorySummary.executed++;
+      if (status === 'ALLOWED') exploratorySummary.completed++;
+      else if (status === 'BLOCKED' || status === 'REQUEST_FAILED_CAUSE_UNKNOWN' || status === 'CONSISTENT_WITH_FILTERING') exploratorySummary.failed++;
+      else exploratorySummary.unmeasured++;
+    } else if (isScored && !SCORABLE_STATUSES.has(status)) {
+      scoredUnmeasuredCount++;
+    }
+
+    if (isScored && status === 'BLOCKED') passedCount++;
+    else if (isScored && status === 'PARTIAL') partialCount++;
+    else if (isScored && status === 'ALLOWED') failedCount++;
+    else if (isScored && status === 'INCONCLUSIVE') inconclusiveCount++;
     else if (status === 'CONSISTENT_WITH_FILTERING') consistentWithFilteringCount++;
     else if (status === 'REQUEST_FAILED_CAUSE_UNKNOWN') causeUnknownCount++;
-    else if (status === 'INCONCLUSIVE') inconclusiveCount++;
     else if (status === 'UNSUPPORTED') unsupportedCount++;
     else if (status === 'ERROR') errorCount++;
     else if (status === 'CANCELLED') cancelledCount++;
@@ -177,6 +191,8 @@ export function calculateBenchmarkScore(resultsMap = {}, categoryWeights = [], r
     unsupportedCount,
     errorCount,
     cancelledCount,
+    scoredUnmeasuredCount,
+    exploratorySummary,
     coveragePercentage,
     overallConfidence: !eligibleTotalTests ? 'No Live Data' : coveragePercentage >= 80 && inconclusiveCount <= 4 ? 'High (Controlled Fixtures)' : coveragePercentage >= 45 ? 'Moderate' : 'Low (Partial Coverage)',
     weightsWereRenormalized: activeWeight > 0 && Math.abs(activeWeight - 100) > 0.01,

@@ -2516,7 +2516,7 @@ export async function executeAuditedTest(
 
       return createResult(
         RESULT_STATUS.ALLOWED,
-        `Exploratory probe to ${testItem.targetUrl} resolved with an opaque response in ${probeLatency}ms.`,
+        `Request to ${testItem.targetUrl} completed with an opaque response in ${probeLatency}ms. This does not prove the server was reached: a content blocker can answer it with a local stand-in (surrogate), which looks the same to the page.`,
         'Exploratory no-cors Subresource Probe',
         CONFIDENCE.CONFIRMED,
         { targetUrl: testItem.targetUrl, probeLatencyMs: probeLatency }
