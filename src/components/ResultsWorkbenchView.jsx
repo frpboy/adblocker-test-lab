@@ -448,14 +448,14 @@ export default function ResultsWorkbenchView({
               >
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold truncate max-w-[150px]">{cat.name}</span>
-                  <span className="font-mono text-[10px] opacity-75">{cat.configWeight}% weight</span>
+                  <span className="font-mono text-[10px] opacity-75">{cat.configuredWeight}% weight</span>
                 </div>
                 <div className="flex items-end justify-between font-mono">
                   <span className="text-xl font-bold">
                     {cat.rawScore !== null ? `${cat.rawScore}%` : 'STANDBY'}
                   </span>
                   <span className={`text-[10px] ${muted}`}>
-                    {cat.blocked}/{cat.eligibleCount} blocked
+                    {cat.catBlocked}/{cat.eligibleCount} blocked
                   </span>
                 </div>
                 {/* Mini progress bar */}

@@ -226,7 +226,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
         </h3>
         <p className={`mt-1 text-xs leading-relaxed max-w-3xl ${muted}`}>
           Delivers live third-party placements in dedicated, isolated containers to observe actual ad network delivery, script loading, and creative rendering.
-          All live-ad observations are strictly exploratory and <strong>never affect the 55-vector authoritative compliance score</strong>.
+          All live-ad observations are strictly exploratory and <strong>never affect the core ad &amp; tracker blocking score</strong>.
         </p>
       </div>
 
@@ -259,9 +259,18 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
             disabled={sessionActive}
             className={`mt-1 w-full p-2 border rounded-sm ${subSurface} ${focusRing} disabled:opacity-50`}
           >
-            <option value="adsterra">Adsterra (Configured)</option>
-            <option value="monetag">Monetag (Unconfigured)</option>
-            <option value="exoclick">ExoClick (Unconfigured)</option>
+            {[
+              ['adsterra', 'Adsterra'],
+              ['monetag', 'Monetag'],
+              ['exoclick', 'ExoClick']
+            ].map(([id, name]) => {
+              const count = available.filter((format) => format.provider === id).length;
+              return (
+                <option key={id} value={id}>
+                  {name} ({count ? `${count} format${count === 1 ? '' : 's'} configured` : 'Not configured'})
+                </option>
+              );
+            })}
             <option value="all">All compatible providers</option>
           </select>
         </label>
