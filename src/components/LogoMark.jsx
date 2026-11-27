@@ -21,8 +21,8 @@ export default function LogoMark({ className = 'w-9 h-9' }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <rect x="26.6" y="31.2" width="10.8" height="8.2" rx="1.4" fill="none" stroke="#c65322" strokeWidth="2.6" />
-      <path d="m29.9 33.4 4.2 3.8m0-3.8-4.2 3.8" stroke="#c65322" strokeWidth="2.4" strokeLinecap="round" />
+      <rect x="26.5" y="31.4" width="11" height="8" rx="1.2" fill="none" stroke="#c65322" strokeWidth="1.9" />
+      <path d="m30.2 33.6 3.6 3.6m0-3.6-3.6 3.6" stroke="#c65322" strokeWidth="1.9" strokeLinecap="round" />
     </svg>
   );
 }
