@@ -236,7 +236,7 @@ export default function RealAdsStressLab({ surface, subSurface, muted, focusRing
         </h1>
         <p className={`mt-2 text-sm leading-relaxed max-w-3xl ${muted}`}>
           Loads real ads from ad networks into separate boxes on this page, so you can see what your blocker does with live ads.
-          Nothing loads until you press Start, and these results <strong className="text-current">never affect your blocking score</strong>.
+          Nothing loads until you press Start, and these results <strong className="text-current">never affect your test-probe score</strong>.
         </p>
       </div>
 

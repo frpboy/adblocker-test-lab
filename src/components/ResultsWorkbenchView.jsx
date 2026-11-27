@@ -246,7 +246,7 @@ export default function ResultsWorkbenchView({
             // Score bar (DESIGN.md: the score gets real presence). Ink fill, orange end mark.
             <div
               role="meter"
-              aria-label="Blocking score"
+              aria-label="Test-probe score"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={scoreSummary.overallScore}
@@ -283,7 +283,7 @@ export default function ResultsWorkbenchView({
                   <li key={g.id} className="flex flex-wrap items-baseline justify-between gap-x-4">
                     <span><strong className="font-semibold">{g.label}</strong> <span className={muted}>({g.scored} {g.scored === 1 ? 'test' : 'tests'})</span></span>
                     <span className="tabular-nums">
-                      {g.blocked} blocked, {g.partial} partial, {g.allowed} got through
+                      {g.blocked} blocked, {g.partial} partial, {g.allowed} got through{g.unmeasured > 0 ? `, ${g.unmeasured} not measured` : ''}
                       {g.share !== null ? <span className={muted}>{` · ${g.share}%`}</span> : null}
                     </span>
                   </li>

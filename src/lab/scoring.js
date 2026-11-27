@@ -231,7 +231,7 @@ export function calculateBenchmarkScore(resultsMap = {}, categoryWeights = [], r
     categoryBreakdown,
     evidenceGroups: [...groupData.values()]
       .filter((g) => g.scored > 0)
-      .map(({ types, ...g }) => ({ ...g, share: g.eligible ? Math.round((g.credits / g.eligible) * 100) : null })),
+      .map(({ types, ...g }) => ({ ...g, unmeasured: g.scored - g.eligible, share: g.eligible ? Math.round((g.credits / g.eligible) * 100) : null })),
     privacySignalsSummary
   };
 }

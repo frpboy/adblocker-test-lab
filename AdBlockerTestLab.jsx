@@ -1357,7 +1357,7 @@ export function buildProtectionTraceStages({
       state: status,
       detail: `Classified as ${status} in ${durationMs} ms (${
         testItem.audit.scoringEligible
-          ? 'Core Ad/Tracker Blocking Score'
+          ? 'Scored test-probe score'
           : testItem.metricGroup === METRIC_GROUP.PRIVACY_SIGNAL
           ? 'Privacy Signals Index'
           : 'Exploratory / Non-Scored'
@@ -1959,7 +1959,7 @@ export function generateHtmlReport({ scoreSummary, resultsMap, userReported }) {
 <h1>${escapeHtml(BRAND_NAME)} v${escapeHtml(APP_VERSION)}: Diagnostic Benchmark Report</h1>
   <p><strong>${escapeHtml(BRAND_PROMISE)}</strong></p>
   <div class="panel">
-    <h2>Ad &amp; Tracker Blocking Score: ${
+    <h2>Test-probe score: ${
       scoreSummary.overallScore !== null ? `${escapeHtml(scoreSummary.overallScore)} / 100` : 'No Scored Blocking Tests Executed'
     }</h2>
     <p>Core Blocking Coverage: ${escapeHtml(scoreSummary.coveragePercentage)}% (${escapeHtml(scoreSummary.eligibleTotalTests)}/${escapeHtml(scoreSummary.maxScoredTests)} core blocking fixtures)</p>

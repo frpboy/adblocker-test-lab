@@ -75,6 +75,9 @@ test('splits the scored tests by what they observe and counts only measured ones
   assert.deepEqual([byId.element_hiding.blocked, byId.element_hiding.partial, byId.element_hiding.share], [1, 1, 75]);
   assert.deepEqual([byId.request_blocking.allowed, byId.request_blocking.eligible, byId.request_blocking.share], [1, 1, 0]);
   assert.equal(byId.popup_behaviour.eligible, 0);
+  assert.equal(byId.popup_behaviour.unmeasured, 1, 'an unmeasured scored test is reported on its group');
+  assert.equal(byId.request_blocking.unmeasured, 1);
+  assert.equal(byId.element_hiding.unmeasured, 0);
   assert.equal(byId.popup_behaviour.share, null, 'an unmeasured group has no percentage');
   assert.equal(byId.other, undefined, 'exploratory probes never appear in the scored groups');
 });
