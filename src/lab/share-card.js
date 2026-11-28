@@ -160,7 +160,7 @@ export async function renderShareCard(summary, { url = SITE_URL, label = SITE_LA
   ctx.fillStyle = C.muted;
   ctx.font = `400 23px ${FONT}`;
   if (hasScore) {
-    ctx.fillText(`Based on ${summary.eligible} of ${summary.maxScored} scored tests`, 72, y + 4);
+    ctx.fillText(`Based on ${summary.eligible} of ${summary.maxScored} scored same-site tests`, 72, y + 4);
   }
 
   // Counts, each with a shape so meaning does not rely on colour

@@ -29,3 +29,13 @@ test('mitigates CSV formula injection (CWE-1236) by neutralizing formula trigger
   assert.equal(formatCsvField(null), `""`);
   assert.equal(formatCsvField(undefined), `""`);
 });
+
+test('the report states that scored fixtures are same-site probes', async () => {
+  const { generateHtmlReport } = await import('../src/lab/reporting.js');
+  const html = generateHtmlReport({
+    brandName: 'Lab', appVersion: '1', brandPromise: 'x', registry: [],
+    scoreSummary: { overallScore: 0, coveragePercentage: 100, eligibleTotalTests: 35, maxScoredTests: 35, privacySignalsSummary: { activeCount: 0, totalSignals: 0 } },
+    resultsMap: {}, userReported: {}
+  });
+  assert.match(html, /scored fixtures are same-site probes/);
+});

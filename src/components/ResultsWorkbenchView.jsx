@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, Download, Copy, Check, RotateCcw, X } from 'lucide-react';
 import RunSummary from './RunSummary.jsx';
+import ComparePanel from './ComparePanel.jsx';
 import { scoreVerdict } from '../lab/run-summary.js';
 import {
   plainTestName,
@@ -323,6 +324,19 @@ export default function ResultsWorkbenchView({
           savedAt={savedAt}
           restoredFromEarlierVisit={restoredFromEarlierVisit}
           onClearResults={onClearResults}
+          notify={notify}
+          surface={surface}
+          subSurface={subSurface}
+          muted={muted}
+          focusRing={focusRing}
+        />
+      )}
+
+      {!isActiveRun && (
+        <ComparePanel
+          resultsMap={resultsMap}
+          registry={testRegistry}
+          lastRun={lastRun}
           notify={notify}
           surface={surface}
           subSurface={subSurface}

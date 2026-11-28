@@ -6,6 +6,7 @@ import {
   CONTACT_EMAIL,
   EFFECTIVE_DATE,
   EXTERNAL_TEST_SERVERS,
+  CONTROL_TEST_SERVERS,
   LIVE_AD_NETWORKS,
   PRIVACY_POLICY,
   TERMS_OF_USE,
@@ -72,4 +73,9 @@ test('the Privacy Policy describes the visit and test counters while they exist'
   assert.match(text, /Neon/);
   assert.match(text, /does not store your IP address/);
   assert.ok(existsSync(new URL('../api/counter.js', import.meta.url)), 'policy describes a counter that no longer exists');
+});
+
+test('the privacy policy lists the control servers the full test contacts', async () => {
+  const { CONTROL_ENDPOINTS } = await import('../src/lab/reachability.js');
+  assert.deepEqual(CONTROL_TEST_SERVERS.map((s) => s.host).sort(), CONTROL_ENDPOINTS.map((e) => e.host).sort());
 });

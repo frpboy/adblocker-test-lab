@@ -153,6 +153,13 @@ export default function RunSummary({
         </ul>
       </div>
 
+      {summary.reachability.state !== 'not_run' && (
+        <div className={`rounded-sm border p-4 max-w-prose ${subSurface}`}>
+          <h3 className="text-sm font-bold">{summary.reachability.title}</h3>
+          <p className="mt-1 text-sm leading-relaxed">{summary.reachability.body}</p>
+        </div>
+      )}
+
       {view === 'detailed' && (
         <div className="space-y-1">
           <TestList title="Blocked" mark={'✓'} items={summary.blocked} muted={muted} empty="Nothing in this run was fully blocked." defaultOpen />
@@ -169,6 +176,15 @@ export default function RunSummary({
             empty="None in this run. These checks are never scored, because a failure can also mean the server is down."
           />
           <TestList title="Requests to ad and tracker servers that completed (a blocker may have answered with a stand-in)" mark={'→'} items={summary.extraReached} muted={muted} empty="None in this run." />
+          {Array.isArray(lastRun?.controls) && lastRun.controls.length > 0 && (
+            <TestList
+              title="Control servers (ordinary sites used for comparison)"
+              mark={'◎'}
+              items={lastRun.controls.map((c) => ({ id: c.id, name: `${c.host}: ${c.reached ? 'reached' : 'could not be reached'}` }))}
+              muted={muted}
+              empty="None in this run."
+            />
+          )}
         </div>
       )}
 

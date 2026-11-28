@@ -40,6 +40,7 @@ import { LEGAL_PAGES } from './src/lab/legal-content.js';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab, pathForTab, tabFromPath, titleForTab } from './src/lab/navigation.js';
 import { saveResults, loadResults, clearResults } from './src/lab/result-store.js';
+import { PROBE_FETCH_OPTIONS, runControls } from './src/lab/reachability.js';
 import { recordVisitAndLoad, recordTestRun } from './src/lab/site-counter.js';
 import { plainTestName } from './src/lab/plain-language.js';
 import { waitForFrame } from './src/lab/frame-wait.js';
@@ -1963,6 +1964,7 @@ export function generateHtmlReport({ scoreSummary, resultsMap, userReported }) {
       scoreSummary.overallScore !== null ? `${escapeHtml(scoreSummary.overallScore)} / 100` : 'No Scored Blocking Tests Executed'
     }</h2>
     <p>Core Blocking Coverage: ${escapeHtml(scoreSummary.coveragePercentage)}% (${escapeHtml(scoreSummary.eligibleTotalTests)}/${escapeHtml(scoreSummary.maxScoredTests)} core blocking fixtures)</p>
+    <p>Scope: the scored fixtures are same-site probes. Requests to third-party servers and network-level filtering are not scored; see the extra checks below.</p>
     <p>Browser Privacy &amp; Hardening Signals Active: ${escapeHtml(scoreSummary.privacySignalsSummary.activeCount)} / ${escapeHtml(scoreSummary.privacySignalsSummary.totalSignals)}</p>
     <p><strong>User-Reported Context:</strong> Extension: ${safeReportedExt} | DNS: ${safeReportedDns} | Notes: ${safeReportedNotes}</p>
   </div>
@@ -2480,19 +2482,15 @@ export async function executeAuditedTest(
       let failed = false;
       let probeLatency = 0;
       let errText = '';
+      let probeTimedOut = false;
 
       try {
         const controller = new AbortController();
         const onUserAbort = () => controller.abort();
         abortSignal?.addEventListener('abort', onUserAbort, { once: true });
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const timer = setTimeout(() => { probeTimedOut = true; controller.abort(); }, timeoutMs);
 
-        await fetch(testItem.targetUrl, {
-          method: 'GET',
-          mode: 'no-cors',
-          cache: 'no-store',
-          signal: controller.signal
-        });
+        await fetch(testItem.targetUrl, { ...PROBE_FETCH_OPTIONS, signal: controller.signal });
         clearTimeout(timer);
         abortSignal?.removeEventListener('abort', onUserAbort);
         probeLatency = Math.round(performance.now() - t0);
@@ -2502,7 +2500,7 @@ export async function executeAuditedTest(
         }
         probeLatency = Math.round(performance.now() - t0);
         failed = true;
-        errText = err?.name || 'NetworkError';
+        errText = probeTimedOut ? 'TimeoutError' : err?.name || 'NetworkError';
       }
 
       if (failed) {
@@ -3508,7 +3506,14 @@ export default function App() {
         }
       };
 
+      // Ordinary control servers run beside the third-party checks, so a failure to reach an
+      // ad server can be read against whether ordinary servers answered in the same run.
+      const runStartedAt = new Date().toISOString();
+      const controlsPromise = testsToRun.some((t) => t.type === 'external_domain_probe')
+        ? runControls({ timeoutMs, signal: abortController.signal })
+        : Promise.resolve(null);
       await Promise.all(Array.from({ length: workerCount }, () => worker()));
+      const controlResults = await controlsPromise;
       flushPendingBatch();
 
       if (sandboxStageRef.current) {
@@ -3538,8 +3543,13 @@ export default function App() {
             : runIds.length === TEST_REGISTRY.length
             ? 'full'
             : 'custom',
+        startedAt: runStartedAt,
         finishedAt: new Date().toISOString(),
-        cancelled: wasCancelled
+        cancelled: wasCancelled,
+        timeoutMs,
+        concurrency: workerCount,
+        appVersion: APP_VERSION,
+        controls: controlResults
       });
       notify(
         wasCancelled ? 'Run aborted immediately via AbortSignal.' : `Completed ${completed} diagnostic cases.`,

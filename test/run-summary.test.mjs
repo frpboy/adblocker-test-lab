@@ -56,7 +56,7 @@ test('a partial result is labelled partial everywhere, including the share text'
   assert.equal(s.partial, true);
   assert.equal(
     buildShareText(s, 'https://lab.frpboy.in'),
-    'My browser setup scored 13/100 on the AdBlocker Test Lab test probes (partial result, 4 of 35 scored tests). One setup, one moment. Test yours: https://lab.frpboy.in'
+    'My browser setup scored 13/100 on the AdBlocker Test Lab test probes (partial result, 4 of 35 scored same-site tests). One setup, one moment. Test yours: https://lab.frpboy.in'
   );
 });
 
@@ -97,8 +97,9 @@ test('a blocker that is on but hides few elements gets element-hiding advice (uB
   });
   const s = buildRunSummary({ scoreSummary, resultsMap, registry: reg, lastRun: null });
 
-  assert.equal(s.blockerActive, true);
-  assert.match(s.nextSteps[0], /hid only 1 of 12 ad elements/);
+  assert.equal(s.scoredFilteringSeen, true);
+  assert.doesNotMatch(s.nextSteps[0], /Your blocker is active/);
+  assert.match(s.nextSteps[0], /only 1 of 12 ad elements were hidden/);
   assert.match(s.nextSteps[0], /Complete/);
   assert.equal(s.scoredUnmeasured.length, 0);
   assert.equal(s.otherUnmeasured, 2);
@@ -106,9 +107,62 @@ test('a blocker that is on but hides few elements gets element-hiding advice (uB
   assert.ok(!s.simple.some((l) => /left out of the score/.test(l)), 'non-scored checks must not be described as left out of the score');
 });
 
-test('nothing blocked at all gets the "is it switched on" advice instead', () => {
+test('nothing blocked at all explains the scored probes are same-site, without claiming a cause', () => {
   const reg = [{ id: 'DSP-01', metricGroup: 'AD_TRACKER_BLOCKING' }];
   const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap: { 'DSP-01': { status: 'ALLOWED' } }, registry: reg, lastRun: null });
-  assert.equal(s.blockerActive, false);
-  assert.match(s.nextSteps[0], /^Nothing was blocked/);
+  assert.equal(s.scoredFilteringSeen, false);
+  assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
+  assert.match(s.nextSteps[0], /network-level filtering is not measured/);
+  assert.doesNotMatch(s.nextSteps[0], /DNS is working|blocker is (broken|failing)/i);
+});
+
+test('verdict titles say "scored" so they are not read as overall protection', () => {
+  const mk = (score) => scoreVerdict({ overallScore: score, eligibleTotalTests: 35, maxScoredTests: 35, passedCount: 0, failedCount: 35 });
+  for (const score of [0, 60, 95]) assert.match(mk(score).title, /scored probes/);
+});
+
+test('unreachable third-party servers alone never produce a claim that a blocker is active', () => {
+  const reg = [
+    { id: 'DSP-01', metricGroup: 'AD_TRACKER_BLOCKING' },
+    { id: 'X1', metricGroup: 'EXPLORATORY_PROBE' }
+  ];
+  const s = buildRunSummary({
+    scoreSummary: summaryOf({ overallScore: 0 }),
+    resultsMap: { 'DSP-01': { status: 'ALLOWED' }, X1: { status: 'REQUEST_FAILED_CAUSE_UNKNOWN' } },
+    registry: reg,
+    lastRun: null
+  });
+  assert.equal(s.scoredFilteringSeen, false);
+  assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
+  assert.ok(!s.nextSteps.join(' ').match(/blocker is active/i));
+});
+
+test('0 scored blocked + 7 failed third-party probes: no "blocker is active" claim anywhere in the summary', () => {
+  const reg = [{ id: 'S1', metricGroup: 'AD_TRACKER_BLOCKING' }, ...Array.from({ length: 10 }, (_, i) => ({ id: `E${i}`, metricGroup: 'EXPLORATORY_PROBE' }))];
+  const resultsMap = { S1: { status: 'ALLOWED' } };
+  for (let i = 0; i < 10; i++) resultsMap[`E${i}`] = { status: i < 7 ? 'REQUEST_FAILED_CAUSE_UNKNOWN' : 'ALLOWED' };
+  const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap, registry: reg, lastRun: null });
+  const all = JSON.stringify(s);
+  assert.doesNotMatch(all, /blocker is active|it stopped some requests/i);
+  assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
+});
+
+test('rendered summary data: 0 scored blocked + 7 of 10 external failures + 3/3 controls reached', () => {
+  const reg = [{ id: 'S1', metricGroup: 'AD_TRACKER_BLOCKING' }, ...Array.from({ length: 10 }, (_, i) => ({ id: `E${i}`, metricGroup: 'EXPLORATORY_PROBE' }))];
+  const resultsMap = { S1: { status: 'ALLOWED' } };
+  for (let i = 0; i < 10; i++) resultsMap[`E${i}`] = { status: i < 7 ? 'REQUEST_FAILED_CAUSE_UNKNOWN' : 'ALLOWED' };
+  const controls = [{ reached: true }, { reached: true }, { reached: true }];
+  const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap, registry: reg, lastRun: { controls, timeoutMs: 2500, cancelled: false } });
+  const shown = [s.headline, ...s.simple, s.reachability.title, s.reachability.body, ...s.nextSteps].filter(Boolean).join('\n');
+  assert.equal(s.reachability.state, 'some_unreachable');
+  assert.match(shown, /7 of 10 ad and tracker servers could not be reached/);
+  assert.match(shown, /3 of 3 ordinary control servers/);
+  assert.match(shown, /None of the scored probes were blocked/);
+  assert.doesNotMatch(shown, /blocker is active|stopped some requests|DNS is working|is blocking/i);
+});
+
+test('a cancelled run reports a stopped reachability state in the summary', () => {
+  const reg = [{ id: 'E0', metricGroup: 'EXPLORATORY_PROBE' }];
+  const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap: {}, registry: reg, lastRun: { cancelled: true, controls: [{ reached: false }, { reached: false }, { reached: false }] } });
+  assert.equal(s.reachability.state, 'stopped');
 });
