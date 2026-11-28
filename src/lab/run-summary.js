@@ -118,7 +118,7 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
 
   const nextSteps = [];
   if (scored.length && !blockerActive) {
-    nextSteps.push('Nothing was blocked. If you expected an ad blocker to be active, check that it is installed, switched on, and not paused for this site.');
+    nextSteps.push('None of the scored probes were blocked. They run on this site\'s own address, so network-level filtering is not measured by them. The extra checks show what happened to requests to third-party servers. If you expected on-page blocking, confirm your blocker is on for this site.');
   } else if (blockerActive && cosmeticWeak) {
     nextSteps.push(
       `Your blocker is active (it stopped some requests) but hid only ${cosmetic.catBlocked} of ${cosmetic.eligibleCount} ad elements on the page. Turn on element hiding, sometimes called cosmetic filtering. Some blockers only hide common ad elements in their strongest mode; in uBlock Origin Lite that mode is called "Complete".`
@@ -170,7 +170,7 @@ export function buildShareText(summary, url = SITE_URL) {
     return `Try the AdBlocker Test Lab probes in your browser: ${url}`;
   }
   const coverage = summary.partial
-    ? ` (partial result, ${summary.eligible} of ${summary.maxScored} scored tests)`
-    : ` (${summary.eligible} of ${summary.maxScored} scored tests)`;
+    ? ` (partial result, ${summary.eligible} of ${summary.maxScored} scored same-site tests)`
+    : ` (${summary.eligible} of ${summary.maxScored} scored same-site tests)`;
   return `My browser setup scored ${summary.score}/100 on the AdBlocker Test Lab test probes${coverage}. One setup, one moment. Test yours: ${url}`;
 }

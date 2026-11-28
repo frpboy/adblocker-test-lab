@@ -56,7 +56,7 @@ test('a partial result is labelled partial everywhere, including the share text'
   assert.equal(s.partial, true);
   assert.equal(
     buildShareText(s, 'https://lab.frpboy.in'),
-    'My browser setup scored 13/100 on the AdBlocker Test Lab test probes (partial result, 4 of 35 scored tests). One setup, one moment. Test yours: https://lab.frpboy.in'
+    'My browser setup scored 13/100 on the AdBlocker Test Lab test probes (partial result, 4 of 35 scored same-site tests). One setup, one moment. Test yours: https://lab.frpboy.in'
   );
 });
 
@@ -106,9 +106,11 @@ test('a blocker that is on but hides few elements gets element-hiding advice (uB
   assert.ok(!s.simple.some((l) => /left out of the score/.test(l)), 'non-scored checks must not be described as left out of the score');
 });
 
-test('nothing blocked at all gets the "is it switched on" advice instead', () => {
+test('nothing blocked at all explains the scored probes are same-site, without claiming a cause', () => {
   const reg = [{ id: 'DSP-01', metricGroup: 'AD_TRACKER_BLOCKING' }];
   const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap: { 'DSP-01': { status: 'ALLOWED' } }, registry: reg, lastRun: null });
   assert.equal(s.blockerActive, false);
-  assert.match(s.nextSteps[0], /^Nothing was blocked/);
+  assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
+  assert.match(s.nextSteps[0], /network-level filtering is not measured/);
+  assert.doesNotMatch(s.nextSteps[0], /DNS is working|blocker is (broken|failing)/i);
 });
