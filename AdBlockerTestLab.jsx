@@ -1963,7 +1963,7 @@ export function generateHtmlReport({ scoreSummary, resultsMap, userReported }) {
     <h2>Test-probe score: ${
       scoreSummary.overallScore !== null ? `${escapeHtml(scoreSummary.overallScore)} / 100` : 'No Scored Blocking Tests Executed'
     }</h2>
-    <p>Core Blocking Coverage: ${escapeHtml(scoreSummary.coveragePercentage)}% (${escapeHtml(scoreSummary.eligibleTotalTests)}/${escapeHtml(scoreSummary.maxScoredTests)} core blocking fixtures)</p>
+    <p>Scored tests measured across all stored results: ${escapeHtml(scoreSummary.eligibleTotalTests)} of ${escapeHtml(scoreSummary.maxScoredTests)}. This counts scored tests that gave a result, not tests that blocked.</p>
     <p>Scope: the scored fixtures are same-site probes. Requests to third-party servers and network-level filtering are not scored; see the extra checks below.</p>
     <p>Browser Privacy &amp; Hardening Signals Active: ${escapeHtml(scoreSummary.privacySignalsSummary.activeCount)} / ${escapeHtml(scoreSummary.privacySignalsSummary.totalSignals)}</p>
     <p><strong>User-Reported Context:</strong> Extension: ${safeReportedExt} | DNS: ${safeReportedDns} | Notes: ${safeReportedNotes}</p>

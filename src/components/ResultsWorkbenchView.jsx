@@ -675,7 +675,7 @@ export default function ResultsWorkbenchView({
               label: 'Report (HTML)',
               run: () => {
                 triggerDownload(
-                  generateExtractedHtmlReport({ brandName, appVersion, brandPromise, registry: testRegistry, scoreSummary, resultsMap, userReported }),
+                  generateExtractedHtmlReport({ brandName, appVersion, brandPromise, registry: testRegistry, scoreSummary, resultsMap, userReported, lastRun }),
                   'adblocker-test-lab-report.html',
                   'text/html;charset=utf-8;'
                 );
