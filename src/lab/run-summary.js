@@ -30,20 +30,20 @@ export function scoreVerdict(scoreSummary) {
   if (overallScore >= 85) {
     return {
       tone: 'strong',
-      title: 'Most test probes were blocked',
+      title: 'Most scored probes were blocked',
       body: `${passedCount} of ${eligibleTotalTests} scored test probes were blocked outright.`
     };
   }
   if (overallScore >= 50) {
     return {
       tone: 'mixed',
-      title: 'Some test probes were not blocked',
+      title: 'Some scored probes were not blocked',
       body: `${failedCount} of ${eligibleTotalTests} scored test probes were not blocked.`
     };
   }
   return {
     tone: 'weak',
-    title: "Most test probes weren't blocked",
+    title: "Most scored probes weren't blocked",
     body: 'The scored tests use made-up ad-like paths and page elements on this site (no real ads are loaded), so the score describes how this browser setup handled them, not how well it blocks ads on the web. If you use a blocker, check that it is on for this site and that element hiding is on, then run the test again. DNS or network-level blockers are not measured by the scored tests.'
   };
 }

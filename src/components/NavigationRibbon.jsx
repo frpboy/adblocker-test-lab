@@ -80,7 +80,7 @@ export default function NavigationRibbon({
                 <span className={muted}>/100</span>
                 <span className={`ml-1.5 text-xs ${muted}`}>
                   {partial ? 'partial, ' : ''}
-                  {scoreSummary.eligibleTotalTests} of {scoreSummary.maxScoredTests} tests
+                  {scoreSummary.eligibleTotalTests} of {scoreSummary.maxScoredTests} scored tests
                 </span>
               </span>
             ) : (

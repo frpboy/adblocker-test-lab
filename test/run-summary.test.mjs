@@ -114,3 +114,8 @@ test('nothing blocked at all explains the scored probes are same-site, without c
   assert.match(s.nextSteps[0], /network-level filtering is not measured/);
   assert.doesNotMatch(s.nextSteps[0], /DNS is working|blocker is (broken|failing)/i);
 });
+
+test('verdict titles say "scored" so they are not read as overall protection', () => {
+  const mk = (score) => scoreVerdict({ overallScore: score, eligibleTotalTests: 35, maxScoredTests: 35, passedCount: 0, failedCount: 35 });
+  for (const score of [0, 60, 95]) assert.match(mk(score).title, /scored probes/);
+});
