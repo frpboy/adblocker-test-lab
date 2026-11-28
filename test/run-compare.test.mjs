@@ -77,7 +77,7 @@ test('third-party results are not compared when either run lacks usable controls
   assert.equal(r.ok, true);
   assert.equal(r.externalComparable, false);
   assert.equal(r.rows.filter((x) => x.group === 'external').length, 0);
-  assert.match(r.issues.map((i) => i.text).join('|'), /Run B reached only 1 of 3 control servers/);
+  assert.match(r.issues.map((i) => i.text).join('|'), /The later run reached only 1 of 3 control servers/);
   const none = compareRuns(a, mk('c', '2026-11-28T10:06:00Z', base, { controls: null }), registry);
   assert.match(none.issues.map((i) => i.text).join('|'), /has no control-server results/);
 });
@@ -104,4 +104,15 @@ test('saved runs: newest first, capped, replace same run, delete, ignore junk', 
   assert.deepEqual(loadSavedRuns(null), []);
   st.setItem(SAVED_RUNS_KEY, JSON.stringify({ version: 1, runs: [{ id: 'old', label: 'x', testIds: [], results: {}, savedAt: 1 }] }));
   assert.deepEqual(loadSavedRuns(st, Date.parse('2026-11-28T11:00:00Z')), [], 'runs older than 30 days are dropped');
+});
+
+test('earlier/later labels come from finish timestamps, not from the order the runs are passed in', () => {
+  const early = mk('early', '2026-11-28T10:00:00Z', base);
+  const late = mk('late', '2026-11-28T10:05:00Z', { ...base, S1: 'BLOCKED' });
+  const fwd = compareRuns(early, late, registry);
+  const rev = compareRuns(late, early, registry);
+  assert.equal(fwd.a.id, 'early');
+  assert.equal(rev.a.id, 'early');
+  assert.equal(rev.b.id, 'late');
+  assert.deepEqual(rev.rows, fwd.rows);
 });

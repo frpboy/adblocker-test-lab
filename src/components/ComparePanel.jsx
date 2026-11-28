@@ -19,7 +19,7 @@ export default function ComparePanel({ resultsMap, registry, lastRun, notify, su
   );
   const alreadySaved = Boolean(latest && saved.some((r) => r.finishedAt && r.finishedAt === latest.finishedAt));
   const pick = (id) => (id === LATEST ? latest : saved.find((r) => r.id === id) || null);
-  // With nothing chosen yet, run A is the newest saved run that is not the latest run itself.
+  // With nothing chosen yet, the first run is the newest saved run that is not the latest run itself.
   const defaultA = saved.find((r) => !latest || r.finishedAt !== latest.finishedAt)?.id || '';
   const effA = aId && saved.some((r) => r.id === aId) ? aId : defaultA;
 
@@ -57,7 +57,7 @@ export default function ComparePanel({ resultsMap, registry, lastRun, notify, su
     <li className="text-sm">
       <span>{r.name}</span> <span className={`font-mono text-xs ${muted}`}>{r.id}</span>
       <span className={`block text-xs ${muted}`}>
-        Run A: {CLASS_LABEL[r.a]}. Run B: {CLASS_LABEL[r.b]}.
+        Earlier run: {CLASS_LABEL[r.a]}. Later run: {CLASS_LABEL[r.b]}.
       </span>
     </li>
   );
@@ -111,14 +111,14 @@ export default function ComparePanel({ resultsMap, registry, lastRun, notify, su
       {(saved.length > 0 || hasRun) && (
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm font-semibold">
-            Run A
+            First run to compare
             <select value={effA} onChange={(e) => setAId(e.target.value)} className={field}>
               <option value="">Choose a saved run</option>
               {saved.map((r) => <option key={r.id} value={r.id}>{runName(r)}</option>)}
             </select>
           </label>
           <label className="grid gap-1 text-sm font-semibold">
-            Run B
+            Second run to compare
             <select value={bId} onChange={(e) => setBId(e.target.value)} className={field}>
               {hasRun && <option value={LATEST}>Latest run (not saved)</option>}
               {saved.map((r) => <option key={r.id} value={r.id}>{runName(r)}</option>)}
@@ -137,7 +137,7 @@ export default function ComparePanel({ resultsMap, registry, lastRun, notify, su
           {result.ok && (
             <>
               <p className="text-base font-semibold">
-                {result.a.label} is run A (earlier), {result.b.label} is run B (later).
+                Earlier run (by finish time): {result.a.label}. Later run: {result.b.label}. The order you picked them in does not matter.
               </p>
               <ul className="list-disc pl-5 space-y-1 text-base">
                 <li>Scored tests: {result.summary.scored.changed} of {result.summary.scored.total} differ between the runs.</li>

@@ -57,7 +57,7 @@ function controlsUsable(snap) {
 }
 
 /**
- * Neutral per-test comparison of two saved runs. The earlier run (by finish time) is A.
+ * Neutral per-test comparison of two saved runs. The earlier run (by finish time) is `a`, whatever order the caller passes them in.
  * Never says one run is better, and never gives a cause.
  */
 export function compareRuns(first, second, registry) {
@@ -85,8 +85,8 @@ export function compareRuns(first, second, registry) {
   const ca = controlsUsable(a);
   const cb = controlsUsable(b);
   const externalComparable = ca.ok && cb.ok;
-  if (!ca.ok) warn(`Run A ${ca.why}, so third-party server results are not compared.`);
-  if (!cb.ok) warn(`Run B ${cb.why}, so third-party server results are not compared.`);
+  if (!ca.ok) warn(`The earlier run ${ca.why}, so third-party server results are not compared.`);
+  if (!cb.ok) warn(`The later run ${cb.why}, so third-party server results are not compared.`);
 
   if (issues.some((i) => i.level === 'block')) return { ok: false, a, b, issues, rows: [], summary: null };
 

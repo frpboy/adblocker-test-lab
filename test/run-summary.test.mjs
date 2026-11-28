@@ -136,3 +136,13 @@ test('unreachable third-party servers alone never produce a claim that a blocker
   assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
   assert.ok(!s.nextSteps.join(' ').match(/blocker is active/i));
 });
+
+test('0 scored blocked + 7 failed third-party probes: no "blocker is active" claim anywhere in the summary', () => {
+  const reg = [{ id: 'S1', metricGroup: 'AD_TRACKER_BLOCKING' }, ...Array.from({ length: 10 }, (_, i) => ({ id: `E${i}`, metricGroup: 'EXPLORATORY_PROBE' }))];
+  const resultsMap = { S1: { status: 'ALLOWED' } };
+  for (let i = 0; i < 10; i++) resultsMap[`E${i}`] = { status: i < 7 ? 'REQUEST_FAILED_CAUSE_UNKNOWN' : 'ALLOWED' };
+  const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap, registry: reg, lastRun: null });
+  const all = JSON.stringify(s);
+  assert.doesNotMatch(all, /blocker is active|it stopped some requests/i);
+  assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
+});
