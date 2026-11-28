@@ -27,7 +27,8 @@ test('probeEndpoint reports reached, failed, and timed out', async () => {
     fetchImpl: (u, { signal }) => new Promise((_, rej) => signal.addEventListener('abort', () => rej(Object.assign(new Error('x'), { name: 'AbortError' }))))
   });
   assert.equal(slow.reached, false);
-  assert.equal(slow.error, 'AbortError');
+  assert.equal(slow.error, 'TimeoutError');
+  assert.equal(slow.timedOut, true);
 });
 
 test('only completed and unreachable statuses count; inconclusive does not', () => {
@@ -67,4 +68,43 @@ test('two of three controls are enough; the none-unreachable text does not claim
   const r = summarizeReachability({ probes: probes(['ALLOWED', 'ALLOWED', 'ALLOWED']), controls: controls([true, true, false]) });
   assert.equal(r.state, 'none_unreachable');
   assert.match(r.body, /does not show that nothing was filtered/);
+});
+
+test('a slow control fetch that never answers is a timeout, and a user abort is not', async () => {
+  const hang = (u, { signal }) => new Promise((_, rej) => signal.addEventListener('abort', () => rej(Object.assign(new Error('x'), { name: 'AbortError' }))));
+  const slow = await runControls({ fetchImpl: hang, timeoutMs: 20 });
+  assert.ok(slow.every((c) => c.reached === false && c.timedOut === true && c.error === 'TimeoutError'));
+  const user = new AbortController();
+  const p = runControls({ fetchImpl: hang, timeoutMs: 5000, signal: user.signal });
+  user.abort();
+  const stopped = await p;
+  assert.ok(stopped.every((c) => c.reached === false && c.timedOut === false && c.aborted === true));
+});
+
+test('timeout uncertainty is stated whenever failures are shown', () => {
+  const probes = Array.from({ length: 4 }, (_, i) => ({ id: `E${i}`, name: `E${i}`, status: i < 2 ? 'REQUEST_FAILED_CAUSE_UNKNOWN' : 'ALLOWED' }));
+  const good = [{ reached: true }, { reached: true }, { reached: true }];
+  const r = summarizeReachability({ probes, controls: good, timeoutMs: 2500 });
+  assert.equal(r.state, 'some_unreachable');
+  assert.match(r.body, /longer than 2\.5 seconds counts as not reached, so a slow connection can look the same/);
+  const bad = summarizeReachability({ probes, controls: [{ reached: false }, { reached: false }, { reached: false }], timeoutMs: 2500 });
+  assert.equal(bad.state, 'controls_failed');
+  assert.match(bad.body, /slow/);
+});
+
+test('a stopped run gets a stopped-run summary, never "controls failed"', () => {
+  const probes = [{ id: 'E1', name: 'E1', status: 'REQUEST_FAILED_CAUSE_UNKNOWN' }];
+  const aborted = [{ reached: false, aborted: true }, { reached: false, aborted: true }, { reached: false, aborted: true }];
+  const r = summarizeReachability({ probes, controls: aborted, cancelled: true, timeoutMs: 2500 });
+  assert.equal(r.state, 'stopped');
+  assert.match(r.title, /stopped early/);
+  assert.doesNotMatch(r.body, /not be reached|offline/);
+});
+
+test('the lab own ad/tracker probe and the controls share one set of request options', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../AdBlockerTestLab.jsx', import.meta.url), 'utf8');
+  assert.match(src, /fetch\(testItem\.targetUrl, \{ \.\.\.PROBE_FETCH_OPTIONS, signal/);
+  const { PROBE_FETCH_OPTIONS } = await import('../src/lab/reachability.js');
+  assert.deepEqual({ ...PROBE_FETCH_OPTIONS }, { method: 'GET', mode: 'no-cors', cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
 });

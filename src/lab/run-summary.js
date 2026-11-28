@@ -97,7 +97,9 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
 
   const reachability = summarizeReachability({
     probes: extra.map((t) => ({ id: t.id, name: nameOf(t), status: statusOf(t) })),
-    controls: lastRun?.controls
+    controls: lastRun?.controls,
+    cancelled: Boolean(lastRun?.cancelled),
+    timeoutMs: lastRun?.timeoutMs
   });
 
   const verdict = scoreVerdict(scoreSummary);

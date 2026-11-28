@@ -14,6 +14,16 @@ export const CONTROL_ENDPOINTS = [
   { id: 'CTL-3', host: 'cdn.jsdelivr.net', operator: 'jsDelivr', url: 'https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css' }
 ];
 
+// One set of request options for BOTH the ad/tracker probes and the controls, so the two are
+// made the same way: no cookies, no referrer, no cache.
+export const PROBE_FETCH_OPTIONS = Object.freeze({
+  method: 'GET',
+  mode: 'no-cors',
+  cache: 'no-store',
+  credentials: 'omit',
+  referrerPolicy: 'no-referrer'
+});
+
 export const MIN_CONTROLS_REACHED = 2;
 export const MIN_MEASURED_SERVERS = 3;
 
@@ -32,19 +42,13 @@ export async function probeEndpoint(url, { fetchImpl = globalThis.fetch, timeout
   const controller = new AbortController();
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort, { once: true });
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
   try {
-    await fetchImpl(url, {
-      method: 'GET',
-      mode: 'no-cors',
-      cache: 'no-store',
-      credentials: 'omit',
-      referrerPolicy: 'no-referrer',
-      signal: controller.signal
-    });
+    await fetchImpl(url, { ...PROBE_FETCH_OPTIONS, signal: controller.signal });
     return { reached: true, ms: Date.now() - t0 };
   } catch (err) {
-    return { reached: false, ms: Date.now() - t0, aborted: Boolean(signal?.aborted), error: err?.name || 'NetworkError' };
+    return { reached: false, ms: Date.now() - t0, aborted: Boolean(signal?.aborted), timedOut: timedOut && !signal?.aborted, error: timedOut ? 'TimeoutError' : err?.name || 'NetworkError' };
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener('abort', onAbort);
@@ -60,7 +64,7 @@ export async function runControls({ endpoints = CONTROL_ENDPOINTS, fetchImpl, ti
  * probes: [{ id, name, status }] for the third-party checks in the run.
  * controls: result of runControls for the same run, or null/undefined when none were run.
  */
-export function summarizeReachability({ probes = [], controls } = {}) {
+export function summarizeReachability({ probes = [], controls, cancelled = false, timeoutMs } = {}) {
   const measured = probes
     .map((p) => ({ ...p, outcome: classifyExternalStatus(p.status) }))
     .filter((p) => p.outcome);
@@ -78,6 +82,18 @@ export function summarizeReachability({ probes = [], controls } = {}) {
     controlsReached
   };
 
+  const timeoutNote = timeoutMs
+    ? ` A request that takes longer than ${Math.round(timeoutMs / 100) / 10} seconds counts as not reached, so a slow connection can look the same.`
+    : ' A request that takes too long counts as not reached, so a slow connection can look the same.';
+
+  if (cancelled) {
+    return {
+      ...base,
+      state: 'stopped',
+      title: 'Third-party servers: run stopped early',
+      body: 'This run was stopped before it finished, so reachability was not interpreted. Run the full test to the end.'
+    };
+  }
   if (!probes.length || !controlsTotal) {
     return {
       ...base,
@@ -91,7 +107,7 @@ export function summarizeReachability({ probes = [], controls } = {}) {
       ...base,
       state: 'controls_failed',
       title: 'Third-party servers: not interpretable',
-      body: `Only ${controlsReached} of ${controlsTotal} ordinary control servers could be reached, so failures to reach ad and tracker servers say nothing here. The connection may be offline or restricted.`
+      body: `Only ${controlsReached} of ${controlsTotal} ordinary control servers could be reached, so failures to reach ad and tracker servers say nothing here. The connection may be offline, restricted or slow.${timeoutNote}`
     };
   }
   if (measured.length < MIN_MEASURED_SERVERS) {
@@ -99,7 +115,7 @@ export function summarizeReachability({ probes = [], controls } = {}) {
       ...base,
       state: 'too_few',
       title: 'Third-party servers: too few clear answers',
-      body: `Only ${measured.length} ad and tracker checks gave a clear answer in this run.`
+      body: `Only ${measured.length} ad and tracker checks gave a clear answer in this run.${timeoutNote}`
     };
   }
   if (!unreachableList.length) {
@@ -114,6 +130,6 @@ export function summarizeReachability({ probes = [], controls } = {}) {
     ...base,
     state: 'some_unreachable',
     title: `Third-party servers: ${unreachableList.length} of ${measured.length} ad and tracker servers could not be reached`,
-    body: `${controlsReached} of ${controlsTotal} ordinary control servers could be reached in the same run. Network-level filtering, such as a DNS filter, VPN or firewall, or a request-blocking extension can produce this pattern. This page cannot tell which, and cannot rule out a server problem. It is not part of the score.`
+    body: `${controlsReached} of ${controlsTotal} ordinary control servers could be reached in the same run. Network-level filtering, such as a DNS filter, VPN or firewall, or a request-blocking extension can produce this pattern. This page cannot tell which, and cannot rule out a server problem.${timeoutNote} It is not part of the score.`
   };
 }

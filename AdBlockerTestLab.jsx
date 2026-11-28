@@ -40,7 +40,7 @@ import { LEGAL_PAGES } from './src/lab/legal-content.js';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab, pathForTab, tabFromPath, titleForTab } from './src/lab/navigation.js';
 import { saveResults, loadResults, clearResults } from './src/lab/result-store.js';
-import { runControls } from './src/lab/reachability.js';
+import { PROBE_FETCH_OPTIONS, runControls } from './src/lab/reachability.js';
 import { recordVisitAndLoad, recordTestRun } from './src/lab/site-counter.js';
 import { plainTestName } from './src/lab/plain-language.js';
 import { waitForFrame } from './src/lab/frame-wait.js';
@@ -2482,19 +2482,15 @@ export async function executeAuditedTest(
       let failed = false;
       let probeLatency = 0;
       let errText = '';
+      let probeTimedOut = false;
 
       try {
         const controller = new AbortController();
         const onUserAbort = () => controller.abort();
         abortSignal?.addEventListener('abort', onUserAbort, { once: true });
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const timer = setTimeout(() => { probeTimedOut = true; controller.abort(); }, timeoutMs);
 
-        await fetch(testItem.targetUrl, {
-          method: 'GET',
-          mode: 'no-cors',
-          cache: 'no-store',
-          signal: controller.signal
-        });
+        await fetch(testItem.targetUrl, { ...PROBE_FETCH_OPTIONS, signal: controller.signal });
         clearTimeout(timer);
         abortSignal?.removeEventListener('abort', onUserAbort);
         probeLatency = Math.round(performance.now() - t0);
@@ -2504,7 +2500,7 @@ export async function executeAuditedTest(
         }
         probeLatency = Math.round(performance.now() - t0);
         failed = true;
-        errText = err?.name || 'NetworkError';
+        errText = probeTimedOut ? 'TimeoutError' : err?.name || 'NetworkError';
       }
 
       if (failed) {

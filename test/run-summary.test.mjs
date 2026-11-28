@@ -146,3 +146,23 @@ test('0 scored blocked + 7 failed third-party probes: no "blocker is active" cla
   assert.doesNotMatch(all, /blocker is active|it stopped some requests/i);
   assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
 });
+
+test('rendered summary data: 0 scored blocked + 7 of 10 external failures + 3/3 controls reached', () => {
+  const reg = [{ id: 'S1', metricGroup: 'AD_TRACKER_BLOCKING' }, ...Array.from({ length: 10 }, (_, i) => ({ id: `E${i}`, metricGroup: 'EXPLORATORY_PROBE' }))];
+  const resultsMap = { S1: { status: 'ALLOWED' } };
+  for (let i = 0; i < 10; i++) resultsMap[`E${i}`] = { status: i < 7 ? 'REQUEST_FAILED_CAUSE_UNKNOWN' : 'ALLOWED' };
+  const controls = [{ reached: true }, { reached: true }, { reached: true }];
+  const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap, registry: reg, lastRun: { controls, timeoutMs: 2500, cancelled: false } });
+  const shown = [s.headline, ...s.simple, s.reachability.title, s.reachability.body, ...s.nextSteps].filter(Boolean).join('\n');
+  assert.equal(s.reachability.state, 'some_unreachable');
+  assert.match(shown, /7 of 10 ad and tracker servers could not be reached/);
+  assert.match(shown, /3 of 3 ordinary control servers/);
+  assert.match(shown, /None of the scored probes were blocked/);
+  assert.doesNotMatch(shown, /blocker is active|stopped some requests|DNS is working|is blocking/i);
+});
+
+test('a cancelled run reports a stopped reachability state in the summary', () => {
+  const reg = [{ id: 'E0', metricGroup: 'EXPLORATORY_PROBE' }];
+  const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap: {}, registry: reg, lastRun: { cancelled: true, controls: [{ reached: false }, { reached: false }, { reached: false }] } });
+  assert.equal(s.reachability.state, 'stopped');
+});
