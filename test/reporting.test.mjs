@@ -58,8 +58,8 @@ const html = (lastRun) => generateHtmlReport({ brandName: 'Lab', appVersion: '4.
 test('export no longer calls measured tests "blocking coverage" and separates measured from blocked', () => {
   const h = html(run());
   assert.doesNotMatch(h, /Core Blocking Coverage|core blocking fixtures/);
-  assert.match(h, /Scored tests measured: 35 of 35\. This counts scored tests that gave a result, not tests that blocked\./);
-  assert.match(h, /0 blocked, 0 partly blocked, 1 got through/);
+  assert.match(h, /Scored tests measured across all stored results: 35 of 35\. This counts scored tests that gave a result, not tests that blocked\./);
+  assert.match(h, /Scored outcome in the most recent run only: 0 blocked, 0 partly blocked, 1 got through/);
 });
 
 test('export with healthy controls and failed third-party probes prints the reachability card, controls and run metadata', () => {
@@ -100,4 +100,22 @@ test('export escapes hostile control host and error text', () => {
   const h = html(run({ controls: [{ host: '<img src=x onerror=alert(1)>', reached: false, error: '<b>x</b>' }, ...okControls] }));
   assert.doesNotMatch(h, /<img src=x|<b>x<\/b>/);
   assert.match(h, /&lt;img src=x onerror=alert\(1\)&gt;/);
+});
+
+test('a partial/custom run after a full run keeps the two scopes distinct in the export', () => {
+  const all = { S1: { status: 'ALLOWED' }, S2: { status: 'ALLOWED' }, E0: { status: 'ALLOWED' } };
+  const reg2 = [
+    { id: 'S1', name: 'One', section: 's', metricGroup: 'AD_TRACKER_BLOCKING', audit: {} },
+    { id: 'S2', name: 'Two', section: 's', metricGroup: 'AD_TRACKER_BLOCKING', audit: {} },
+    { id: 'E0', name: 'Extra', section: 's', metricGroup: 'EXPLORATORY_PROBE', audit: {} }
+  ];
+  // Earlier full run left 35 of 35 stored; the latest run re-ran only S2 and had no controls.
+  const h = generateHtmlReport({
+    brandName: 'Lab', appVersion: '4.1.0', brandPromise: 'x', registry: reg2, scoreSummary: score, resultsMap: { ...all, S2: { status: 'BLOCKED' } }, userReported: {},
+    lastRun: { testIds: ['S2'], label: 'custom', finishedAt: '2026-11-28T11:00:00.000Z', cancelled: false, timeoutMs: 2500, concurrency: 6, appVersion: '4.1.0' }
+  });
+  assert.match(h, /Scored tests measured across all stored results: 35 of 35/);
+  assert.match(h, /Scored outcome in the most recent run only: 1 blocked, 0 partly blocked, 0 got through\./);
+  assert.match(h, /scope: custom/);
+  assert.match(h, /no control-server results were recorded/);
 });

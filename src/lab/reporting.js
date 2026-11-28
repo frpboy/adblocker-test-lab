@@ -25,8 +25,8 @@ export function exportRunContextHtml({ scoreSummary, resultsMap, registry, lastR
   const maxScored = scoreSummary?.maxScoredTests ?? 0;
   const parts = [];
   parts.push(
-    `<p>Scored tests measured: ${escapeHtml(measured)} of ${escapeHtml(maxScored)}. This counts scored tests that gave a result, not tests that blocked.</p>`,
-    `<p>Scored outcome in the most recent run: ${escapeHtml(summary.blocked.length)} blocked, ${escapeHtml(summary.partly.length)} partly blocked, ${escapeHtml(summary.allowed.length)} got through.</p>`
+    `<p>Scored tests measured across all stored results: ${escapeHtml(measured)} of ${escapeHtml(maxScored)}. This counts scored tests that gave a result, not tests that blocked.</p>`,
+    `<p>Scored outcome in the most recent run only: ${escapeHtml(summary.blocked.length)} blocked, ${escapeHtml(summary.partly.length)} partly blocked, ${escapeHtml(summary.allowed.length)} got through.</p>`
   );
   if (lastRun?.finishedAt) {
     const bits = [
