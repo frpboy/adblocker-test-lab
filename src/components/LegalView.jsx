@@ -1,5 +1,5 @@
 import React from 'react';
-import { EFFECTIVE_DATE, EXTERNAL_TEST_SERVERS, LIVE_AD_NETWORKS } from '../lab/legal-content.js';
+import { EFFECTIVE_DATE, CONTROL_TEST_SERVERS, EXTERNAL_TEST_SERVERS, LIVE_AD_NETWORKS } from '../lab/legal-content.js';
 
 const linkClass = 'underline underline-offset-4 text-[#a9431c] dark:text-[#f08a5d]';
 
@@ -69,7 +69,7 @@ export default function LegalView({ page, onOpenPage, surface, subSurface, muted
 
           {section.serverList && (
             <ul className="grid gap-2 sm:grid-cols-2 text-sm">
-              {EXTERNAL_TEST_SERVERS.map((server) => (
+              {[...EXTERNAL_TEST_SERVERS, ...CONTROL_TEST_SERVERS].map((server) => (
                 <li key={server.host} className={`rounded-sm border px-3 py-2 ${surface}`}>
                   <span className="block font-mono break-all">{server.host}</span>
                   <span className={muted}>{server.owner}, </span>

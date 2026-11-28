@@ -1,4 +1,5 @@
 import { plainTestName } from './plain-language.js';
+import { summarizeReachability } from './reachability.js';
 
 export const SITE_URL = 'https://lab.frpboy.in';
 export const SITE_LABEL = 'lab.frpboy.in';
@@ -69,7 +70,13 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
   const allowed = scored.filter((t) => statusOf(t) === 'ALLOWED').map(item);
   const unmeasured = tests
     .filter((t) => UNMEASURED_REASONS[statusOf(t)])
-    .map((t) => ({ ...item(t), reason: UNMEASURED_REASONS[statusOf(t)] }));
+    .map((t) => ({
+      ...item(t),
+      reason:
+        t.id === 'TRK-03'
+          ? 'A page can see that a beacon was queued, not whether it arrived, so this check cannot give a clear answer in any browser.'
+          : UNMEASURED_REASONS[statusOf(t)]
+    }));
 
   const privacyOn = privacy.filter((t) => statusOf(t) === 'SIGNAL_ACTIVE').map(item);
   const privacyOff = privacy.filter((t) => statusOf(t) === 'SIGNAL_INACTIVE').map(item);
@@ -82,10 +89,16 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
   const scoredUnmeasured = unmeasured.filter((t) => scoredIds.has(t.id));
   const otherUnmeasured = unmeasured.length - scoredUnmeasured.length;
 
-  // Did the blocker do anything at all, and how well did it hide ad elements?
-  const blockerActive = blocked.length + partly.length + extraFailed.length > 0;
+  // Did any scored probe get stopped on this page, and how well were ad elements hidden?
+  // Unreachable third-party servers are reported separately and never counted as page filtering.
+  const scoredFilteringSeen = blocked.length + partly.length > 0;
   const cosmetic = (scoreSummary.categoryBreakdown || []).find((c) => c.id === 'cosmetic_filtering');
   const cosmeticWeak = Boolean(cosmetic && cosmetic.eligibleCount >= 3 && cosmetic.rawScore !== null && cosmetic.rawScore < 50);
+
+  const reachability = summarizeReachability({
+    probes: extra.map((t) => ({ id: t.id, name: nameOf(t), status: statusOf(t) })),
+    controls: lastRun?.controls
+  });
 
   const verdict = scoreVerdict(scoreSummary);
   const partial = verdict.tone === 'partial';
@@ -117,11 +130,11 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
   }
 
   const nextSteps = [];
-  if (scored.length && !blockerActive) {
+  if (scored.length && !scoredFilteringSeen) {
     nextSteps.push('None of the scored probes were blocked. They run on this site\'s own address, so network-level filtering is not measured by them. The extra checks show what happened to requests to third-party servers. If you expected on-page blocking, confirm your blocker is on for this site.');
-  } else if (blockerActive && cosmeticWeak) {
+  } else if (scoredFilteringSeen && cosmeticWeak) {
     nextSteps.push(
-      `Your blocker is active (it stopped some requests) but hid only ${cosmetic.catBlocked} of ${cosmetic.eligibleCount} ad elements on the page. Turn on element hiding, sometimes called cosmetic filtering. Some blockers only hide common ad elements in their strongest mode; in uBlock Origin Lite that mode is called "Complete".`
+      `Some scored requests were stopped, but only ${cosmetic.catBlocked} of ${cosmetic.eligibleCount} ad elements were hidden on the page. Turn on element hiding, sometimes called cosmetic filtering. Some blockers only hide common ad elements in their strongest mode; in uBlock Origin Lite that mode is called "Complete".`
     );
   }
   if (partial || scope !== 'full') nextSteps.push('Run the full test for a score you can rely on.');
@@ -148,7 +161,8 @@ export function buildRunSummary({ scoreSummary, resultsMap, registry, lastRun, n
     unmeasured,
     scoredUnmeasured,
     otherUnmeasured,
-    blockerActive,
+    scoredFilteringSeen,
+    reachability,
     privacyOn,
     privacyOff,
     extraFailed,

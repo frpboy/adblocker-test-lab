@@ -97,8 +97,9 @@ test('a blocker that is on but hides few elements gets element-hiding advice (uB
   });
   const s = buildRunSummary({ scoreSummary, resultsMap, registry: reg, lastRun: null });
 
-  assert.equal(s.blockerActive, true);
-  assert.match(s.nextSteps[0], /hid only 1 of 12 ad elements/);
+  assert.equal(s.scoredFilteringSeen, true);
+  assert.doesNotMatch(s.nextSteps[0], /Your blocker is active/);
+  assert.match(s.nextSteps[0], /only 1 of 12 ad elements were hidden/);
   assert.match(s.nextSteps[0], /Complete/);
   assert.equal(s.scoredUnmeasured.length, 0);
   assert.equal(s.otherUnmeasured, 2);
@@ -109,7 +110,7 @@ test('a blocker that is on but hides few elements gets element-hiding advice (uB
 test('nothing blocked at all explains the scored probes are same-site, without claiming a cause', () => {
   const reg = [{ id: 'DSP-01', metricGroup: 'AD_TRACKER_BLOCKING' }];
   const s = buildRunSummary({ scoreSummary: summaryOf({ overallScore: 0 }), resultsMap: { 'DSP-01': { status: 'ALLOWED' } }, registry: reg, lastRun: null });
-  assert.equal(s.blockerActive, false);
+  assert.equal(s.scoredFilteringSeen, false);
   assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
   assert.match(s.nextSteps[0], /network-level filtering is not measured/);
   assert.doesNotMatch(s.nextSteps[0], /DNS is working|blocker is (broken|failing)/i);
@@ -118,4 +119,20 @@ test('nothing blocked at all explains the scored probes are same-site, without c
 test('verdict titles say "scored" so they are not read as overall protection', () => {
   const mk = (score) => scoreVerdict({ overallScore: score, eligibleTotalTests: 35, maxScoredTests: 35, passedCount: 0, failedCount: 35 });
   for (const score of [0, 60, 95]) assert.match(mk(score).title, /scored probes/);
+});
+
+test('unreachable third-party servers alone never produce a claim that a blocker is active', () => {
+  const reg = [
+    { id: 'DSP-01', metricGroup: 'AD_TRACKER_BLOCKING' },
+    { id: 'X1', metricGroup: 'EXPLORATORY_PROBE' }
+  ];
+  const s = buildRunSummary({
+    scoreSummary: summaryOf({ overallScore: 0 }),
+    resultsMap: { 'DSP-01': { status: 'ALLOWED' }, X1: { status: 'REQUEST_FAILED_CAUSE_UNKNOWN' } },
+    registry: reg,
+    lastRun: null
+  });
+  assert.equal(s.scoredFilteringSeen, false);
+  assert.match(s.nextSteps[0], /^None of the scored probes were blocked/);
+  assert.ok(!s.nextSteps.join(' ').match(/blocker is active/i));
 });

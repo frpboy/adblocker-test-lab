@@ -23,6 +23,13 @@ export const EXTERNAL_TEST_SERVERS = [
   { host: 'alwingulla.com', owner: 'Monetag', policy: 'https://monetag.com/privacy/' }
 ];
 
+// Ordinary servers the full test contacts as controls, to tell "this network cannot reach third-party servers" from "these ad servers are unreachable".
+export const CONTROL_TEST_SERVERS = [
+  { host: 'www.gstatic.com', owner: 'Google', policy: 'https://policies.google.com/privacy' },
+  { host: 'github.githubassets.com', owner: 'GitHub', policy: 'https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement' },
+  { host: 'cdn.jsdelivr.net', owner: 'jsDelivr', policy: 'https://www.jsdelivr.com/terms/privacy-policy-jsdelivr-net' }
+];
+
 export const LIVE_AD_NETWORKS = [
   { name: 'Adsterra', policy: 'https://adsterra.com/privacy-policy/' },
   { name: 'Monetag', policy: 'https://monetag.com/privacy/' },

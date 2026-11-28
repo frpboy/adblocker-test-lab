@@ -40,6 +40,7 @@ import { LEGAL_PAGES } from './src/lab/legal-content.js';
 import ResultsWorkbenchView, { StatusBadge as SharedStatusBadge } from './src/components/ResultsWorkbenchView.jsx';
 import { normalizeTab, pathForTab, tabFromPath, titleForTab } from './src/lab/navigation.js';
 import { saveResults, loadResults, clearResults } from './src/lab/result-store.js';
+import { runControls } from './src/lab/reachability.js';
 import { recordVisitAndLoad, recordTestRun } from './src/lab/site-counter.js';
 import { plainTestName } from './src/lab/plain-language.js';
 import { waitForFrame } from './src/lab/frame-wait.js';
@@ -3509,7 +3510,14 @@ export default function App() {
         }
       };
 
+      // Ordinary control servers run beside the third-party checks, so a failure to reach an
+      // ad server can be read against whether ordinary servers answered in the same run.
+      const runStartedAt = new Date().toISOString();
+      const controlsPromise = testsToRun.some((t) => t.type === 'external_domain_probe')
+        ? runControls({ timeoutMs, signal: abortController.signal })
+        : Promise.resolve(null);
       await Promise.all(Array.from({ length: workerCount }, () => worker()));
+      const controlResults = await controlsPromise;
       flushPendingBatch();
 
       if (sandboxStageRef.current) {
@@ -3539,8 +3547,13 @@ export default function App() {
             : runIds.length === TEST_REGISTRY.length
             ? 'full'
             : 'custom',
+        startedAt: runStartedAt,
         finishedAt: new Date().toISOString(),
-        cancelled: wasCancelled
+        cancelled: wasCancelled,
+        timeoutMs,
+        concurrency: workerCount,
+        appVersion: APP_VERSION,
+        controls: controlResults
       });
       notify(
         wasCancelled ? 'Run aborted immediately via AbortSignal.' : `Completed ${completed} diagnostic cases.`,
